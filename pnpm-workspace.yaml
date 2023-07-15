@@ -1,10 +1,9 @@
 packages:
   - shell
   - plugins/template
-  # - plugins/http-man
-  # - plugins/o365
-  # - plugins/postgresql
-  # - plugins/jira
-  # - plugins/sql-server
-  # - plugins/ldap
+  - plugins/o365
+  - plugins/postgresql
+  - plugins/jira
+  - plugins/sql-server
+  - plugins/ldap
   - testing
