@@ -1,0 +1,45 @@
+{
+  "name": "bamboo-mono",
+  "version": "0.0.0",
+  "description": "Bamboo Monorepo",
+  "scripts": {
+    "prepare": "husky install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Black Eye Technology",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blackeyetech/bamboo-mono.git"
+  },
+  "bugs": {
+    "url": "https://github.com/blackeyetech/bamboo-mono/issues"
+  },
+  "homepage": "https://github.com/blackeyetech/bamboo-mono#readme",
+  "devDependencies": {
+    "@changesets/cli": "^2.26.2",
+    "@types/node": "^18.16.19",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.3",
+    "prettier": "^3.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "@rollup/plugin-commonjs": "^24.1.0",
+    "@rollup/plugin-json": "^6.0.0",
+    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-replace": "^5.0.2",
+    "@rollup/plugin-terser": "^0.2.1",
+    "rollup": "^3.26.2",
+    "rollup-plugin-dts": "^5.3.0",
+    "rollup-plugin-sourcemaps": "^0.6.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "@rollup/pluginutils": "^5.0.2"
+    }
+  }
+}

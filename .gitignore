@@ -1,0 +1,9 @@
+# node directories and files
+node_modules/
+npm-debug.log
+.pnpm-debug.log
+
+# The transpiled and rolled TypeScript code
+dist/
+
+.DS_Store

@@ -1,0 +1,10 @@
+{
+  "**/src/**/*.ts": [
+    "pnpm prettier --write",
+    "git add"
+  ],
+  "**/*.{json,md,yaml,yml}": [
+    "prettier --write",
+    "git add"
+  ]
+}

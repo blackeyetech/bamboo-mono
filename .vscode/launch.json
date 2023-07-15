@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "test - mjs",
+      "cwd": "${workspaceFolder}/testing",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["dist/main.js", "--xxx=2", "--env-file=rrr"]
+    }
+  ]
+}
