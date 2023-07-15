@@ -1,0 +1,19 @@
+{
+  "name": "testing",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "build": "tsc ",
+    "test": "ts-node src/main.ts"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@bs-core/shell": "workspace:^1.0.0"
+  }
+}
