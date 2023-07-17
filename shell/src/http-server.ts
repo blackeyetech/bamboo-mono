@@ -489,12 +489,14 @@ export class HttpServer {
 
       // If we are here we found a callback - process it and stop looking
       await this.callMiddleware(req, res, el, el.middlewareList).catch((e) => {
+        let message: string;
+
         // If it is a HttpError assume the error message has already been logged
         if (e instanceof HttpError) {
           res.statusCode = e.status;
-          res.write(e.message);
+          message = e.message;
         } else {
-          // We don't know what this is so log it and make sure to retrun a 500
+          // We don't know what this is so log it and make sure to return a 500
           this._logger.error(
             this._loggerTag,
             "Unknown error happened while handling URL (%s) - (%s)",
@@ -503,8 +505,12 @@ export class HttpServer {
           );
 
           res.statusCode = 500;
-          res.write("Unknown error happened");
+          message = "Unknown error happened";
         }
+
+        res.setHeader("content-type", "text/plain; charset=utf-8");
+        res.setHeader("content-length", Buffer.byteLength(message));
+        res.write("message");
       });
 
       found = true;
