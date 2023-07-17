@@ -14,6 +14,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@bs-core/shell": "workspace:^1.0.0"
+    "@bs-core/shell": "workspace:^1.0.1"
   }
 }

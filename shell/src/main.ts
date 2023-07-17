@@ -59,7 +59,8 @@ const _exceptionHandler = async (e: Error) => {
 };
 
 let _httpServerList: httpServer.HttpServer[];
-let _plugins: { plugin: BSPlugin; stopHandler: () => Promise<void> }[];
+let _pluginList: { plugin: BSPlugin; stopHandler: () => Promise<void> }[];
+let _pluginMap: Record<string, BSPlugin>;
 
 let _stopHandler: () => Promise<void>;
 let _finallyHandler: () => Promise<void>;
@@ -88,7 +89,8 @@ export const bs = Object.freeze({
   init: (): void => {
     // Initialise the private variables
     _httpServerList = [];
-    _plugins = [];
+    _pluginList = [];
+    _pluginMap = {};
     _stopHandler = _defaultStopHandler;
     _finallyHandler = _defaultFinallyHandler;
 
@@ -122,7 +124,7 @@ export const bs = Object.freeze({
   getConfigStr: (
     config: string,
     defaultVal?: string,
-    options?: BSConfigOptions
+    options?: BSConfigOptions,
   ): string => {
     // This either returns a string or it throws
     return <string>configMan.get({
@@ -138,7 +140,7 @@ export const bs = Object.freeze({
   getConfigBool: (
     config: string,
     defaultVal?: boolean,
-    options?: BSConfigOptions
+    options?: BSConfigOptions,
   ): boolean => {
     // This either returns a bool or it throws
     return <boolean>configMan.get({
@@ -154,7 +156,7 @@ export const bs = Object.freeze({
   getConfigNum: (
     config: string,
     defaultVal?: number,
-    options?: BSConfigOptions
+    options?: BSConfigOptions,
   ): number => {
     // This either returns a number or it throws
     return <number>configMan.get({
@@ -243,15 +245,15 @@ export const bs = Object.freeze({
     });
 
     // Stop the extensions in the reverse order you started them
-    for (let plugin of _plugins.reverse()) {
+    for (let plugin of _pluginList.reverse()) {
       bs.shutdownMsg(`Attempting to stop plugin ${plugin.plugin.name} ...`);
       await plugin.stopHandler().catch((e) => {
         bs.error(e);
       });
     }
 
-    // Clear the plugins list
-    _plugins = [];
+    // Clear the plugin list
+    _pluginList = [];
 
     // If there was a finally handler provided then call it last
     if (_finallyHandler !== undefined) {
@@ -294,18 +296,26 @@ export const bs = Object.freeze({
   addHttpServer: (
     networkInterface: string,
     networkPort: number,
-    httpConfig: httpServer.HttpConfig = {}
+    httpConfig: httpServer.HttpConfig = {},
   ): httpServer.HttpServer => {
     let server = new httpServer.HttpServer(
       networkInterface,
       networkPort,
       _logger,
-      httpConfig
+      httpConfig,
     );
 
     _httpServerList.push(server);
 
     return server;
+  },
+
+  getHttpServer: (serverNum: number): httpServer.HttpServer | undefined => {
+    return _httpServerList.length ? _httpServerList[serverNum] : undefined;
+  },
+
+  getPlugin: (plugin: string): BSPlugin | undefined => {
+    return _pluginMap[plugin];
   },
 
   sleep: async (durationInSeconds: number): Promise<void> => {
@@ -319,7 +329,7 @@ export const bs = Object.freeze({
 
   question: async (
     ask: string,
-    questionOptions?: BSQuestionOptions
+    questionOptions?: BSQuestionOptions,
   ): Promise<string> => {
     let input = process.stdin;
     let output = process.stdout;
@@ -382,12 +392,13 @@ export class BSPlugin {
     this._version = version;
 
     this.startupMsg(`Adding plugin ${name}`);
-    _plugins.push({
+    _pluginList.push({
       plugin: this,
       stopHandler: async () => {
         this.stop();
       },
     });
+    _pluginMap[this._name] = this;
 
     this.startupMsg("Initialising ...");
   }
@@ -412,7 +423,7 @@ export class BSPlugin {
   // Static metods here
   static async question(
     ask: string,
-    questionOptions?: BSQuestionOptions
+    questionOptions?: BSQuestionOptions,
   ): Promise<string> {
     return bs.question(ask, questionOptions);
   }
@@ -421,7 +432,7 @@ export class BSPlugin {
   getConfigStr(
     config: string,
     defaultVal?: string,
-    options?: BSConfigOptions
+    options?: BSConfigOptions,
   ): string {
     // This either returns a string or it throws
     return <string>configMan.get({
@@ -437,7 +448,7 @@ export class BSPlugin {
   getConfigBool(
     config: string,
     defaultVal?: boolean,
-    options?: BSConfigOptions
+    options?: BSConfigOptions,
   ): boolean {
     // This either returns a bool or it throws
     return <boolean>configMan.get({
@@ -453,7 +464,7 @@ export class BSPlugin {
   getConfigNum(
     config: string,
     defaultVal?: number,
-    options?: BSConfigOptions
+    options?: BSConfigOptions,
   ): number {
     // This either returns a number or it throws
     return <number>configMan.get({
@@ -505,7 +516,7 @@ export class BSPlugin {
   async request(
     origin: string,
     path: string,
-    reqOptions?: httpReq.ReqOptions
+    reqOptions?: httpReq.ReqOptions,
   ): Promise<httpReq.ReqRes> {
     return httpReq.request(origin, path, reqOptions);
   }

@@ -6,7 +6,7 @@ import {
   Middleware,
   EndpointCallback,
   HttpError,
-} from "@bs/shell";
+} from "@bs-core/shell";
 
 // import * as http from "node:http";
 
@@ -81,7 +81,7 @@ let middleware2: Middleware = async (_1, _2, next) => {
   bs.info("finished the middle two");
 };
 
-let httpMan1 = bs.addHttpServer("lo", 8080, {
+bs.addHttpServer("lo", 8080, {
   loggerTag: "HttpMan1",
   defaultMiddlewareList: [
     HttpServer.body(),
@@ -115,7 +115,7 @@ let httpMan2 = bs.addHttpServer("lo", 8081, {
 
 bs.info(httpMan2.baseUrl);
 
-httpMan1.endpoint(
+bs.httpServer(0)?.endpoint(
   "POST",
   "/test/:id",
   (_, res) => {
@@ -175,21 +175,21 @@ let pong: EndpointCallback = (req, res) => {
   );
 };
 
-httpMan1.endpoint("GET", "/ping", pong, {
+bs.httpServer(0)?.endpoint("GET", "/ping", pong, {
   sseServerOptions: { pingInterval: 10, pingEventName: "ev1" },
 });
 
-httpMan1.endpoint("GET", "/html", async (_, res) => {
+bs.httpServer(0)?.endpoint("GET", "/html", async (_, res) => {
   res.html = "<html><p>Hello from 1</p></html>";
 });
 
-httpMan1.endpoint("GET", "/text", async (_, res) => {
+bs.httpServer(0)?.endpoint("GET", "/text", async (_, res) => {
   throw new HttpError(500, "endpoint error help me!");
 
   res.text = "Hello";
 });
 
-httpMan1.endpoint(
+bs.httpServer(0)?.endpoint(
   "GET",
   "/test",
   async (_, res) => {
@@ -198,16 +198,16 @@ httpMan1.endpoint(
   { defaultMiddlewares: false },
 );
 
-httpMan1.endpoint("GET", "/json", (_, res) => {
+bs.httpServer(0)?.endpoint("GET", "/json", (_, res) => {
   res.json = { url: "login" };
 });
 
-httpMan1.endpoint("GET", "/test2", async (_, res) => {
+bs.httpServer(0)?.endpoint("GET", "/test2", async (_, res) => {
   res.statusCode = 201;
   res.end();
 });
 
-httpMan1.addHealthcheck(async () => false);
+bs.httpServer(0)?.addHealthcheck(async () => false);
 
 // bs.exit(0, false);
 // bs.init();

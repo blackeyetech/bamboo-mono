@@ -101,7 +101,7 @@ importers:
 
   testing:
     specifiers:
-      "@bs-core/shell": workspace:^1.0.0
+      "@bs-core/shell": workspace:^1.0.1
     dependencies:
       "@bs-core/shell": link:../shell
 

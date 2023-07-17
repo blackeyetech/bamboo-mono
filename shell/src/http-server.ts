@@ -674,6 +674,9 @@ export class HttpServer {
       );
       this._server.close();
       this._logger.shutdownMsg(this._loggerTag, "Port closed");
+
+      // Just in case someone calls stop() a 2nd time
+      this._server = undefined;
     }
 
     return;

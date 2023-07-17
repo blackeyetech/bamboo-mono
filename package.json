@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "description": "Bamboo Monorepo",
   "scripts": {
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "format-ts": "prettier --write 'src/**/*.ts'",
+    "format-js": "prettier --write 'dist/**/*.{js,ts}'",
+    "format-misc": "prettier --write '**/*.{json,md,yaml}'"
   },
   "engines": {
     "node": ">=18.0.0"
