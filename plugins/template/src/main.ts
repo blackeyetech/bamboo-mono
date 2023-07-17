@@ -1,5 +1,5 @@
 // imports here
-import { BSPlugin } from "bamboo-shell";
+import { BSPlugin } from "@bs-core/shell";
 
 // Types here
 

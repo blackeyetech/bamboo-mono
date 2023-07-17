@@ -16,20 +16,20 @@ importers:
       husky: ^8.0.3
       lint-staged: ^13.2.3
       prettier: ^3.0.0
-      rollup: ^3.26.2
+      rollup: ^3.26.3
       rollup-plugin-dts: ^5.3.0
       rollup-plugin-sourcemaps: ^0.6.3
       ts-node: ^10.9.1
       typescript: ^5.1.6
     dependencies:
-      "@rollup/plugin-commonjs": 24.1.0_rollup@3.26.2
-      "@rollup/plugin-json": 6.0.0_rollup@3.26.2
-      "@rollup/plugin-node-resolve": 15.1.0_rollup@3.26.2
-      "@rollup/plugin-replace": 5.0.2_rollup@3.26.2
-      "@rollup/plugin-terser": 0.2.1_rollup@3.26.2
-      rollup: 3.26.2
-      rollup-plugin-dts: 5.3.0_btijhbnqj3bkl7p6fnurpsgzhq
-      rollup-plugin-sourcemaps: 0.6.3_qemc2fb4b3fotc6byeomtlcgue
+      "@rollup/plugin-commonjs": 24.1.0_rollup@3.26.3
+      "@rollup/plugin-json": 6.0.0_rollup@3.26.3
+      "@rollup/plugin-node-resolve": 15.1.0_rollup@3.26.3
+      "@rollup/plugin-replace": 5.0.2_rollup@3.26.3
+      "@rollup/plugin-terser": 0.2.1_rollup@3.26.3
+      rollup: 3.26.3
+      rollup-plugin-dts: 5.3.0_afuk5ckrta3fepxfxriis2nsxm
+      rollup-plugin-sourcemaps: 0.6.3_tdxnvay2rfkvgs3dcqbq4j6u4m
     devDependencies:
       "@changesets/cli": 2.26.2
       "@types/node": 18.16.19
@@ -41,15 +41,15 @@ importers:
 
   plugins/jira:
     specifiers:
-      "@bs-core/shell": workspace:^1.0.0
+      "@bs-core/shell": workspace:^1.1.0
     dependencies:
       "@bs-core/shell": link:../../shell
 
   plugins/ldap:
     specifiers:
-      "@bs-core/shell": workspace:^1.0.0
+      "@bs-core/shell": workspace:^1.1.0
       "@types/ldapjs": ^2.2.5
-      ldapjs: ^3.0.2
+      ldapjs: ^3.0.3
     dependencies:
       "@bs-core/shell": link:../../shell
       ldapjs: 3.0.3
@@ -58,8 +58,8 @@ importers:
 
   plugins/o365:
     specifiers:
-      "@bs-core/shell": workspace:^1.0.0
-      "@microsoft/microsoft-graph-types": ^2.26.0
+      "@bs-core/shell": workspace:^1.1.0
+      "@microsoft/microsoft-graph-types": ^2.35.0
     dependencies:
       "@bs-core/shell": link:../../shell
     devDependencies:
@@ -67,9 +67,9 @@ importers:
 
   plugins/postgresql:
     specifiers:
-      "@bs-core/shell": workspace:^1.0.0
-      "@types/pg": ^8.6.6
-      pg: ^8.10.0
+      "@bs-core/shell": workspace:^1.1.0
+      "@types/pg": ^8.10.2
+      pg: ^8.11.1
     dependencies:
       "@bs-core/shell": link:../../shell
       pg: 8.11.1
@@ -78,7 +78,7 @@ importers:
 
   plugins/sql-server:
     specifiers:
-      "@bs-core/shell": workspace:^1.0.0
+      "@bs-core/shell": workspace:^1.1.0
       "@types/mssql": ^8.1.2
       mssql: ^9.1.1
     dependencies:
@@ -89,7 +89,7 @@ importers:
 
   plugins/template:
     specifiers:
-      "@bs-core/shell": workspace:^1.0.0
+      "@bs-core/shell": workspace:^1.1.0
     dependencies:
       "@bs-core/shell": link:../../shell
 
@@ -840,7 +840,7 @@ packages:
       fastq: 1.15.0
     dev: true
 
-  /@rollup/plugin-commonjs/24.1.0_rollup@3.26.2:
+  /@rollup/plugin-commonjs/24.1.0_rollup@3.26.3:
     resolution:
       {
         integrity: sha512-eSL45hjhCWI0jCCXcNtLVqM5N1JlBGvlFfY0m6oOYnLCJ6N0qEXoZql4sY2MOUArzhH4SA/qBpTxvvZp2Sc+DQ==,
@@ -852,16 +852,16 @@ packages:
       rollup:
         optional: true
     dependencies:
-      "@rollup/pluginutils": 5.0.2_rollup@3.26.2
+      "@rollup/pluginutils": 5.0.2_rollup@3.26.3
       commondir: 1.0.1
       estree-walker: 2.0.2
       glob: 8.1.0
       is-reference: 1.2.1
       magic-string: 0.27.0
-      rollup: 3.26.2
+      rollup: 3.26.3
     dev: false
 
-  /@rollup/plugin-json/6.0.0_rollup@3.26.2:
+  /@rollup/plugin-json/6.0.0_rollup@3.26.3:
     resolution:
       {
         integrity: sha512-i/4C5Jrdr1XUarRhVu27EEwjt4GObltD7c+MkCIpO2QIbojw8MUs+CCTqOphQi3Qtg1FLmYt+l+6YeoIf51J7w==,
@@ -873,11 +873,11 @@ packages:
       rollup:
         optional: true
     dependencies:
-      "@rollup/pluginutils": 5.0.2_rollup@3.26.2
-      rollup: 3.26.2
+      "@rollup/pluginutils": 5.0.2_rollup@3.26.3
+      rollup: 3.26.3
     dev: false
 
-  /@rollup/plugin-node-resolve/15.1.0_rollup@3.26.2:
+  /@rollup/plugin-node-resolve/15.1.0_rollup@3.26.3:
     resolution:
       {
         integrity: sha512-xeZHCgsiZ9pzYVgAo9580eCGqwh/XCEUM9q6iQfGNocjgkufHAqC3exA+45URvhiYV8sBF9RlBai650eNs7AsA==,
@@ -889,16 +889,16 @@ packages:
       rollup:
         optional: true
     dependencies:
-      "@rollup/pluginutils": 5.0.2_rollup@3.26.2
+      "@rollup/pluginutils": 5.0.2_rollup@3.26.3
       "@types/resolve": 1.20.2
       deepmerge: 4.3.1
       is-builtin-module: 3.2.1
       is-module: 1.0.0
       resolve: 1.22.2
-      rollup: 3.26.2
+      rollup: 3.26.3
     dev: false
 
-  /@rollup/plugin-replace/5.0.2_rollup@3.26.2:
+  /@rollup/plugin-replace/5.0.2_rollup@3.26.3:
     resolution:
       {
         integrity: sha512-M9YXNekv/C/iHHK+cvORzfRYfPbq0RDD8r0G+bMiTXjNGKulPnCT9O3Ss46WfhI6ZOCgApOP7xAdmCQJ+U2LAA==,
@@ -910,12 +910,12 @@ packages:
       rollup:
         optional: true
     dependencies:
-      "@rollup/pluginutils": 5.0.2_rollup@3.26.2
+      "@rollup/pluginutils": 5.0.2_rollup@3.26.3
       magic-string: 0.27.0
-      rollup: 3.26.2
+      rollup: 3.26.3
     dev: false
 
-  /@rollup/plugin-terser/0.2.1_rollup@3.26.2:
+  /@rollup/plugin-terser/0.2.1_rollup@3.26.3:
     resolution:
       {
         integrity: sha512-hV52c8Oo6/cXZZxVVoRNBb4zh+EKSHS4I1sedWV5pf0O+hTLSkrf6w86/V0AZutYtwBguB6HLKwz89WDBfwGOA==,
@@ -927,13 +927,13 @@ packages:
       rollup:
         optional: true
     dependencies:
-      rollup: 3.26.2
+      rollup: 3.26.3
       serialize-javascript: 6.0.1
       smob: 0.0.6
-      terser: 5.19.0
+      terser: 5.19.1
     dev: false
 
-  /@rollup/pluginutils/5.0.2_rollup@3.26.2:
+  /@rollup/pluginutils/5.0.2_rollup@3.26.3:
     resolution:
       {
         integrity: sha512-pTd9rIsP92h+B6wWwFbW8RkZv4hiR/xKsqre4SIuAOaOEQRxi0lqLke9k2/7WegC85GgUs9pjmOjCUi3In4vwA==,
@@ -948,7 +948,7 @@ packages:
       "@types/estree": 1.0.1
       estree-walker: 2.0.2
       picomatch: 2.3.1
-      rollup: 3.26.2
+      rollup: 3.26.3
     dev: false
 
   /@tediousjs/connection-string/0.4.2:
@@ -1016,7 +1016,7 @@ packages:
         integrity: sha512-Lv/nD6QDCmcT+V1vaTRnEKE8UgOilVv5pHcQuzkU1LcRe4mbHHuUo/KHi0LKrpdHhQY8FJzryF38fcVdeUIrzg==,
       }
     dependencies:
-      "@types/node": 18.16.19
+      "@types/node": 20.4.2
     dev: true
 
   /@types/minimist/1.2.2:
@@ -1032,7 +1032,7 @@ packages:
         integrity: sha512-hoDM+mZUClfXu0J1pyVdbhv2Ve0dl0TdagAE3M5rd1slqoVEEHuNObPD+giwtJgyo99CcS58qbF9ektVKdxSfQ==,
       }
     dependencies:
-      "@types/node": 18.16.19
+      "@types/node": 20.4.2
       "@types/tedious": 4.0.9
       tarn: 3.0.2
     dev: true
@@ -1050,6 +1050,13 @@ packages:
         integrity: sha512-IXl7o+R9iti9eBW4Wg2hx1xQDig183jj7YLn8F7udNceyfkbn1ZxmzZXuak20gR40D7pIkIY1kYGx5VIGbaHKA==,
       }
 
+  /@types/node/20.4.2:
+    resolution:
+      {
+        integrity: sha512-Dd0BYtWgnWJKwO1jkmTrzofjK2QXXcai0dmtzvIBhcA+RsG5h8R3xlyta0kGOZRNfL9GuRtb1knmPEhQrePCEw==,
+      }
+    dev: true
+
   /@types/normalize-package-data/2.4.1:
     resolution:
       {
@@ -1063,7 +1070,7 @@ packages:
         integrity: sha512-MKFs9P6nJ+LAeHLU3V0cODEOgyThJ3OAnmOlsZsxux6sfQs3HRXR5bBn7xG5DjckEFhTAxsXi7k7cd0pCMxpJw==,
       }
     dependencies:
-      "@types/node": 18.16.19
+      "@types/node": 20.4.2
       pg-protocol: 1.6.0
       pg-types: 4.0.1
     dev: true
@@ -1088,7 +1095,7 @@ packages:
         integrity: sha512-ipwFvfy9b2m0gjHsIX0D6NAAwGCKokzf5zJqUZHUGt+7uWVlBIy6n2eyMgiKQ8ChLFVxic/zwQUhjLYNzbHDRA==,
       }
     dependencies:
-      "@types/node": 18.16.19
+      "@types/node": 20.4.2
     dev: true
 
   /abstract-logging/2.0.1:
@@ -1240,9 +1247,23 @@ packages:
     dependencies:
       call-bind: 1.0.2
       define-properties: 1.2.0
-      es-abstract: 1.21.3
+      es-abstract: 1.22.1
       es-shim-unscopables: 1.0.0
     dev: true
+
+  /arraybuffer.prototype.slice/1.0.1:
+    resolution:
+      {
+        integrity: sha512-09x0ZWFEjj4WD8PDbykUwo3t9arLn8NIzmmYEJFpYekOAQjpkGSyrQhNoRTcwwcFRu+ycWF78QZ63oWTqSjBcw==,
+      }
+    engines: { node: ">= 0.4" }
+    dependencies:
+      array-buffer-byte-length: 1.0.0
+      call-bind: 1.0.2
+      define-properties: 1.2.0
+      get-intrinsic: 1.2.1
+      is-array-buffer: 3.0.2
+      is-shared-array-buffer: 1.0.2
 
   /arrify/1.0.1:
     resolution:
@@ -1857,14 +1878,15 @@ packages:
       is-arrayish: 0.2.1
     dev: true
 
-  /es-abstract/1.21.3:
+  /es-abstract/1.22.1:
     resolution:
       {
-        integrity: sha512-ZU4miiY1j3sGPFLJ34VJXEqhpmL+HGByCinGHv4HC+Fxl2fI2Z4yR6tl0mORnDr6PA8eihWo4LmSWDbvhALckg==,
+        integrity: sha512-ioRRcXMO6OFyRpyzV3kE1IIBd4WG5/kltnzdxSCqoP8CMGs/Li+M1uF5o7lOkZVFjDs+NLesthnF66Pg/0q0Lw==,
       }
     engines: { node: ">= 0.4" }
     dependencies:
       array-buffer-byte-length: 1.0.0
+      arraybuffer.prototype.slice: 1.0.1
       available-typed-arrays: 1.0.5
       call-bind: 1.0.2
       es-set-tostringtag: 2.0.1
@@ -1891,10 +1913,13 @@ packages:
       object-keys: 1.1.1
       object.assign: 4.1.4
       regexp.prototype.flags: 1.5.0
+      safe-array-concat: 1.0.0
       safe-regex-test: 1.0.0
       string.prototype.trim: 1.2.7
       string.prototype.trimend: 1.0.6
       string.prototype.trimstart: 1.0.6
+      typed-array-buffer: 1.0.0
+      typed-array-byte-length: 1.0.0
       typed-array-byte-offset: 1.0.0
       typed-array-length: 1.0.4
       unbox-primitive: 1.0.2
@@ -1908,7 +1933,7 @@ packages:
     engines: { node: ">= 0.4" }
     dependencies:
       define-properties: 1.2.0
-      es-abstract: 1.21.3
+      es-abstract: 1.22.1
       function-bind: 1.1.1
       functions-have-names: 1.2.3
       get-intrinsic: 1.2.1
@@ -2173,7 +2198,7 @@ packages:
     dependencies:
       call-bind: 1.0.2
       define-properties: 1.2.0
-      es-abstract: 1.21.3
+      es-abstract: 1.22.1
       functions-have-names: 1.2.3
 
   /functions-have-names/1.2.3:
@@ -2750,6 +2775,12 @@ packages:
       is-docker: 2.2.1
     dev: false
 
+  /isarray/2.0.5:
+    resolution:
+      {
+        integrity: sha512-xHjhDr3cNBK0BzdUJSPXZntQUx/mwMS5Rw4A7lPJ90XGAO6ISP/ePDNuo0vhqOZU+UD5JoodwCAAoZQd3FeAKw==,
+      }
+
   /isexe/2.0.0:
     resolution:
       {
@@ -2813,7 +2844,7 @@ packages:
     dependencies:
       jws: 3.2.2
       lodash: 4.17.21
-      ms: 2.1.2
+      ms: 2.1.3
       semver: 7.5.4
     dev: false
 
@@ -3205,6 +3236,13 @@ packages:
       {
         integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==,
       }
+
+  /ms/2.1.3:
+    resolution:
+      {
+        integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==,
+      }
+    dev: false
 
   /mssql/9.1.1:
     resolution:
@@ -3939,7 +3977,7 @@ packages:
         integrity: sha512-V2hovdzFbOi77/WajaSMXk2OLm+xNIeQdMMuB7icj7bk6zi2F8GGAxigcnDFpJHbNyNcgyJDiP+8nOrY5cZGrA==,
       }
 
-  /rollup-plugin-dts/5.3.0_btijhbnqj3bkl7p6fnurpsgzhq:
+  /rollup-plugin-dts/5.3.0_afuk5ckrta3fepxfxriis2nsxm:
     resolution:
       {
         integrity: sha512-8FXp0ZkyZj1iU5klkIJYLjIq/YZSwBoERu33QBDxm/1yw5UU4txrEtcmMkrq+ZiKu3Q4qvPCNqc3ovX6rjqzbQ==,
@@ -3950,13 +3988,13 @@ packages:
       typescript: ^4.1 || ^5.0
     dependencies:
       magic-string: 0.30.1
-      rollup: 3.26.2
+      rollup: 3.26.3
       typescript: 5.1.6
     optionalDependencies:
       "@babel/code-frame": 7.22.5
     dev: false
 
-  /rollup-plugin-sourcemaps/0.6.3_qemc2fb4b3fotc6byeomtlcgue:
+  /rollup-plugin-sourcemaps/0.6.3_tdxnvay2rfkvgs3dcqbq4j6u4m:
     resolution:
       {
         integrity: sha512-paFu+nT1xvuO1tPFYXGe+XnQvg4Hjqv/eIhG8i5EspfYYPBKL57X7iVbfv55aNVASg3dzWvES9dmWsL2KhfByw==,
@@ -3969,16 +4007,16 @@ packages:
       "@types/node":
         optional: true
     dependencies:
-      "@rollup/pluginutils": 5.0.2_rollup@3.26.2
+      "@rollup/pluginutils": 5.0.2_rollup@3.26.3
       "@types/node": 18.16.19
-      rollup: 3.26.2
+      rollup: 3.26.3
       source-map-resolve: 0.6.0
     dev: false
 
-  /rollup/3.26.2:
+  /rollup/3.26.3:
     resolution:
       {
-        integrity: sha512-6umBIGVz93er97pMgQO08LuH3m6PUb3jlDUUGFsNJB6VgTCUaDFpupf5JfU30529m/UKOgmiX+uY6Sx8cOYpLA==,
+        integrity: sha512-7Tin0C8l86TkpcMtXvQu6saWH93nhG3dGQ1/+l5V2TDMceTxO7kDiK6GzbfLWNNxqJXm591PcEZUozZm51ogwQ==,
       }
     engines: { node: ">=14.18.0", npm: ">=8.0.0" }
     hasBin: true
@@ -4003,6 +4041,18 @@ packages:
     dependencies:
       tslib: 2.6.0
     dev: true
+
+  /safe-array-concat/1.0.0:
+    resolution:
+      {
+        integrity: sha512-9dVEFruWIsnie89yym+xWTAYASdpw3CJV7Li/6zBewGf9z2i1j31rP6jnY0pHEO4QZh6N0K11bFjWmdR8UGdPQ==,
+      }
+    engines: { node: ">=0.4" }
+    dependencies:
+      call-bind: 1.0.2
+      get-intrinsic: 1.2.1
+      has-symbols: 1.0.3
+      isarray: 2.0.5
 
   /safe-buffer/5.2.1:
     resolution:
@@ -4333,7 +4383,7 @@ packages:
     dependencies:
       call-bind: 1.0.2
       define-properties: 1.2.0
-      es-abstract: 1.21.3
+      es-abstract: 1.22.1
 
   /string.prototype.trimend/1.0.6:
     resolution:
@@ -4343,7 +4393,7 @@ packages:
     dependencies:
       call-bind: 1.0.2
       define-properties: 1.2.0
-      es-abstract: 1.21.3
+      es-abstract: 1.22.1
 
   /string.prototype.trimstart/1.0.6:
     resolution:
@@ -4353,7 +4403,7 @@ packages:
     dependencies:
       call-bind: 1.0.2
       define-properties: 1.2.0
-      es-abstract: 1.21.3
+      es-abstract: 1.22.1
 
   /string_decoder/1.3.0:
     resolution:
@@ -4474,10 +4524,10 @@ packages:
     engines: { node: ">=8" }
     dev: true
 
-  /terser/5.19.0:
+  /terser/5.19.1:
     resolution:
       {
-        integrity: sha512-JpcpGOQLOXm2jsomozdMDpd5f8ZHh1rR48OFgWUH3QsyZcfPgv2qDCYbcDEAYNd4OZRj2bWYKpwdll/udZCk/Q==,
+        integrity: sha512-27hxBUVdV6GoNg1pKQ7Z5cbR6V9txPVyBA+FQw3BaZ1Wuzvztce5p156DaP0NVZNrMZZ+6iG9Syf7WgMNKDg2Q==,
       }
     engines: { node: ">=10" }
     hasBin: true
@@ -4611,6 +4661,29 @@ packages:
       }
     engines: { node: ">=8" }
     dev: true
+
+  /typed-array-buffer/1.0.0:
+    resolution:
+      {
+        integrity: sha512-Y8KTSIglk9OZEr8zywiIHG/kmQ7KWyjseXs1CbSo8vC42w7hg2HgYTxSWwP0+is7bWDc1H+Fo026CpHFwm8tkw==,
+      }
+    engines: { node: ">= 0.4" }
+    dependencies:
+      call-bind: 1.0.2
+      get-intrinsic: 1.2.1
+      is-typed-array: 1.1.10
+
+  /typed-array-byte-length/1.0.0:
+    resolution:
+      {
+        integrity: sha512-Or/+kvLxNpeQ9DtSydonMxCx+9ZXOswtwJn17SNLvhptaXYDJvkFFP5zbfU/uLmvnBJlI4yrnXRxpdWH/M5tNA==,
+      }
+    engines: { node: ">= 0.4" }
+    dependencies:
+      call-bind: 1.0.2
+      for-each: 0.3.3
+      has-proto: 1.0.1
+      is-typed-array: 1.1.10
 
   /typed-array-byte-offset/1.0.0:
     resolution:
