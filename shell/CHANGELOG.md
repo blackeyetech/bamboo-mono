@@ -1,5 +1,14 @@
 # @bs-core/shell
 
+## 1.2.0
+
+### Minor Changes
+
+- Added new functionality to all an App useing Bamboo Shell to be restarted using
+  a SIGHUP. This includes the ability to set a restart handler for the app.
+
+  Calling bs.restart() will now restart the app
+
 ## 1.1.0
 
 ### Minor Changes

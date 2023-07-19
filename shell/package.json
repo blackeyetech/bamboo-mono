@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "@bs-core/shell",
   "description": "The Bamboo Shell",
   "exports": {
@@ -37,7 +37,5 @@
   "dependencies": {
     "path-to-regexp": "^6.2.1"
   },
-  "publishConfig": {
-    "access": "public"
-  }
+  "private": false
 }

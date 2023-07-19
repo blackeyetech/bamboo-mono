@@ -81,7 +81,7 @@ let middleware2: Middleware = async (_1, _2, next) => {
   bs.info("finished the middle two");
 };
 
-bs.addHttpServer("lo", 8080, {
+await bs.addHttpServer("lo", 8080, {
   loggerTag: "HttpMan1",
   defaultMiddlewareList: [
     HttpServer.body(),
@@ -91,7 +91,7 @@ bs.addHttpServer("lo", 8080, {
   ],
 });
 
-let httpMan2 = bs.addHttpServer("lo", 8081, {
+let httpMan2 = await bs.addHttpServer("lo", 8081, {
   loggerTag: "HttpMan2",
   defaultMiddlewareList: [HttpServer.body(), HttpServer.json(), middleware2],
 });
@@ -209,5 +209,15 @@ bs.httpServer(0)?.endpoint("GET", "/test2", async (_, res) => {
 
 bs.httpServer(0)?.addHealthcheck(async () => false);
 
-// bs.exit(0, false);
-// bs.init();
+await bs.sleep(5);
+
+bs.setRestartHandler(async () => {
+  bs.info("We are restarting!!!");
+
+  httpMan2 = await bs.addHttpServer("lo", 8081, {
+    loggerTag: "HttpMan2",
+    defaultMiddlewareList: [HttpServer.body(), HttpServer.json(), middleware2],
+  });
+});
+
+// bs.restart();

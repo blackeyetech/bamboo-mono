@@ -7,9 +7,7 @@
     "build": "tsc ",
     "test": "ts-node src/main.ts"
   },
-  "publishConfig": {
-    "access": "restricted"
-  },
+  "private": true,
   "keywords": [],
   "author": "",
   "license": "ISC",

@@ -8,6 +8,7 @@ import * as http from "node:http";
 import * as https from "node:https";
 import * as os from "node:os";
 import * as fs from "node:fs";
+import * as net from "node:net";
 
 // Types here
 export interface ServerResponse extends http.ServerResponse {
@@ -119,6 +120,9 @@ type MethodListElement = {
 
 // HttpServer class here
 export class HttpServer {
+  private _socketMap: Map<number, net.Socket>;
+  private _socketId: number;
+
   private _networkInterface: string;
   private _networkPort: number;
   private _networkIp: string;
@@ -167,13 +171,14 @@ export class HttpServer {
       ...httpConfig,
     };
 
+    this._socketMap = new Map();
+    this._socketId = 0;
+
     this._networkIp = "";
     this._baseUrl = "";
 
     this._logger = bsLogger;
     this._loggerTag = config.loggerTag;
-
-    this._logger.startupMsg(this._loggerTag, "Initialising HTTP manager ...");
 
     this._networkInterface = networkInterface;
     this._networkPort = networkPort;
@@ -203,13 +208,6 @@ export class HttpServer {
     }
 
     this._defaultMiddlewareList = config.defaultMiddlewareList;
-
-    this.setupHttpServer();
-
-    this._logger.startupMsg(
-      this._loggerTag,
-      "Now listening. HTTP manager started!",
-    );
   }
 
   // Getter methods here
@@ -230,96 +228,86 @@ export class HttpServer {
   }
 
   // Private methods here
-  private setupHttpServer(): void {
+  private findInterfaceIp(networkInterface: string): string | null {
     this._logger.startupMsg(
       this._loggerTag,
-      `Finding IP for interface (${this._networkInterface})`,
+      `Finding IP for interface (${networkInterface})`,
     );
 
     let ifaces = os.networkInterfaces();
     this._logger.startupMsg(this._loggerTag, "Interfaces on host: %j", ifaces);
 
-    if (ifaces[this._networkInterface] === undefined) {
-      throw new Error(
-        `${this._networkInterface} is not an interface on this server`,
-      );
+    if (ifaces[networkInterface] === undefined) {
+      return null;
     }
 
-    this._networkIp = "";
+    let ip = "";
 
     // Search for the first I/F with a family of type IPv4
-    let found = ifaces[this._networkInterface]?.find(
-      (i) => i.family === "IPv4",
-    );
+    let found = ifaces[networkInterface]?.find((i) => i.family === "IPv4");
     if (found !== undefined) {
-      this._networkIp = found.address;
+      ip = found.address;
       this._logger.startupMsg(
         this._loggerTag,
-        `Found IP (${this._networkIp}) for interface ${this._networkInterface}`,
-      );
-      this._logger.startupMsg(
-        this._loggerTag,
-        `Will listen on interface ${this._networkInterface} (IP: ${this._networkIp})`,
+        `Found IP (${ip}) for interface ${networkInterface}`,
       );
     }
 
-    if (this._networkIp.length === 0) {
-      throw new Error(
-        `${this._networkInterface} is not an interface on this server`,
-      );
+    if (ip.length === 0) {
+      return null;
     }
 
-    // Create either a HTTP or HTTPS server
-    if (this._enableHttps) {
-      this._baseUrl = `https://${this._networkIp}:${this._networkPort}`;
+    return ip;
+  }
 
-      if (this._keyFile === undefined) {
-        throw new HttpConfigError("HTTPS is enabled but no key file provided!");
-      }
-      if (this._certFile === undefined) {
-        throw new HttpConfigError(
-          "HTTPS is enabled but no cert file provided!",
+  private async startListening(server: http.Server): Promise<void> {
+    // Start listening
+    server.listen(this._networkPort, this._networkIp);
+
+    // Since this is an async event we need to wait for the "listening" event
+    // to fire, so lets wrap this in a Promise and resolve the promise when
+    // it happens
+    return new Promise((resolve, _) => {
+      server.on("listening", () => {
+        this._logger.startupMsg(
+          this._loggerTag,
+          `Now listening on (${this._baseUrl}). HTTP manager started!`,
         );
-      }
 
-      const options = {
-        key: fs.readFileSync(this._keyFile),
-        cert: fs.readFileSync(this._certFile),
-      };
+        resolve();
+      });
 
-      this._logger.startupMsg(
-        this._loggerTag,
-        `Attempting to listen on (${this._baseUrl})`,
-      );
+      // We also want to track all of the sockets that are opened
+      server.on("connection", (socket: net.Socket) => {
+        // We need a local copy of the socket ID for this closure to work
+        let socketId = this._socketId++;
+        this._socketMap.set(socketId, socket);
 
-      this._server = https
-        .createServer(options, (req, res) =>
-          this.handleHttpReq(req, res, "https"),
-        )
-        .listen(this._networkPort, this._networkIp);
-    } else {
-      this._baseUrl = `http://${this._networkIp}:${this._networkPort}`;
+        this._logger.trace(
+          this._loggerTag,
+          "'connection' for socketId (%d) on remote connection (%s/%s)",
+          socketId,
+          socket.remoteAddress,
+          socket.remotePort,
+        );
 
-      this._logger.startupMsg(
-        this._loggerTag,
-        `Attempting to listen on (${this._baseUrl})`,
-      );
+        // Check when the socket closes
+        socket.on("close", () => {
+          // First check if the socket has not been closed during a stop()
+          if (this._socketMap.has(socketId)) {
+            this._socketMap.delete(socketId);
 
-      this._server = http
-        .createServer((req, res) => this.handleHttpReq(req, res, "http"))
-        .listen(this._networkPort, this._networkIp);
-    }
-
-    this._server.keepAliveTimeout = this._httpKeepAliveTimeout;
-    this._server.headersTimeout = this._httpHeaderTimeout;
-
-    // Now we need to add the endpoint for healthchecks
-    this.endpoint(
-      "GET",
-      this._healthCheckPath,
-      (req, res) => this.healthcheckCallback(req, res),
-      { defaultMiddlewares: false },
-    );
+            this._logger.trace(
+              this._loggerTag,
+              "'close' for socketId (%d) on remote connection (%s/%s)",
+              socketId,
+              socket.remoteAddress,
+              socket.remotePort,
+            );
+          }
+        });
+      });
+    });
   }
 
   private handlePreflightReq(req: ServerRequest, res: ServerResponse): void {
@@ -666,7 +654,97 @@ export class HttpServer {
   }
 
   // Public methods here
+  async start(): Promise<void> {
+    this._logger.startupMsg(this._loggerTag, "Initialising HTTP manager ...");
+
+    let ip = this.findInterfaceIp(this._networkInterface);
+
+    if (ip === null) {
+      throw new Error(
+        `${this._networkInterface} is not an interface on this server`,
+      );
+    }
+
+    this._networkIp = ip;
+
+    this._logger.startupMsg(
+      this._loggerTag,
+      `Will listen on interface ${this._networkInterface} (IP: ${this._networkIp})`,
+    );
+
+    // Create either a HTTP or HTTPS server
+    if (this._enableHttps) {
+      this._baseUrl = `https://${this._networkIp}:${this._networkPort}`;
+
+      if (this._keyFile === undefined) {
+        throw new HttpConfigError("HTTPS is enabled but no key file provided!");
+      }
+      if (this._certFile === undefined) {
+        throw new HttpConfigError(
+          "HTTPS is enabled but no cert file provided!",
+        );
+      }
+
+      const options = {
+        key: fs.readFileSync(this._keyFile),
+        cert: fs.readFileSync(this._certFile),
+      };
+
+      this._logger.startupMsg(
+        this._loggerTag,
+        `Attempting to listen on (${this._baseUrl})`,
+      );
+
+      this._server = https.createServer(options, (req, res) =>
+        this.handleHttpReq(req, res, "https"),
+      );
+    } else {
+      this._baseUrl = `http://${this._networkIp}:${this._networkPort}`;
+
+      this._logger.startupMsg(
+        this._loggerTag,
+        `Attempting to listen on (${this._baseUrl})`,
+      );
+
+      this._server = http.createServer((req, res) =>
+        this.handleHttpReq(req, res, "http"),
+      );
+    }
+
+    this._server.keepAliveTimeout = this._httpKeepAliveTimeout;
+    this._server.headersTimeout = this._httpHeaderTimeout;
+
+    await this.startListening(this._server);
+
+    // Now we need to add the endpoint for healthchecks
+    this.endpoint(
+      "GET",
+      this._healthCheckPath,
+      (req, res) => this.healthcheckCallback(req, res),
+      { defaultMiddlewares: false },
+    );
+  }
+
   async stop(): Promise<void> {
+    this._logger.shutdownMsg(
+      this._loggerTag,
+      "Closing all connections now ...",
+    );
+
+    this._socketMap.forEach((socket: net.Socket, key: number) => {
+      socket.destroy();
+      this._logger.trace(
+        this._loggerTag,
+        "Destroying socketId (%d) for remote connection (%s/%s)",
+        key,
+        socket.remoteAddress,
+        socket.remotePort,
+      );
+    });
+
+    // Just in case someone calls stop() a 2nd time
+    this._socketMap.clear();
+
     if (this._server !== undefined) {
       this._logger.shutdownMsg(
         this._loggerTag,

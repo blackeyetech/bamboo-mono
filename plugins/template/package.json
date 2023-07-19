@@ -34,10 +34,8 @@
   ],
   "author": "Black Eye Technology",
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
   "dependencies": {
     "@bs-core/shell": "workspace:^1.1.0"
-  }
+  },
+  "private": false
 }

@@ -62,8 +62,10 @@ let _httpServerList: httpServer.HttpServer[];
 let _pluginList: { plugin: BSPlugin; stopHandler: () => Promise<void> }[];
 let _pluginMap: Record<string, BSPlugin>;
 
-let _stopHandler: () => Promise<void>;
 let _finallyHandler: () => Promise<void>;
+let _stopHandler: () => Promise<void>;
+// Do this only at start up. If the user sets it we shouldn't change it
+let _restartHandler = async (): Promise<void> => {};
 
 let _logger: logger.AbstractLogger;
 
@@ -82,43 +84,6 @@ export type BSQuestionOptions = {
 // The shell object here
 export const bs = Object.freeze({
   request: httpReq.request,
-
-  // The init function - this does not need to be called by the user
-  // this is here mainly to assit with testing. Should be called after
-  // a soft exit
-  init: (): void => {
-    // Initialise the private variables
-    _httpServerList = [];
-    _pluginList = [];
-    _pluginMap = {};
-    _stopHandler = _defaultStopHandler;
-    _finallyHandler = _defaultFinallyHandler;
-
-    // Initialise and start the logger
-    _logger = loggerInit();
-    _logger.start();
-
-    // Set the httpReq logger
-    httpReq.setLogger(_logger);
-
-    // Nopw spit out the versions
-    bs.startupMsg(`Bamboo Shell version (${VERSION})`);
-    bs.startupMsg(`NODE_ENV is (${NODE_ENV})`);
-
-    // Now set up the event handler
-    bs.startupMsg("Setting up shutdown event handlers ...");
-    // Call exit() on a Ctrl-C
-    process.on("SIGINT", _shutdownHandler);
-    // Call exit() when the program is terminated
-    process.on("SIGTERM", _shutdownHandler);
-    // Call exit() during normal programming termination
-    process.on("beforeExit", _shutdownHandler);
-    // Catch and log any execptions and then call exit()
-    process.on("uncaughtException", _exceptionHandler);
-
-    // And it's party time!
-    bs.startupMsg("Ready to Rock and Roll baby!");
-  },
 
   // Config helper methods here
   getConfigStr: (
@@ -223,6 +188,10 @@ export const bs = Object.freeze({
     _stopHandler = handler;
   },
 
+  setRestartHandler: (handler: () => Promise<void>) => {
+    _restartHandler = handler;
+  },
+
   setLogger(newLogger: logger.AbstractLogger): void {
     _logger = newLogger;
   },
@@ -269,6 +238,7 @@ export const bs = Object.freeze({
     process.removeListener("SIGTERM", _shutdownHandler);
     process.removeListener("beforeExit", _shutdownHandler);
     process.removeListener("uncaughtException", _exceptionHandler);
+    process.removeListener("SIGHUP", bs.restart);
 
     bs.shutdownMsg("So long and thanks for all the fish!");
 
@@ -278,6 +248,17 @@ export const bs = Object.freeze({
     if (hard) {
       process.exit(code);
     }
+  },
+
+  restart: async () => {
+    bs.info("Restarting now!");
+
+    // Do a soft exit
+    await bs.exit(0, false);
+    // Then re-init this bad boy
+    init();
+    // Now call the users restart handler
+    await _restartHandler();
   },
 
   shutdownError: async (code: number = 1, testing: boolean = false) => {
@@ -293,11 +274,12 @@ export const bs = Object.freeze({
   },
 
   // Utility functions here
-  addHttpServer: (
+  addHttpServer: async (
     networkInterface: string,
     networkPort: number,
     httpConfig: httpServer.HttpConfig = {},
-  ): httpServer.HttpServer => {
+    startServer: boolean = true,
+  ): Promise<httpServer.HttpServer> => {
     let server = new httpServer.HttpServer(
       networkInterface,
       networkPort,
@@ -305,16 +287,21 @@ export const bs = Object.freeze({
       httpConfig,
     );
 
+    // Automatically start the server if requested
+    if (startServer) {
+      await server.start();
+    }
+
     _httpServerList.push(server);
 
     return server;
   },
 
-  getHttpServer: (serverNum: number): httpServer.HttpServer | undefined => {
+  httpServer: (serverNum: number): httpServer.HttpServer | undefined => {
     return _httpServerList.length ? _httpServerList[serverNum] : undefined;
   },
 
-  getPlugin: (plugin: string): BSPlugin | undefined => {
+  plugin: (plugin: string): BSPlugin | undefined => {
     return _pluginMap[plugin];
   },
 
@@ -558,5 +545,41 @@ function loggerInit(): logger.AbstractLogger {
   return new LoggerConsole(timestamp, timestampLocale, timestampTz, logLevel);
 }
 
+function init(): void {
+  // Initialise the private variables
+  _httpServerList = [];
+  _pluginList = [];
+  _pluginMap = {};
+  _stopHandler = _defaultStopHandler;
+  _finallyHandler = _defaultFinallyHandler;
+
+  // Initialise and start the logger
+  _logger = loggerInit();
+  _logger.start();
+
+  // Set the httpReq logger
+  httpReq.setLogger(_logger);
+
+  // Nopw spit out the versions
+  bs.startupMsg(`Bamboo Shell version (${VERSION})`);
+  bs.startupMsg(`NODE_ENV is (${NODE_ENV})`);
+
+  // Now set up the event handler
+  bs.startupMsg("Setting up shutdown event handlers ...");
+  // Call exit() on a Ctrl-C
+  process.on("SIGINT", _shutdownHandler);
+  // Call exit() when the program is terminated
+  process.on("SIGTERM", _shutdownHandler);
+  // Call exit() during normal programming termination
+  process.on("beforeExit", _shutdownHandler);
+  // Catch and log any execptions and then call exit()
+  process.on("uncaughtException", _exceptionHandler);
+  // Call resatrt() on a HUP signal
+  process.on("SIGHUP", bs.restart);
+
+  // And it's party time!
+  bs.startupMsg("Ready to Rock and Roll baby!");
+}
+
 // OK - lets light this candle!
-bs.init();
+init();

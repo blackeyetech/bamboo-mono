@@ -34,14 +34,12 @@
   ],
   "author": "Black Eye Technology",
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
   "dependencies": {
     "@bs-core/shell": "workspace:^1.1.0",
     "ldapjs": "^3.0.3"
   },
   "devDependencies": {
     "@types/ldapjs": "^2.2.5"
-  }
+  },
+  "private": false
 }
