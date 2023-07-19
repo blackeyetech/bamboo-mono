@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.2.1
+
+### Patch Changes
+
+- Update to display github reo for bamboo-mono
+
 ## 1.2.0
 
 ### Minor Changes

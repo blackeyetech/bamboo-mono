@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "name": "@bs-core/shell",
   "description": "The Bamboo Shell",
   "exports": {
@@ -34,6 +34,14 @@
   ],
   "author": "Black Eye Technology",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blackeyetech/bamboo-mono.git"
+  },
+  "bugs": {
+    "url": "https://github.com/blackeyetech/bamboo-mono/issues"
+  },
+  "homepage": "https://github.com/blackeyetech/bamboo-mono#readme",
   "dependencies": {
     "path-to-regexp": "^6.2.1"
   },
