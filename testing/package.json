@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@bs-core/shell": "workspace:^1.0.1"
+    "@bs-core/shell": "workspace:^1.0.1",
+    "@bs-plugins/template": "workspace:^"
   }
 }

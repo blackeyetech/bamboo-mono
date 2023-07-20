@@ -135,6 +135,12 @@ importers:
       "@bs-core/shell":
         specifier: workspace:^1.0.1
         version: link:../shell
+      "@bs-plugins/jira":
+        specifier: workspace:^
+        version: link:../plugins/jira
+      "@bs-plugins/template":
+        specifier: workspace:^
+        version: link:../plugins/template
 
 packages:
   /@azure/abort-controller@1.1.0:

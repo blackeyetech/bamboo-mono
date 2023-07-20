@@ -73,9 +73,9 @@ export class Jira extends BSPlugin {
   private _sessionHeader: Record<string, string>; // Used if logged in
   private _basicAuthHeader: Record<string, string>; // Used if not logged in
 
-  constructor(jiraConfig: JiraConfig) {
+  constructor(name: string, jiraConfig: JiraConfig) {
     super(
-      "Jira",
+      name,
       // NOTE: PLUGIN_VERSION is replaced with package.json#version by a
       // rollup plugin at build time
       "PLUGIN_VERSION",

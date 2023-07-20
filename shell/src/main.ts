@@ -307,6 +307,21 @@ export const bs = Object.freeze({
     return _httpServerList.length ? _httpServerList[serverNum] : undefined;
   },
 
+  addPlugin: <T extends BSPlugin>(
+    pluginClass: new (name: string, options: any) => T,
+    name: string,
+    options: any,
+  ) => {
+    let plugin = new pluginClass(name, options);
+    _pluginList.push({
+      plugin,
+      stopHandler: async () => {
+        plugin.stopHandler();
+      },
+    });
+    _pluginMap[name] = plugin;
+  },
+
   plugin: (plugin: string): BSPlugin | undefined => {
     return _pluginMap[plugin];
   },
@@ -408,13 +423,6 @@ export class BSPlugin {
     this._version = version;
 
     this.startupMsg(`Adding plugin ${name}`);
-    _pluginList.push({
-      plugin: this,
-      stopHandler: async () => {
-        this.stop();
-      },
-    });
-    _pluginMap[this._name] = this;
 
     this.startupMsg("Initialising ...");
   }
@@ -432,6 +440,10 @@ export class BSPlugin {
 
   get version(): string {
     return this._version;
+  }
+
+  get stopHandler(): () => Promise<void> {
+    return this.stop;
   }
 
   // Private methods here

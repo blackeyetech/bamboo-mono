@@ -8,6 +8,8 @@ import {
   HttpError,
 } from "@bs-core/shell";
 
+import { Jira, JiraConfig } from "@bs-plugins/jira";
+
 // import * as http from "node:http";
 
 // process.on("uncaughtException", (e) => {
@@ -23,7 +25,19 @@ bs.setFinallyHandler(async () => {
   bs.shutdownMsg("Bye 2!");
 });
 
-bs.info("Hello world");
+let options: JiraConfig = { password: "", server: "", user: "" };
+bs.addPlugin(Jira, "t1", options);
+bs.addPlugin(Jira, "t2", options);
+bs.addPlugin(Jira, "t3", options);
+
+let t1 = bs.plugin("t1");
+bs.info(t1.name);
+let t2 = bs.plugin("t2");
+bs.info(t2.name);
+let t3 = bs.plugin("t3");
+bs.info(t3.name);
+
+bs.trace("(%s) (%s)", "hello", "world");
 
 // let b = $.getConfigBool({ config: "XXX", defaultVal: true });
 // $.info("Bool (%j)", b);
@@ -236,4 +250,4 @@ bs.info("setting const %j", bs.setConst("test2", "hello"));
 test2 = bs.getConst("test2");
 bs.info("test2 const is %j", test2);
 
-// bs.restart();
+bs.restart();
