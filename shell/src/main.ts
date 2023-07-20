@@ -317,7 +317,7 @@ export const bs = Object.freeze({
     name: string,
     pluginClass: new (name: string, options?: any) => T,
     config: any = {},
-  ) => {
+  ): BSPlugin => {
     // Make sure we don't have a duplicate name
     if (_pluginList.find((plugin) => plugin.name === name) !== undefined) {
       throw Error(`There is already a plugin with the name ${name}`);
@@ -328,6 +328,8 @@ export const bs = Object.freeze({
 
     // And then cache the plugin
     _pluginList.push(plugin);
+
+    return plugin;
   },
 
   plugin: (name: string): BSPlugin | undefined => {

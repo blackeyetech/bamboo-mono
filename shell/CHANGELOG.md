@@ -1,5 +1,12 @@
 # @bs-core/shell
 
+## 1.3.3
+
+### Patch Changes
+
+- Changed addPlugin() to return the new plugin so the user doesn't have
+  to call plugin() immediately after adding the plugin
+
 ## 1.3.2
 
 ### Patch Changes
