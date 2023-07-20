@@ -220,4 +220,20 @@ bs.setRestartHandler(async () => {
   });
 });
 
+bs.setGlobal("test1", 1);
+let test1 = bs.getGlobal("test1");
+bs.info("test1 global is %j", test1);
+
+bs.setGlobal("test1", "hello");
+test1 = bs.getGlobal("test1");
+bs.info("test1 global is %j", test1);
+
+bs.info("setting const %j", bs.setConst("test2", 1));
+let test2 = bs.getConst("test2");
+bs.info("test2 const is %j", test2);
+
+bs.info("setting const %j", bs.setConst("test2", "hello"));
+test2 = bs.getConst("test2");
+bs.info("test2 const is %j", test2);
+
 // bs.restart();

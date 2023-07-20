@@ -1,5 +1,17 @@
 # @bs-core/shell
 
+## 1.3.0
+
+### Minor Changes
+
+- Added global store and const store to bs to allow for convient passing of
+  globals and consts. The following methods have been added to bs:
+
+  - setGlobal()
+  - getGlocal()
+  - setConst()
+  - gtConst()
+
 ## 1.2.1
 
 ### Patch Changes

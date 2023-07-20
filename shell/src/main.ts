@@ -61,6 +61,8 @@ const _exceptionHandler = async (e: Error) => {
 let _httpServerList: httpServer.HttpServer[];
 let _pluginList: { plugin: BSPlugin; stopHandler: () => Promise<void> }[];
 let _pluginMap: Record<string, BSPlugin>;
+let _globalStore: Map<string, any>;
+let _constStore: Map<string, any>;
 
 let _finallyHandler: () => Promise<void>;
 let _stopHandler: () => Promise<void>;
@@ -303,6 +305,29 @@ export const bs = Object.freeze({
 
   plugin: (plugin: string): BSPlugin | undefined => {
     return _pluginMap[plugin];
+  },
+
+  setGlobal: (name: string, value: any): void => {
+    // Can set a global multiple times
+    _globalStore.set(name, value);
+  },
+
+  getGlobal: (name: string): any => {
+    return _globalStore.get(name);
+  },
+
+  setConst: (name: string, value: any): boolean => {
+    // Can only set a const once
+    if (_constStore.has(name)) {
+      return false;
+    }
+
+    _constStore.set(name, value);
+    return true;
+  },
+
+  getConst: (name: string): any => {
+    return _constStore.get(name);
   },
 
   sleep: async (durationInSeconds: number): Promise<void> => {
@@ -550,6 +575,9 @@ function init(): void {
   _httpServerList = [];
   _pluginList = [];
   _pluginMap = {};
+  _globalStore = new Map();
+  _constStore = new Map();
+
   _stopHandler = _defaultStopHandler;
   _finallyHandler = _defaultFinallyHandler;
 
