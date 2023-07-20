@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "@bs-plugins/o365",
   "description": "Bamboo Shell plugin for Office 365",
   "exports": {
@@ -39,7 +39,7 @@
     "@microsoft/microsoft-graph-types": "^2.35.0"
   },
   "dependencies": {
-    "@bs-core/shell": "workspace:^1.1.0"
+    "@bs-core/shell": "workspace:^"
   },
   "private": false
 }

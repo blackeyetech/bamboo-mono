@@ -9,7 +9,7 @@ import { BSPlugin } from "@bs-core/shell";
 
 // Template class here
 export class Template extends BSPlugin {
-  constructor(name: string) {
+  constructor(name: string, _: any) {
     super(
       name,
       // NOTE: PLUGIN_VERSION is replaced with package.json#version by a

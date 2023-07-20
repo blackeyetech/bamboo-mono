@@ -4,9 +4,6 @@
 // imports here
 import { AbstractLogger } from "./logger.js";
 
-// Private variables here
-let _logger: AbstractLogger | undefined;
-
 // Types here
 export type ReqRes = {
   statusCode: number;
@@ -176,18 +173,13 @@ async function handleResponseData(results: Response): Promise<object | string> {
 }
 
 // Public methods here
-export let setLogger = (logger: AbstractLogger) => {
-  _logger = logger;
-};
-
 export let request = async (
   origin: string,
   path: string,
+  logger: AbstractLogger,
   reqOptions?: ReqOptions,
 ): Promise<ReqRes> => {
-  if (_logger !== undefined) {
-    _logger.trace("httpReq for origin (%s) path (%s)", origin, path);
-  }
+  logger.trace("httpReq", "Request for origin (%s) path (%s)", origin, path);
 
   // Set the default values
   let options = {

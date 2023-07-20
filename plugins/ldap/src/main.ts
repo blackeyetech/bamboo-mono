@@ -29,9 +29,9 @@ export class Ldap extends BSPlugin {
   private _serviceHeartBeatTimeout?: NodeJS.Timeout;
   private _serviceLdapClient?: ldap.Client;
 
-  constructor(config: LdapConfig) {
+  constructor(name: string, config: LdapConfig) {
     super(
-      "ldap",
+      name,
       // NOTE: PLUGIN_VERSION is replaced with package.json#version by a
       // rollup plugin at build time
       "PLUGIN_VERSION",

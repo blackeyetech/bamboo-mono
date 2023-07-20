@@ -84,7 +84,14 @@ export type BSQuestionOptions = {
 
 // The shell object here
 export const bs = Object.freeze({
-  request: httpReq.request,
+  // request wrapper
+  request: async (
+    origin: string,
+    path: string,
+    reqOptions?: httpReq.ReqOptions,
+  ): Promise<httpReq.ReqRes> => {
+    return httpReq.request(origin, path, _logger, reqOptions);
+  },
 
   // Config helper methods here
   getConfigStr: (
@@ -418,11 +425,13 @@ export class BSPlugin {
   // Properties here
   private _name: string;
   private _version: string;
+  private _logger: logger.AbstractLogger;
 
   // Constructor here
   constructor(name: string, version: string) {
     this._name = name;
     this._version = version;
+    this._logger = _logger;
 
     this.startupMsg("Initialising ...");
   }
@@ -447,106 +456,44 @@ export class BSPlugin {
   }
 
   // Private methods here
-
-  // Static metods here
-  static async question(
-    ask: string,
-    questionOptions?: BSQuestionOptions,
-  ): Promise<string> {
-    return bs.question(ask, questionOptions);
+  protected setLogger(newLogger: logger.AbstractLogger): void {
+    this._logger = newLogger;
   }
 
-  // Public methods here
-  getConfigStr(
-    config: string,
-    defaultVal?: string,
-    options?: BSConfigOptions,
-  ): string {
-    // This either returns a string or it throws
-    return <string>configMan.get({
-      config,
-      type: configMan.Types.String,
-      logTag: this._name,
-      logger: _logger,
-      defaultVal,
-      ...options,
-    });
+  protected fatal(...args: any): void {
+    this._logger.fatal(this._name, ...args);
   }
 
-  getConfigBool(
-    config: string,
-    defaultVal?: boolean,
-    options?: BSConfigOptions,
-  ): boolean {
-    // This either returns a bool or it throws
-    return <boolean>configMan.get({
-      config,
-      type: configMan.Types.Boolean,
-      logTag: this._name,
-      logger: _logger,
-      defaultVal,
-      ...options,
-    });
+  protected error(...args: any): void {
+    this._logger.error(this._name, ...args);
   }
 
-  getConfigNum(
-    config: string,
-    defaultVal?: number,
-    options?: BSConfigOptions,
-  ): number {
-    // This either returns a number or it throws
-    return <number>configMan.get({
-      config,
-      type: configMan.Types.Number,
-      logTag: this._name,
-      logger: _logger,
-      defaultVal,
-      ...options,
-    });
+  protected warn(...args: any): void {
+    this._logger.warn(this._name, ...args);
   }
 
-  fatal(...args: any): void {
-    _logger.fatal(this._name, ...args);
+  protected info(...args: any): void {
+    this._logger.info(this._name, ...args);
   }
 
-  error(...args: any): void {
-    _logger.error(this._name, ...args);
+  protected startupMsg(...args: any): void {
+    this._logger.startupMsg(this._name, ...args);
   }
 
-  warn(...args: any): void {
-    _logger.warn(this._name, ...args);
+  protected shutdownMsg(...args: any): void {
+    this._logger.shutdownMsg(this._name, ...args);
   }
 
-  info(...args: any): void {
-    _logger.info(this._name, ...args);
+  protected debug(...args: any): void {
+    this._logger.debug(this._name, ...args);
   }
 
-  startupMsg(...args: any): void {
-    _logger.startupMsg(this._name, ...args);
+  protected trace(...args: any): void {
+    this._logger.trace(this._name, ...args);
   }
 
-  shutdownMsg(...args: any): void {
-    _logger.shutdownMsg(this._name, ...args);
-  }
-
-  debug(...args: any): void {
-    _logger.debug(this._name, ...args);
-  }
-
-  trace(...args: any): void {
-    _logger.trace(this._name, ...args);
-  }
-
-  force(...args: any): void {
-    _logger.force(this._name, ...args);
-  }
-
-  async request(
-    origin: string,
-    path: string,
-    reqOptions?: httpReq.ReqOptions,
-  ): Promise<httpReq.ReqRes> {
-    return httpReq.request(origin, path, reqOptions);
+  protected force(...args: any): void {
+    this._logger.force(this._name, ...args);
   }
 }
 
@@ -600,10 +547,7 @@ function init(): void {
   _logger = loggerInit();
   _logger.start();
 
-  // Set the httpReq logger
-  httpReq.setLogger(_logger);
-
-  // Nopw spit out the versions
+  // Now spit out the versions
   bs.startupMsg(`Bamboo Shell version (${VERSION})`);
   bs.startupMsg(`NODE_ENV is (${NODE_ENV})`);
 

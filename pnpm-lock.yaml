@@ -60,13 +60,13 @@ importers:
   plugins/jira:
     dependencies:
       "@bs-core/shell":
-        specifier: workspace:^1.1.0
+        specifier: workspace:^
         version: link:../../shell
 
   plugins/ldap:
     dependencies:
       "@bs-core/shell":
-        specifier: workspace:^1.1.0
+        specifier: workspace:^
         version: link:../../shell
       ldapjs:
         specifier: ^3.0.3
@@ -79,7 +79,7 @@ importers:
   plugins/o365:
     dependencies:
       "@bs-core/shell":
-        specifier: workspace:^1.1.0
+        specifier: workspace:^
         version: link:../../shell
     devDependencies:
       "@microsoft/microsoft-graph-types":
@@ -89,7 +89,7 @@ importers:
   plugins/postgresql:
     dependencies:
       "@bs-core/shell":
-        specifier: workspace:^1.1.0
+        specifier: workspace:^
         version: link:../../shell
       pg:
         specifier: ^8.11.1
@@ -102,7 +102,7 @@ importers:
   plugins/sql-server:
     dependencies:
       "@bs-core/shell":
-        specifier: workspace:^1.1.0
+        specifier: workspace:^
         version: link:../../shell
       mssql:
         specifier: ^9.1.1
@@ -115,13 +115,7 @@ importers:
   plugins/template:
     dependencies:
       "@bs-core/shell":
-        specifier: workspace:^1.1.0
-        version: link:../../shell
-
-  plugins/template2:
-    dependencies:
-      "@bs-core/shell":
-        specifier: workspace:^1.1.0
+        specifier: workspace:^
         version: link:../../shell
 
   shell:
@@ -133,7 +127,7 @@ importers:
   testing:
     dependencies:
       "@bs-core/shell":
-        specifier: workspace:^1.0.1
+        specifier: workspace:^
         version: link:../shell
       "@bs-plugins/jira":
         specifier: workspace:^
@@ -1944,7 +1938,7 @@ packages:
       is-regex: 1.1.4
       is-shared-array-buffer: 1.0.2
       is-string: 1.0.7
-      is-typed-array: 1.1.10
+      is-typed-array: 1.1.12
       is-weakref: 1.0.2
       object-inspect: 1.12.3
       object-keys: 1.1.1
@@ -1960,7 +1954,7 @@ packages:
       typed-array-byte-offset: 1.0.0
       typed-array-length: 1.0.4
       unbox-primitive: 1.0.2
-      which-typed-array: 1.1.10
+      which-typed-array: 1.1.11
 
   /es-aggregate-error@1.0.9:
     resolution:
@@ -2557,7 +2551,7 @@ packages:
     dependencies:
       call-bind: 1.0.2
       get-intrinsic: 1.2.1
-      is-typed-array: 1.1.10
+      is-typed-array: 1.1.12
 
   /is-arrayish@0.2.1:
     resolution:
@@ -2773,18 +2767,14 @@ packages:
     dependencies:
       has-symbols: 1.0.3
 
-  /is-typed-array@1.1.10:
+  /is-typed-array@1.1.12:
     resolution:
       {
-        integrity: sha512-PJqgEHiWZvMpaFZ3uTc8kHPM4+4ADTlDniuQL7cU/UDA0Ql7F70yGfHph3cLNe+c9toaigv+DFzTJKhc2CtO6A==,
+        integrity: sha512-Z14TF2JNG8Lss5/HMqt0//T9JeHXttXy5pH/DBU4vi98ozO2btxzq9MwYDZYnKwU8nRsz/+GVFVRDq3DkVuSPg==,
       }
     engines: { node: ">= 0.4" }
     dependencies:
-      available-typed-arrays: 1.0.5
-      call-bind: 1.0.2
-      for-each: 0.3.3
-      gopd: 1.0.1
-      has-tostringtag: 1.0.0
+      which-typed-array: 1.1.11
 
   /is-weakref@1.0.2:
     resolution:
@@ -4708,7 +4698,7 @@ packages:
     dependencies:
       call-bind: 1.0.2
       get-intrinsic: 1.2.1
-      is-typed-array: 1.1.10
+      is-typed-array: 1.1.12
 
   /typed-array-byte-length@1.0.0:
     resolution:
@@ -4720,7 +4710,7 @@ packages:
       call-bind: 1.0.2
       for-each: 0.3.3
       has-proto: 1.0.1
-      is-typed-array: 1.1.10
+      is-typed-array: 1.1.12
 
   /typed-array-byte-offset@1.0.0:
     resolution:
@@ -4733,7 +4723,7 @@ packages:
       call-bind: 1.0.2
       for-each: 0.3.3
       has-proto: 1.0.1
-      is-typed-array: 1.1.10
+      is-typed-array: 1.1.12
 
   /typed-array-length@1.0.4:
     resolution:
@@ -4743,7 +4733,7 @@ packages:
     dependencies:
       call-bind: 1.0.2
       for-each: 0.3.3
-      is-typed-array: 1.1.10
+      is-typed-array: 1.1.12
 
   /typescript@5.1.6:
     resolution:
@@ -4877,10 +4867,10 @@ packages:
       path-exists: 4.0.0
     dev: true
 
-  /which-typed-array@1.1.10:
+  /which-typed-array@1.1.11:
     resolution:
       {
-        integrity: sha512-uxoA5vLUfRPdjCuJ1h5LlYdmTLbYfums398v3WLkM+i/Wltl2/XyZpQWKbN++ck5L64SR/grOHqtXCUKmlZPNA==,
+        integrity: sha512-qe9UWWpkeG5yzZ0tNYxDmd7vo58HDBc39mZ0xWWpolAGADdFOzkfamWLDxkOWcvHQKVmdTyQdLD4NOfjLWTKew==,
       }
     engines: { node: ">= 0.4" }
     dependencies:
@@ -4889,7 +4879,6 @@ packages:
       for-each: 0.3.3
       gopd: 1.0.1
       has-tostringtag: 1.0.0
-      is-typed-array: 1.1.10
 
   /which@1.3.1:
     resolution:

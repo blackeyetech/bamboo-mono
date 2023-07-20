@@ -1,5 +1,5 @@
 // imports here
-import { BSPlugin, ReqRes } from "@bs-core/shell";
+import { bs, BSPlugin, ReqRes } from "@bs-core/shell";
 
 // Types here
 export type AuthDetails = {
@@ -107,7 +107,7 @@ export class Jira extends BSPlugin {
 
   // Public methods here
   public async login(auth?: AuthDetails): Promise<void> {
-    let res = await this.request(this._server, JiraResources.session, {
+    let res = await bs.request(this._server, JiraResources.session, {
       method: "POST",
       body: {
         username: auth !== undefined ? auth.username : this._user,
@@ -137,7 +137,7 @@ export class Jira extends BSPlugin {
     // Stop the timer first!
     clearInterval(this._timeout);
 
-    await this.request(this._server, JiraResources.session, {
+    await bs.request(this._server, JiraResources.session, {
       method: "DELETE",
       headers: {
         cookie: `JSESSIONID=${this._sessionId}`,
@@ -156,7 +156,7 @@ export class Jira extends BSPlugin {
       return this._fieldDict;
     }
 
-    let res = await this.request(this._server, JiraResources.field, {
+    let res = await bs.request(this._server, JiraResources.field, {
       method: "GET",
       headers:
         this._sessionId === null ? this._basicAuthHeader : this._sessionHeader,
@@ -193,7 +193,7 @@ export class Jira extends BSPlugin {
       issuetypeNames: issueType,
     };
 
-    let res = await this.request(this._server, JiraResources.createmeta, {
+    let res = await bs.request(this._server, JiraResources.createmeta, {
       method: "GET",
       searchParams,
       headers:
@@ -226,7 +226,7 @@ export class Jira extends BSPlugin {
   public async getComponents(
     projectKey: string,
   ): Promise<{ [key: string]: string }> {
-    let res = await this.request(
+    let res = await bs.request(
       this._server,
       `${JiraResources.components}/${projectKey}/components`,
       {
@@ -248,7 +248,7 @@ export class Jira extends BSPlugin {
   }
 
   public async getProjects(component?: string): Promise<any[]> {
-    let res = await this.request(this._server, JiraResources.project, {
+    let res = await bs.request(this._server, JiraResources.project, {
       method: "GET",
       headers:
         this._sessionId === null ? this._basicAuthHeader : this._sessionHeader,
@@ -275,7 +275,7 @@ export class Jira extends BSPlugin {
     project: string,
     body: Record<string, string>,
   ): Promise<void> {
-    await this.request(this._server, `${JiraResources.project}/${project}`, {
+    await bs.request(this._server, `${JiraResources.project}/${project}`, {
       method: "PUT",
       headers:
         this._sessionId === null ? this._basicAuthHeader : this._sessionHeader,
@@ -316,7 +316,7 @@ export class Jira extends BSPlugin {
       }
     }
 
-    let res = await this.request(this._server, JiraResources.issue, {
+    let res = await bs.request(this._server, JiraResources.issue, {
       method: "POST",
       body: issue,
       headers:
@@ -348,25 +348,19 @@ export class Jira extends BSPlugin {
       }
     }
 
-    let res = await this.request(
-      this._server,
-      `${JiraResources.issue}/${key}`,
-      {
-        method: "PUT",
-        body: issue,
-        searchParams: notifyUsers ? undefined : { notifyUsers: "false" },
-        headers:
-          this._sessionId === null
-            ? this._basicAuthHeader
-            : this._sessionHeader,
-      },
-    );
+    let res = await bs.request(this._server, `${JiraResources.issue}/${key}`, {
+      method: "PUT",
+      body: issue,
+      searchParams: notifyUsers ? undefined : { notifyUsers: "false" },
+      headers:
+        this._sessionId === null ? this._basicAuthHeader : this._sessionHeader,
+    });
 
     return res.body.key;
   }
 
   public async getIssue(idOrKey: string): Promise<any> {
-    let res = await this.request(
+    let res = await bs.request(
       this._server,
       `${JiraResources.issue}/${idOrKey}`,
       {
@@ -441,25 +435,19 @@ export class Jira extends BSPlugin {
       issue.update.labels.push({ [action]: label });
     }
 
-    let res = await this.request(
-      this._server,
-      `${JiraResources.issue}/${key}`,
-      {
-        method: "PUT",
-        body: issue,
-        searchParams: notifyUsers ? undefined : { notifyUsers: "false" },
-        headers:
-          this._sessionId === null
-            ? this._basicAuthHeader
-            : this._sessionHeader,
-      },
-    );
+    let res = await bs.request(this._server, `${JiraResources.issue}/${key}`, {
+      method: "PUT",
+      body: issue,
+      searchParams: notifyUsers ? undefined : { notifyUsers: "false" },
+      headers:
+        this._sessionId === null ? this._basicAuthHeader : this._sessionHeader,
+    });
 
     return res.body.key;
   }
 
   public async addComment(idOrKey: string, comment: string): Promise<void> {
-    await this.request(
+    await bs.request(
       this._server,
       `${JiraResources.issue}/${idOrKey}/comment`,
       {
@@ -476,7 +464,7 @@ export class Jira extends BSPlugin {
   }
 
   public async addWatcher(idOrKey: string, watcher: string): Promise<void> {
-    await this.request(
+    await bs.request(
       this._server,
       `${JiraResources.issue}/${idOrKey}/watchers`,
       {
@@ -491,7 +479,7 @@ export class Jira extends BSPlugin {
   }
 
   public async removeWatcher(idOrKey: string, watcher: string): Promise<void> {
-    await this.request(
+    await bs.request(
       this._server,
       `${JiraResources.issue}/${idOrKey}/watchers`,
       {
@@ -509,7 +497,7 @@ export class Jira extends BSPlugin {
   public async getTransitions(
     idOrKey: string,
   ): Promise<Record<string, string>> {
-    let res = await this.request(
+    let res = await bs.request(
       this._server,
       `${JiraResources.issue}/${idOrKey}/transitions`,
       {
@@ -571,7 +559,7 @@ export class Jira extends BSPlugin {
       transition: { id: transitionId },
     };
 
-    await this.request(
+    await bs.request(
       this._server,
       `${JiraResources.issue}/${idOrKey}/transitions`,
       {
@@ -591,21 +579,23 @@ export class Jira extends BSPlugin {
     let maxResults = 1000; // 1000 is the max you can get
 
     while (true) {
-      let res = await this.request(this._server, JiraResources.search, {
-        method: "GET",
-        headers:
-          this._sessionId === null
-            ? this._basicAuthHeader
-            : this._sessionHeader,
-        searchParams: {
-          jql,
-          startAt: startAt.toString(),
-          maxResults: maxResults.toString(),
-          fields: "key",
-        },
-      }).catch((e) => {
-        this.error(e);
-      });
+      let res = await bs
+        .request(this._server, JiraResources.search, {
+          method: "GET",
+          headers:
+            this._sessionId === null
+              ? this._basicAuthHeader
+              : this._sessionHeader,
+          searchParams: {
+            jql,
+            startAt: startAt.toString(),
+            maxResults: maxResults.toString(),
+            fields: "key",
+          },
+        })
+        .catch((e) => {
+          this.error(e);
+        });
 
       if (res === undefined) {
         break;
@@ -631,7 +621,7 @@ export class Jira extends BSPlugin {
   }
 
   public async getUserDashboardIds(userId: string): Promise<number[]> {
-    let res = await this.request(
+    let res = await bs.request(
       this._server,
       `/${SCRIPTRUNNER_DASHBOARDS_N_FILTERS_URL}/params`,
       {
@@ -662,7 +652,7 @@ export class Jira extends BSPlugin {
   }
 
   public async getUserFilterIds(userId: string): Promise<string[]> {
-    let res = await this.request(
+    let res = await bs.request(
       this._server,
       `/${SCRIPTRUNNER_DASHBOARDS_N_FILTERS_URL}/params`,
       {
@@ -697,7 +687,7 @@ export class Jira extends BSPlugin {
     toUserId: string,
     dashboardIds: number[],
   ): Promise<void> {
-    await this.request(
+    await bs.request(
       this._server,
       `/${SCRIPTRUNNER_DASHBOARDS_N_FILTERS_URL}`,
       {
@@ -721,7 +711,7 @@ export class Jira extends BSPlugin {
     toUserId: string,
     filterIds: string[],
   ): Promise<void> {
-    await this.request(
+    await bs.request(
       this._server,
       `/${SCRIPTRUNNER_DASHBOARDS_N_FILTERS_URL}`,
       {
@@ -756,7 +746,7 @@ export class Jira extends BSPlugin {
       searchParams["expand"] = "groups";
     }
 
-    let res = await this.request(this._server, JiraResources.user, {
+    let res = await bs.request(this._server, JiraResources.user, {
       method: "GET",
       searchParams,
       headers:
@@ -767,7 +757,7 @@ export class Jira extends BSPlugin {
   }
 
   public async addUserToGroup(user: string, group: string): Promise<Object> {
-    let res = await this.request(this._server, `${JiraResources.group}/user`, {
+    let res = await bs.request(this._server, `${JiraResources.group}/user`, {
       method: "POST",
       searchParams: { groupname: group },
       headers:
@@ -797,15 +787,19 @@ export class Jira extends BSPlugin {
     user: string,
     applicationKey: string,
   ): Promise<void> {
-    await this.request(this._server, `${JiraResources.user}/application`, {
-      method: "POST",
-      searchParams: { username: user, applicationKey: applicationKey },
-      headers:
-        this._sessionId === null ? this._basicAuthHeader : this._sessionHeader,
-      body: {},
-    }).catch((e) => {
-      this.error("Received errors (%j)", e);
-    });
+    await bs
+      .request(this._server, `${JiraResources.user}/application`, {
+        method: "POST",
+        searchParams: { username: user, applicationKey: applicationKey },
+        headers:
+          this._sessionId === null
+            ? this._basicAuthHeader
+            : this._sessionHeader,
+        body: {},
+      })
+      .catch((e) => {
+        this.error("Received errors (%j)", e);
+      });
   }
 
   public async restApiCall(
@@ -813,7 +807,7 @@ export class Jira extends BSPlugin {
     path: string,
     body: any,
   ): Promise<ReqRes> {
-    let res = await this.request(this._server, path, {
+    let res = await bs.request(this._server, path, {
       method,
       headers:
         this._sessionId === null ? this._basicAuthHeader : this._sessionHeader,

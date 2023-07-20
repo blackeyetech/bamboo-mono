@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 
 // Load the package.json so we can get the version
 const pkg = JSON.parse(
-  readFileSync(new URL("./package.json", import.meta.url), "utf8")
+  readFileSync(new URL("./package.json", import.meta.url), "utf8"),
 );
 
 // We need to know if we are building for prod or dev
@@ -46,7 +46,7 @@ export default [
       file: "dist/plugin.mjs",
       format: "es",
     },
-    external: ["app-sh"],
+    external: ["@bs-core/shell"],
 
     plugins,
   },

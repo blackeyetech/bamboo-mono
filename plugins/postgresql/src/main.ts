@@ -61,9 +61,9 @@ export class PostgreSql extends BSPlugin {
   // Properties here
   private _pool: pg.Pool;
 
-  constructor(postgresqlConfig: PostgreSqlConfig) {
+  constructor(name: string, postgresqlConfig: PostgreSqlConfig) {
     super(
-      "PostgreSQL",
+      name,
       // NOTE: PLUGIN_VERSION is replaced with package.json#version by a
       // rollup plugin at build time
       "PLUGIN_VERSION",

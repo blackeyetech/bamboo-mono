@@ -1,5 +1,5 @@
 // imports here
-import { BSPlugin } from "@bs-core/shell";
+import { bs, BSPlugin } from "@bs-core/shell";
 
 import * as MSGraph from "@microsoft/microsoft-graph-types";
 
@@ -46,9 +46,9 @@ export class O365 extends BSPlugin {
   private _tokenTimeout: NodeJS.Timeout | undefined;
   private _token: string | null;
 
-  constructor(o365Config: O365Config) {
+  constructor(name: string, o365Config: O365Config) {
     super(
-      "o365",
+      name,
       // NOTE: PLUGIN_VERSION is replaced with package.json#version by a
       // rollup plugin at build time
       "PLUGIN_VERSION",
@@ -87,25 +87,27 @@ export class O365 extends BSPlugin {
       grant_type: this._grantType,
     };
 
-    let res = await this.request(
-      "https://login.microsoftonline.com",
-      `/${this._tenantId}/oauth2/v2.0/token`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+    let res = await bs
+      .request(
+        "https://login.microsoftonline.com",
+        `/${this._tenantId}/oauth2/v2.0/token`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: querystring.stringify(data),
         },
-        body: querystring.stringify(data),
-      },
-    ).catch((e) => {
-      this.error("Error while getting new token - (%s)", e);
+      )
+      .catch((e) => {
+        this.error("Error while getting new token - (%s)", e);
 
-      // Make sure to explicitly set the token to undefined
-      this._token = null;
-      // Try again in 1 minute
-      this.info("Will try and get new token again in 1 min");
-      this._tokenTimeout = setTimeout(() => this.login(), 60 * 1000);
-    });
+        // Make sure to explicitly set the token to undefined
+        this._token = null;
+        // Try again in 1 minute
+        this.info("Will try and get new token again in 1 min");
+        this._tokenTimeout = setTimeout(() => this.login(), 60 * 1000);
+      });
 
     if (res !== undefined) {
       let body = <MSGraphTokenResponse>res.body;
@@ -229,17 +231,15 @@ export class O365 extends BSPlugin {
       }
     }
 
-    let res = await this.request(
-      this._resource,
-      `/v1.0/users/${fromUser}/sendMail`,
-      {
+    let res = await bs
+      .request(this._resource, `/v1.0/users/${fromUser}/sendMail`, {
         method: "POST",
         body: { message },
         bearerToken: this._token,
-      },
-    ).catch((e) => {
-      this.error("Error while sending email (%j) - (%s)", message, e);
-    });
+      })
+      .catch((e) => {
+        this.error("Error while sending email (%j) - (%s)", message, e);
+      });
 
     if (res === undefined || res.statusCode !== 202) {
       return false;

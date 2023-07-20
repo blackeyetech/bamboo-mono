@@ -1,6 +1,6 @@
 {
   "name": "testing",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "",
   "type": "module",
   "scripts": {
@@ -12,7 +12,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@bs-core/shell": "workspace:^1.0.1",
+    "@bs-core/shell": "workspace:^",
+    "@bs-plugins/jira": "workspace:^",
     "@bs-plugins/template": "workspace:^"
   }
 }

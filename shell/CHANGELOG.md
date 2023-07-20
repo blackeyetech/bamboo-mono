@@ -1,5 +1,12 @@
 # @bs-core/shell
 
+## 1.3.2
+
+### Patch Changes
+
+- Made some small changes to how plugins work internally. This is a change
+  required for the updated plugins.
+
 ## 1.3.1
 
 ### Patch Changes

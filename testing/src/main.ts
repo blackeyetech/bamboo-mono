@@ -9,13 +9,9 @@ import {
 } from "@bs-core/shell";
 
 import { Jira, JiraConfig } from "@bs-plugins/jira";
+import { Template } from "@bs-plugins/template";
 
 // import * as http from "node:http";
-
-// process.on("uncaughtException", (e) => {
-//   sh.error("caught %s)", e);
-//   // sh.exit(1);
-// });
 
 bs.setStopHandler(async () => {
   bs.shutdownMsg("Bye 1!");
@@ -29,6 +25,7 @@ let options: JiraConfig = { password: "", server: "", user: "" };
 bs.addPlugin("t1", Jira, options);
 bs.addPlugin("t2", Jira, options);
 bs.addPlugin("t3", Jira, options);
+bs.addPlugin("t4", Template);
 
 let t1 = bs.plugin("t1");
 bs.info(t1?.name);
@@ -36,6 +33,8 @@ let t2 = bs.plugin("t2");
 bs.info(t2?.name);
 let t3 = bs.plugin("t3");
 bs.info(t3?.name);
+let t4 = bs.plugin("t4");
+bs.info(t4?.name);
 
 bs.trace("(%s) (%s)", "hello", "world");
 
@@ -223,7 +222,7 @@ bs.httpServer(0)?.endpoint("GET", "/test2", async (_, res) => {
 
 bs.httpServer(0)?.addHealthcheck(async () => false);
 
-await bs.sleep(5);
+await bs.sleep(2);
 
 bs.setRestartHandler(async () => {
   bs.info("We are restarting!!!");
@@ -250,4 +249,4 @@ bs.info("setting const %j", bs.setConst("test2", "hello"));
 test2 = bs.getConst("test2");
 bs.info("test2 const is %j", test2);
 
-bs.restart();
+// bs.restart();

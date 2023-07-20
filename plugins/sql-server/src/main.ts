@@ -103,9 +103,9 @@ export class SqlServer extends BSPlugin {
   private _port: number;
   private _appName: string;
 
-  constructor(sqlServerConfig: SqlServerConfig) {
+  constructor(name: string, sqlServerConfig: SqlServerConfig) {
     super(
-      "SqlServer",
+      name,
 
       // NOTE: PLUGIN_VERSION is replaced with package.json#version by a
       // rollup plugin at build time

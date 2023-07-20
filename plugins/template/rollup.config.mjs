@@ -46,7 +46,7 @@ export default [
       file: "dist/plugin.mjs",
       format: "es",
     },
-    external: ["bamboo-shell"],
+    external: ["@bs-core/shell"],
 
     plugins,
   },
