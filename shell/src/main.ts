@@ -201,6 +201,10 @@ export const bs = Object.freeze({
   exit: async (code: number, hard: boolean = true): Promise<void> => {
     bs.shutdownMsg("Exiting ...");
 
+    // Clear the global and const stores
+    _globalStore.clear();
+    _constStore.clear();
+
     // Make sure we stop all of the HttpSevers - probably best to do it first
     for (let httpServer of _httpServerList) {
       await httpServer.stop();
