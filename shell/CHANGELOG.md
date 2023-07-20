@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.3.1
+
+### Patch Changes
+
+- Changed how plugins get added because it was causing issues
+
 ## 1.3.0
 
 ### Minor Changes

@@ -26,16 +26,16 @@ bs.setFinallyHandler(async () => {
 });
 
 let options: JiraConfig = { password: "", server: "", user: "" };
-bs.addPlugin(Jira, "t1", options);
-bs.addPlugin(Jira, "t2", options);
-bs.addPlugin(Jira, "t3", options);
+bs.addPlugin("t1", Jira, options);
+bs.addPlugin("t2", Jira, options);
+bs.addPlugin("t3", Jira, options);
 
 let t1 = bs.plugin("t1");
-bs.info(t1.name);
+bs.info(t1?.name);
 let t2 = bs.plugin("t2");
-bs.info(t2.name);
+bs.info(t2?.name);
 let t3 = bs.plugin("t3");
-bs.info(t3.name);
+bs.info(t3?.name);
 
 bs.trace("(%s) (%s)", "hello", "world");
 

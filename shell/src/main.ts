@@ -59,8 +59,7 @@ const _exceptionHandler = async (e: Error) => {
 };
 
 let _httpServerList: httpServer.HttpServer[];
-let _pluginList: { plugin: BSPlugin; stopHandler: () => Promise<void> }[];
-let _pluginMap: Record<string, BSPlugin>;
+let _pluginList: BSPlugin[];
 let _globalStore: Map<string, any>;
 let _constStore: Map<string, any>;
 
@@ -221,7 +220,7 @@ export const bs = Object.freeze({
 
     // Stop the extensions in the reverse order you started them
     for (let plugin of _pluginList.reverse()) {
-      bs.shutdownMsg(`Attempting to stop plugin ${plugin.plugin.name} ...`);
+      bs.shutdownMsg(`Attempting to stop plugin ${plugin.name} ...`);
       await plugin.stopHandler().catch((e) => {
         bs.error(e);
       });
@@ -308,22 +307,25 @@ export const bs = Object.freeze({
   },
 
   addPlugin: <T extends BSPlugin>(
-    pluginClass: new (name: string, options: any) => T,
     name: string,
-    options: any,
+    pluginClass: new (name: string, options?: any) => T,
+    config: any = {},
   ) => {
-    let plugin = new pluginClass(name, options);
-    _pluginList.push({
-      plugin,
-      stopHandler: async () => {
-        plugin.stopHandler();
-      },
-    });
-    _pluginMap[name] = plugin;
+    // Make sure we don't have a duplicate name
+    if (_pluginList.find((plugin) => plugin.name === name) !== undefined) {
+      throw Error(`There is already a plugin with the name ${name}`);
+    }
+
+    // Create the plugin
+    let plugin = new pluginClass(name, config);
+
+    // And then cache the plugin
+    _pluginList.push(plugin);
   },
 
-  plugin: (plugin: string): BSPlugin | undefined => {
-    return _pluginMap[plugin];
+  plugin: (name: string): BSPlugin | undefined => {
+    // Search for the plugin that has a matching name
+    return _pluginList.find((plugin) => plugin.name === name);
   },
 
   setGlobal: (name: string, value: any): void => {
@@ -421,8 +423,6 @@ export class BSPlugin {
   constructor(name: string, version: string) {
     this._name = name;
     this._version = version;
-
-    this.startupMsg(`Adding plugin ${name}`);
 
     this.startupMsg("Initialising ...");
   }
@@ -590,7 +590,6 @@ function init(): void {
   // Initialise the private variables
   _httpServerList = [];
   _pluginList = [];
-  _pluginMap = {};
   _globalStore = new Map();
   _constStore = new Map();
 
