@@ -653,6 +653,36 @@ export class HttpServer {
     }
   }
 
+  getFilesRecursive(dir: string, files: string[] = []): string[] {
+    let dirFiles: string[] = [];
+
+    try {
+      dirFiles = fs.readdirSync(dir);
+    } catch (e) {
+      this._logger.warn(this._loggerTag, "No permissions for dir (%s)", dir);
+    }
+
+    for (let file of dirFiles) {
+      if (fs.statSync(`${dir}/${file}`).isDirectory()) {
+        this.getFilesRecursive(`${dir}/${file}`, files);
+      } else if (fs.statSync(`${dir}/${file}`).isFile()) {
+        files.push(`${dir}/${file}`);
+
+        try {
+          fs.accessSync(`${dir}/${file}`, fs.constants.R_OK);
+        } catch (e) {
+          this._logger.warn(
+            this._loggerTag,
+            "No permissions for file : (%s)",
+            file,
+          );
+        }
+      }
+    }
+
+    return files;
+  }
+
   // Public methods here
   async start(): Promise<void> {
     this._logger.startupMsg(this._loggerTag, "Initialising HTTP manager ...");
@@ -685,7 +715,7 @@ export class HttpServer {
         );
       }
 
-      const options = {
+      const options: https.ServerOptions = {
         key: fs.readFileSync(this._keyFile),
         cert: fs.readFileSync(this._certFile),
       };
