@@ -13,6 +13,125 @@ import { Template } from "@bs-plugins/template";
 
 // import * as http from "node:http";
 
+async function init() {
+  let options: JiraConfig = { password: "", server: "", user: "" };
+  bs.addPlugin("t1", Jira, options);
+  bs.addPlugin("t2", Jira, options);
+  bs.addPlugin("t3", Jira, options);
+  bs.addPlugin("t4", Template);
+
+  await bs.addHttpServer("lo", 8080, {
+    loggerTag: "HttpMan1",
+    defaultMiddlewareList: [
+      HttpServer.body(),
+      HttpServer.json(),
+      middleware1,
+      middleware2,
+    ],
+  });
+
+  let httpMan2 = await bs.addHttpServer("lo", 8081, {
+    loggerTag: "HttpMan2",
+    defaultMiddlewareList: [HttpServer.body(), HttpServer.json(), middleware2],
+  });
+
+  bs.info(httpMan2.baseUrl);
+
+  bs.httpServer().endpoint(
+    "POST",
+    "/test/:id",
+    (_, res) => {
+      // // res.setHeader("Access-Control-Allow-Origin", "*");
+
+      // // sh.info("q=%s", details.url.searchParams.get("q"));
+      // // sh.info("r=%s", details.url.searchParams.get("r"));
+      // // sh.info("id=%s", details.params.id);
+      // sh.info("body=%s", details.middlewareProps.body);
+      // sh.info("jsonBody=%s", details.middlewareProps.json);
+      // // sh.info("headers=%s", req.headers);
+
+      // if (details.params.id === "1") {
+      //   throw new HttpError(400, "fool!");
+      // }
+
+      res.statusCode = 200;
+      res.json = { hello: "kieran" };
+    },
+
+    {
+      middlewareList: [middleware1, middleware2],
+      corsOptions: {
+        enable: true,
+        headersAllowed: "*",
+        originsAllowed: ["https://test-cors.org"],
+        credentialsAllowed: true,
+      },
+    },
+  );
+
+  let pong: EndpointCallback = (req, res) => {
+    bs.info("pinged");
+    for (let header in req.headers) {
+      bs.info("Header: %s: %s", header, req.headers[header]);
+    }
+
+    if (req.sseServer === undefined) {
+      return;
+    }
+
+    // res.setHeader("Access-Control-Allow-Origin", "*");
+    let i = 1;
+    bs.info("last event id: %s", req.sseServer?.lastEventId);
+
+    res.addListener("close", () => {
+      console.log("closed!");
+    });
+    setInterval(
+      () => {
+        i += 1;
+        req.sseServer?.sendData(i, { id: i });
+      },
+      1000,
+      res,
+      bs,
+    );
+  };
+
+  bs.httpServer().endpoint("GET", "/ping", pong, {
+    sseServerOptions: { pingInterval: 10, pingEventName: "ev1" },
+  });
+
+  bs.httpServer().endpoint("GET", "/html", async (_, res) => {
+    res.html = "<html><p>Hello from 1</p></html>";
+  });
+
+  bs.httpServer().endpoint("GET", "/text", async (_, res) => {
+    throw new HttpError(500, "endpoint error help me!");
+
+    res.text = "Hello";
+  });
+
+  bs.httpServer().endpoint(
+    "GET",
+    "/test",
+    async (_, res) => {
+      res.text = "";
+    },
+    { defaultMiddlewares: false },
+  );
+
+  bs.httpServer().endpoint("GET", "/json", (_, res) => {
+    res.json = { url: "login" };
+  });
+
+  bs.httpServer().endpoint("GET", "/test2", async (_, res) => {
+    res.statusCode = 201;
+    res.end();
+  });
+
+  bs.httpServer().addHealthcheck(async () => false);
+}
+
 bs.setStopHandler(async () => {
   bs.shutdownMsg("Bye 1!");
 });
@@ -20,21 +139,6 @@ bs.setStopHandler(async () => {
 bs.setFinallyHandler(async () => {
   bs.shutdownMsg("Bye 2!");
 });
-
-let options: JiraConfig = { password: "", server: "", user: "" };
-bs.addPlugin("t1", Jira, options);
-bs.addPlugin("t2", Jira, options);
-bs.addPlugin("t3", Jira, options);
-bs.addPlugin("t4", Template);
-
-let t1 = bs.plugin("t1");
-bs.info(t1?.name);
-let t2 = bs.plugin("t2");
-bs.info(t2?.name);
-let t3 = bs.plugin("t3");
-bs.info(t3?.name);
-let t4 = bs.plugin("t4");
-bs.info(t4?.name);
 
 bs.trace("(%s) (%s)", "hello", "world");
 
@@ -94,20 +198,6 @@ let middleware2: Middleware = async (_1, _2, next) => {
   bs.info("finished the middle two");
 };
 
-await bs.addHttpServer("lo", 8080, {
-  loggerTag: "HttpMan1",
-  defaultMiddlewareList: [
-    HttpServer.body(),
-    HttpServer.json(),
-    middleware1,
-    middleware2,
-  ],
-});
-
-let httpMan2 = await bs.addHttpServer("lo", 8081, {
-  loggerTag: "HttpMan2",
-  defaultMiddlewareList: [HttpServer.body(), HttpServer.json(), middleware2],
-});
 // httpMan.healthcheck(() => {
 //   sh.info("Helllo!!!");
 //   return false;
@@ -126,112 +216,7 @@ let httpMan2 = await bs.addHttpServer("lo", 8081, {
 //   b: z.string(),
 // });
 
-bs.info(httpMan2.baseUrl);
-
-bs.httpServer(0)?.endpoint(
-  "POST",
-  "/test/:id",
-  (_, res) => {
-    // // res.setHeader("Access-Control-Allow-Origin", "*");
-
-    // // sh.info("q=%s", details.url.searchParams.get("q"));
-    // // sh.info("r=%s", details.url.searchParams.get("r"));
-    // // sh.info("id=%s", details.params.id);
-    // sh.info("body=%s", details.middlewareProps.body);
-    // sh.info("jsonBody=%s", details.middlewareProps.json);
-    // // sh.info("headers=%s", req.headers);
-
-    // if (details.params.id === "1") {
-    //   throw new HttpError(400, "fool!");
-    // }
-
-    res.statusCode = 200;
-    res.json = { hello: "kieran" };
-  },
-
-  {
-    middlewareList: [middleware1, middleware2],
-    corsOptions: {
-      enable: true,
-      headersAllowed: "*",
-      originsAllowed: ["https://test-cors.org"],
-      credentialsAllowed: true,
-    },
-  },
-);
-
-let pong: EndpointCallback = (req, res) => {
-  bs.info("pinged");
-  for (let header in req.headers) {
-    bs.info("Header: %s: %s", header, req.headers[header]);
-  }
-
-  if (req.sseServer === undefined) {
-    return;
-  }
-
-  // res.setHeader("Access-Control-Allow-Origin", "*");
-  let i = 1;
-  bs.info("last event id: %s", req.sseServer?.lastEventId);
-
-  res.addListener("close", () => {
-    console.log("closed!");
-  });
-  setInterval(
-    () => {
-      i += 1;
-      req.sseServer?.sendData(i, { id: i });
-    },
-    1000,
-    res,
-    bs,
-  );
-};
-
-bs.httpServer(0)?.endpoint("GET", "/ping", pong, {
-  sseServerOptions: { pingInterval: 10, pingEventName: "ev1" },
-});
-
-bs.httpServer(0)?.endpoint("GET", "/html", async (_, res) => {
-  res.html = "<html><p>Hello from 1</p></html>";
-});
-
-bs.httpServer(0)?.endpoint("GET", "/text", async (_, res) => {
-  throw new HttpError(500, "endpoint error help me!");
-
-  res.text = "Hello";
-});
-
-bs.httpServer(0)?.endpoint(
-  "GET",
-  "/test",
-  async (_, res) => {
-    res.text = "";
-  },
-  { defaultMiddlewares: false },
-);
-
-bs.httpServer(0)?.endpoint("GET", "/json", (_, res) => {
-  res.json = { url: "login" };
-});
-
-bs.httpServer(0)?.endpoint("GET", "/test2", async (_, res) => {
-  res.statusCode = 201;
-  res.end();
-});
-
-bs.httpServer(0)?.addHealthcheck(async () => false);
-
 await bs.sleep(2);
-
-bs.setRestartHandler(async () => {
-  bs.info("We are restarting!!!");
-
-  httpMan2 = await bs.addHttpServer("lo", 8081, {
-    loggerTag: "HttpMan2",
-    defaultMiddlewareList: [HttpServer.body(), HttpServer.json(), middleware2],
-  });
-});
 
 bs.setGlobal("test1", 1);
 let test1 = bs.getGlobal("test1");
@@ -250,3 +235,15 @@ test2 = bs.getConst("test2");
 bs.info("test2 const is %j", test2);
 
 // bs.restart();
+
+bs.setRestartHandler(init);
+await init();
+
+let t1 = bs.plugin("t1");
+bs.info(t1.name);
+let t2 = bs.plugin("t2");
+bs.info(t2.name);
+let t3 = bs.plugin("t3");
+bs.info(t3.name);
+let t4 = bs.plugin("t4");
+bs.info(t4.name);

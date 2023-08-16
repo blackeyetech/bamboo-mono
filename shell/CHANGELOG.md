@@ -24,19 +24,19 @@
 
 ### Minor Changes
 
-- Added global store and const store to bs to allow for convient passing of
+- Added global store and const store to bs to allow for convenient passing of
   globals and consts. The following methods have been added to bs:
 
   - setGlobal()
-  - getGlocal()
+  - getGlobal()
   - setConst()
-  - gtConst()
+  - getConst()
 
 ## 1.2.1
 
 ### Patch Changes
 
-- Update to display github reo for bamboo-mono
+- Update to display github repo for bamboo-mono
 
 ## 1.2.0
 
