@@ -160,12 +160,12 @@ function init() {
 
   // Iterate through each line
   for (let line of lines) {
-    // If the line is commented out then skip it
-    if (line.startsWith("#")) {
+    // If the line is commented out or blank then skip it
+    if (line.startsWith("#") || line.length === 0) {
       continue;
     }
 
-    // Can't use split here because the value may contain an "="
+    // Don't use split() here because the value may contain an "="
     let index = line.indexOf("=");
 
     // Check if there was an equal in the line - if not then skip this line
@@ -176,6 +176,15 @@ function init() {
     // Get the key/value pair - make sure to trim them as well
     let key = line.slice(0, index).trim();
     let value = line.slice(index + 1).trim();
+
+    // Check if the value is delimited with single or double quotes
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      // Strip them away
+      value = value.slice(1, value.length - 1);
+    }
 
     // Stick them in the env file store
     // NOTE: Make key upper case to match env vars

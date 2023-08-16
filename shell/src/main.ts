@@ -41,14 +41,6 @@ const NODE_ENV =
 const VERSION: string = "BS_VERSION";
 
 // Private variables here
-const _defaultFinallyHandler = async (): Promise<void> => {
-  bs.shutdownMsg("Done!");
-};
-
-const _defaultStopHandler = async (): Promise<void> => {
-  bs.shutdownMsg("Stopped!");
-};
-
 const _shutdownHandler = async (): Promise<void> => {
   await bs.exit(0);
 };
@@ -58,16 +50,20 @@ const _exceptionHandler = async (e: Error) => {
   await bs.exit(1);
 };
 
+let _finallyHandler = async (): Promise<void> => {
+  bs.shutdownMsg("Done!");
+};
+let _stopHandler = async (): Promise<void> => {
+  bs.shutdownMsg("Stopped!");
+};
+let _restartHandler = async (): Promise<void> => {
+  bs.shutdownMsg("Restarted!");
+};
+
 let _httpServerList: httpServer.HttpServer[];
 let _pluginList: BSPlugin[];
 let _globalStore: Map<string, any>;
 let _constStore: Map<string, any>;
-
-let _finallyHandler: () => Promise<void>;
-let _stopHandler: () => Promise<void>;
-// Do this only at start up. If the user sets it we shouldn't change it
-let _restartHandler = async (): Promise<void> => {};
-
 let _logger: logger.AbstractLogger;
 
 // Types here
@@ -309,13 +305,18 @@ export const bs = Object.freeze({
     return server;
   },
 
-  httpServer: (serverNum: number): httpServer.HttpServer | undefined => {
-    return _httpServerList.length ? _httpServerList[serverNum] : undefined;
+  httpServer: (serverNum: number = 0): httpServer.HttpServer => {
+    // Check if the requested server DOES NOT exist
+    if (serverNum >= _httpServerList.length) {
+      throw Error(`There is no http server with the number ${serverNum}`);
+    }
+
+    return _httpServerList[serverNum];
   },
 
-  addPlugin: <T extends BSPlugin>(
+  addPlugin: (
     name: string,
-    pluginClass: new (name: string, options?: any) => T,
+    pluginClass: new (name: string, options?: any) => BSPlugin,
     config: any = {},
   ): BSPlugin => {
     // Make sure we don't have a duplicate name
@@ -332,9 +333,16 @@ export const bs = Object.freeze({
     return plugin;
   },
 
-  plugin: (name: string): BSPlugin | undefined => {
+  plugin: (name: string): BSPlugin => {
     // Search for the plugin that has a matching name
-    return _pluginList.find((plugin) => plugin.name === name);
+    let plugin = _pluginList.find((p) => p.name === name);
+
+    // Check if the plugin DOES NOT exist
+    if (plugin === undefined) {
+      throw Error(`There is no plugin with the name ${name}`);
+    }
+
+    return plugin;
   },
 
   setGlobal: (name: string, value: any): void => {
@@ -541,9 +549,6 @@ function init(): void {
   _pluginList = [];
   _globalStore = new Map();
   _constStore = new Map();
-
-  _stopHandler = _defaultStopHandler;
-  _finallyHandler = _defaultFinallyHandler;
 
   // Initialise and start the logger
   _logger = loggerInit();

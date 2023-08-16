@@ -1,5 +1,20 @@
 # @bs-core/shell
 
+## 1.4.0
+
+### Minor Changes
+
+- Can now delimit a env file config value using double or single quotes.
+  This means you can have leading or trailing to spaces in a vlaue if required.
+
+### Patch Changes
+
+- Fixed typos in README file
+- Refactored the resetHandler logic
+- Now throws an error if a plugin name requested using plugin() does not exist
+
+  Now throws an error if a HTTP Server requested using httpServer() does not exist
+
 ## 1.3.3
 
 ### Patch Changes
@@ -24,19 +39,19 @@
 
 ### Minor Changes
 
-- Added global store and const store to bs to allow for convient passing of
+- Added global store and const store to bs to allow for convenient passing of
   globals and consts. The following methods have been added to bs:
 
   - setGlobal()
-  - getGlocal()
+  - getGlobal()
   - setConst()
-  - gtConst()
+  - getConst()
 
 ## 1.2.1
 
 ### Patch Changes
 
-- Update to display github reo for bamboo-mono
+- Update to display github repo for bamboo-mono
 
 ## 1.2.0
 
