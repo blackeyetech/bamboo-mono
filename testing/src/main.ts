@@ -11,6 +11,8 @@ import {
 import { Jira, JiraConfig } from "@bs-plugins/jira";
 import { Template } from "@bs-plugins/template";
 
+import helmet from "helmet";
+
 // import * as http from "node:http";
 
 async function init() {
@@ -20,52 +22,44 @@ async function init() {
   bs.addPlugin("t3", Jira, options);
   bs.addPlugin("t4", Template);
 
-  await bs.addHttpServer("lo", 8080, {
+  let httpMan1 = await bs.addHttpServer("lo", 8080, {
     loggerTag: "HttpMan1",
-    defaultMiddlewareList: [
-      HttpServer.body(),
-      HttpServer.json(),
-      middleware1,
-      middleware2,
-    ],
+    staticFileServer: {
+      path: "/home/parallels/dev/src/oit/mdrp/frontend/bootstrap3",
+      extraContentTypes: { world: "application/octect" },
+    },
   });
 
-  let httpMan2 = await bs.addHttpServer("lo", 8081, {
-    loggerTag: "HttpMan2",
-    defaultMiddlewareList: [HttpServer.body(), HttpServer.json(), middleware2],
-  });
+  httpMan1.use(HttpServer.body());
+  httpMan1.use(HttpServer.json());
+  httpMan1.use(
+    HttpServer.cors({
+      headersAllowed: "*",
+      originsAllowed: "*",
+      credentialsAllowed: false,
+    }),
+  );
+  httpMan1.use(HttpServer.expressWrapper(helmet()));
 
-  bs.info(httpMan2.baseUrl);
+  bs.setConst("hs", httpMan1);
 
   bs.httpServer().endpoint(
-    "POST",
-    "/test/:id",
-    (_, res) => {
-      // // res.setHeader("Access-Control-Allow-Origin", "*");
-
-      // // sh.info("q=%s", details.url.searchParams.get("q"));
-      // // sh.info("r=%s", details.url.searchParams.get("r"));
-      // // sh.info("id=%s", details.params.id);
-      // sh.info("body=%s", details.middlewareProps.body);
-      // sh.info("jsonBody=%s", details.middlewareProps.json);
-      // // sh.info("headers=%s", req.headers);
-
-      // if (details.params.id === "1") {
-      //   throw new HttpError(400, "fool!");
-      // }
-
-      res.statusCode = 200;
+    "PUT",
+    "/api/test/:id",
+    (req, res) => {
+      bs.info(req.body);
+      bs.info("%j", req.json);
       res.json = { hello: "kieran" };
     },
 
     {
-      middlewareList: [middleware1, middleware2],
-      corsOptions: {
-        enable: true,
-        headersAllowed: "*",
-        originsAllowed: ["https://test-cors.org"],
-        credentialsAllowed: true,
-      },
+      middlewareList: [
+        // HttpServer.cors({
+        //   headersAllowed: "*",
+        //   originsAllowed: "*",
+        //   credentialsAllowed: false,
+        // }),
+      ],
     },
   );
 
@@ -97,37 +91,45 @@ async function init() {
     );
   };
 
-  bs.httpServer().endpoint("GET", "/ping", pong, {
+  bs.httpServer().endpoint("GET", "/api/ping", pong, {
     sseServerOptions: { pingInterval: 10, pingEventName: "ev1" },
   });
 
-  bs.httpServer().endpoint("GET", "/html", async (_, res) => {
-    res.html = "<html><p>Hello from 1</p></html>";
-  });
-
-  bs.httpServer().endpoint("GET", "/text", async (_, res) => {
-    throw new HttpError(500, "endpoint error help me!");
-
-    res.text = "Hello";
-  });
-
-  bs.httpServer().endpoint(
-    "GET",
-    "/test",
+  let hs = <HttpServer>bs.getConst("hs");
+  hs.get(
+    "/api/html",
     async (_, res) => {
-      res.text = "";
+      res.body = "<html><p>Hello from 1</p></html>";
+      res.setHeader("content-type", "text/html; charset=utf-8");
+
+      res.serverTimingsMetrics.push({ name: "html", duration: 3.33 });
+    },
+    {
+      middlewareList: [middleware2, middleware2],
+    },
+  );
+
+  bs.httpServer().get("/api/text", async (_1, _2) => {
+    throw new HttpError(500, "endpoint error help me!");
+  });
+
+  bs.httpServer().get(
+    "/api/test",
+    async (_, res) => {
+      res.body = "";
     },
     { defaultMiddlewares: false },
   );
 
-  bs.httpServer().endpoint("GET", "/json", (_, res) => {
-    res.json = { url: "login" };
-  });
-
-  bs.httpServer().endpoint("GET", "/test2", async (_, res) => {
-    res.statusCode = 201;
-    res.end();
-  });
+  bs.httpServer().endpoint(
+    "GET",
+    "/api/json",
+    (_, res) => {
+      res.statusCode = 201;
+      res.json = { url: "login" };
+    },
+    { etag: false },
+  );
 
   bs.httpServer().addHealthcheck(async () => false);
 }
@@ -182,15 +184,15 @@ bs.info("%j", res);
 
 bs.trace("Traced!");
 
-let middleware1: Middleware = async (_1, _2, next) => {
-  let now = new Date().valueOf();
-  bs.info("in the middle of one");
-  // details.body = Buffer.from("howdy");
-  await next();
-  let time = new Date().valueOf() - now;
-  bs.info("finished the middle one - %s", time);
-  // throw new HttpError(500, "middleware error help me!");
-};
+// let middleware1: Middleware = async (_1, _2, next) => {
+//   let now = new Date().valueOf();
+//   bs.info("in the middle of one");
+//   // details.body = Buffer.from("howdy");
+//   await next();
+//   let time = new Date().valueOf() - now;
+//   bs.info("finished the middle one - %s", time);
+//   throw new HttpError(500, "middleware error help me!");
+// };
 
 let middleware2: Middleware = async (_1, _2, next) => {
   bs.info("in the middle of two");

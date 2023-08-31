@@ -1,5 +1,17 @@
 # @bs-core/shell
 
+## 1.5.0
+
+### Minor Changes
+
+- Added new helper functions for adding endpoints: del(), get(), patch(), post() and put()
+- Added new method use() to add default middleware to the HTTP server
+- Added SSR handler
+- Added static file handler
+- Added Etag and Server-Timing headers to API endpoints
+- Moved CORS functionality into a middleware
+- Added a wrapper that allows you to use most Express middlewares
+
 ## 1.4.0
 
 ### Minor Changes
