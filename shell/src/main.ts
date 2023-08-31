@@ -3,11 +3,11 @@ import * as logger from "./logger.js";
 import { LoggerConsole } from "./logger-console.js";
 import * as configMan from "./config-man.js";
 import * as httpReq from "./http-req.js";
-import * as httpServer from "./http-server.js";
+import * as httpServer from "./http-server/main.js";
 
 export { LogLevel } from "./logger.js";
 export { ReqRes, ReqOptions, ReqAborted, ReqError } from "./http-req.js";
-export { SseServerOptions, SseServer } from "./sse-server.js";
+export { SseServerOptions, SseServer } from "./http-server/sse-server.js";
 export {
   HttpServer,
   HttpConfig,
@@ -21,7 +21,7 @@ export {
   HealthcheckCallback,
   HttpCookie,
   HttpError,
-} from "./http-server.js";
+} from "./http-server/main.js";
 
 import * as readline from "node:readline";
 
@@ -196,7 +196,7 @@ export const bs = Object.freeze({
     _restartHandler = handler;
   },
 
-  setLogger(newLogger: logger.AbstractLogger): void {
+  setLogger: (newLogger: logger.AbstractLogger): void => {
     _logger = newLogger;
   },
 

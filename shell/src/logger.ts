@@ -8,6 +8,52 @@ export enum LogLevel {
   TRACE = 400, // Log trace messages
 }
 
+export class LoggerInstance {
+  private _logger: AbstractLogger;
+  private _tag: string;
+
+  constructor(logger: AbstractLogger, tag: string) {
+    this._logger = logger;
+    this._tag = tag;
+  }
+
+  fatal(...args: any): void {
+    this._logger.fatal(this._tag, ...args);
+  }
+
+  error(...args: any): void {
+    this._logger.error(this._tag, ...args);
+  }
+
+  warn(...args: any): void {
+    this._logger.warn(this._tag, ...args);
+  }
+
+  info(...args: any): void {
+    this._logger.info(this._tag, ...args);
+  }
+
+  startupMsg(...args: any): void {
+    this._logger.startupMsg(this._tag, ...args);
+  }
+
+  shutdownMsg(...args: any): void {
+    this._logger.shutdownMsg(this._tag, ...args);
+  }
+
+  debug(...args: any): void {
+    this._logger.debug(this._tag, ...args);
+  }
+
+  trace(...args: any): void {
+    this._logger.trace(this._tag, ...args);
+  }
+
+  force(...args: any): void {
+    this._logger.force(this._tag, ...args);
+  }
+}
+
 // Logger class here
 export abstract class AbstractLogger {
   protected _timestamp: boolean;
