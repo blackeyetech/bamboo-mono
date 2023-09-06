@@ -1,4 +1,5 @@
 // imports here
+import * as cookies from "./cookies.js";
 import { SseServer } from "./sse-server.js";
 
 import * as http from "node:http";
@@ -43,8 +44,13 @@ export type CorsOptions = {
   maxAge?: number;
 };
 
-// Utility functions here
+export type CsrfCheckOptions = {
+  checkType?: "custom-req-header" | "naive-double-submit-cookie";
+  header?: string;
+  cookie?: string;
+};
 
+// Utility functions here
 export const setServerTimingHeader = (
   res: ServerResponse,
   receiveTime: number,
@@ -295,7 +301,7 @@ export const corsMiddleware = (options: CorsOptions = {}): Middleware => {
 
 export const expressWrapper = (middleware: ExpressMiddleware): Middleware => {
   // Because we need to pass in the express middleware we will return the
-  // middleware, i.e. you need to call this function s
+  // middleware, i.e. you need to call this function
   return async (
     req: ServerRequest,
     res: ServerResponse,
@@ -306,6 +312,57 @@ export const expressWrapper = (middleware: ExpressMiddleware): Middleware => {
         throw e;
       }
     });
+
+    await next();
+  };
+};
+
+export const csrfChecks = (options: CsrfCheckOptions = {}): Middleware => {
+  let opts = {
+    checkType: "custom-req-header",
+    header: "x-csrf-header",
+
+    ...options,
+  };
+
+  // Need to make sure the header we check for is always lower case
+  opts.header = opts.header.toLowerCase();
+
+  // If this is "naive-double-submit-cookie" check then cookie is required
+  if (opts.checkType === "naive-double-submit-cookie") {
+    if (opts.cookie === undefined) {
+      throw new Error(
+        "Must set cookie to use the 'naive-double-submit-cookie' csrf check",
+      );
+    }
+  }
+
+  // Because we need to pass in the options we will return the
+  // middleware, i.e. you need to call this function
+  return async (
+    req: ServerRequest,
+    res: ServerResponse,
+    next: () => Promise<void>,
+  ): Promise<void> => {
+    let failed = false;
+
+    if (opts.checkType === "custom-req-header") {
+      if (req.headers[opts.header] === undefined) {
+        failed = true;
+      }
+    } else {
+      let value = cookies.getCookie(req, opts.cookie as string);
+      if (req.headers[opts.header] !== value) {
+        failed = true;
+      }
+    }
+
+    // If the CSRF check failed then DO NOT continue down the stack
+    if (failed) {
+      res.statusCode = 401;
+      res.write("The request failed the CSRF check");
+      return;
+    }
 
     await next();
   };

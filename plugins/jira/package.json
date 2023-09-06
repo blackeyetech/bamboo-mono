@@ -1,5 +1,5 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "name": "@bs-plugins/jira",
   "description": "Bamboo Shell plugin for JIRA",
   "exports": {

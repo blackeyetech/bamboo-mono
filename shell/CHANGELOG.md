@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.6.0
+
+### Minor Changes
+
+- Added CSFR check middleware
+
 ## 1.5.0
 
 ### Minor Changes

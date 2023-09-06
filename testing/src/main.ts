@@ -54,6 +54,10 @@ async function init() {
 
     {
       middlewareList: [
+        HttpServer.csrf({
+          checkType: "naive-double-submit-cookie",
+          cookie: "X-CSRF-HEADER",
+        }),
         // HttpServer.cors({
         //   headersAllowed: "*",
         //   originsAllowed: "*",

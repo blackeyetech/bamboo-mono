@@ -11,7 +11,9 @@ import {
   jsonMiddleware,
   corsMiddleware,
   expressWrapper,
+  csrfChecks as csrfMiddleware,
   setServerTimingHeader,
+  CsrfCheckOptions,
 } from "./middleware.js";
 import * as staticFiles from "./static-files.js";
 
@@ -35,6 +37,7 @@ export {
   Middleware,
   ExpressMiddleware,
   CorsOptions,
+  CsrfCheckOptions,
 } from "./middleware.js";
 
 // Types here
@@ -52,20 +55,20 @@ export type EndpointCallback = (
   res: ServerResponse,
 ) => Promise<void> | void;
 
+export class HttpConfigError {
+  message: string;
+
+  constructor(message: string) {
+    this.message = message;
+  }
+}
+
 export class HttpError {
   status: number;
   message: string;
 
   constructor(status: number, message: string) {
     this.status = status;
-    this.message = message;
-  }
-}
-
-export class HttpConfigError {
-  message: string;
-
-  constructor(message: string) {
     this.message = message;
   }
 }
@@ -795,11 +798,15 @@ export class HttpServer {
     return jsonMiddleware;
   }
 
-  static cors(options: CorsOptions): Middleware {
+  static cors(options: CorsOptions = {}): Middleware {
     return corsMiddleware(options);
   }
 
   static expressWrapper(middleware: ExpressMiddleware): Middleware {
     return expressWrapper(middleware);
+  }
+
+  static csrf(middleware: CsrfCheckOptions = {}): Middleware {
+    return csrfMiddleware(middleware);
   }
 }
