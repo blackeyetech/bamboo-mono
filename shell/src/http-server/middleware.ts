@@ -1,27 +1,8 @@
-// imports here
-import * as cookies from "./cookies.js";
-import { SseServer } from "./sse-server.js";
+// Imports here
+import { ServerRequest, ServerResponse } from "./req-res.js";
 
 import * as http from "node:http";
-
-// Types here
-export interface ServerResponse extends http.ServerResponse {
-  json?: object | [] | string | number | boolean;
-  body?: string | Buffer;
-  serverTimingsMetrics: { name: string; duration: number }[];
-}
-
-export interface ServerRequest extends http.IncomingMessage {
-  urlObject: URL;
-  params: Record<string, any>;
-  middlewareProps: Record<string, any>;
-
-  receiveTime: number;
-
-  sseServer?: SseServer;
-  json?: any;
-  body?: Buffer;
-}
+import { performance } from "node:perf_hooks";
 
 export type Middleware = (
   req: ServerRequest,
@@ -44,10 +25,14 @@ export type CorsOptions = {
   maxAge?: number;
 };
 
-export type CsrfCheckOptions = {
+export type CsrfChecksOptions = {
   checkType?: "custom-req-header" | "naive-double-submit-cookie";
   header?: string;
   cookie?: string;
+};
+
+export type SecurityHeadersOptions = {
+  headers: { name: string; value: string }[];
 };
 
 // Utility functions here
@@ -317,7 +302,9 @@ export const expressWrapper = (middleware: ExpressMiddleware): Middleware => {
   };
 };
 
-export const csrfChecks = (options: CsrfCheckOptions = {}): Middleware => {
+export const csrfChecksMiddleware = (
+  options: CsrfChecksOptions = {},
+): Middleware => {
   let opts = {
     checkType: "custom-req-header",
     header: "x-csrf-header",
@@ -328,7 +315,7 @@ export const csrfChecks = (options: CsrfCheckOptions = {}): Middleware => {
   // Need to make sure the header we check for is always lower case
   opts.header = opts.header.toLowerCase();
 
-  // If this is "naive-double-submit-cookie" check then cookie is required
+  // If this is "naive-double-submit-cookie" check the cookie is supplied
   if (opts.checkType === "naive-double-submit-cookie") {
     if (opts.cookie === undefined) {
       throw new Error(
@@ -347,11 +334,15 @@ export const csrfChecks = (options: CsrfCheckOptions = {}): Middleware => {
     let failed = false;
 
     if (opts.checkType === "custom-req-header") {
+      // The custom-req-header check just ensures that the specified
+      // header exists - the value is not important
       if (req.headers[opts.header] === undefined) {
         failed = true;
       }
     } else {
-      let value = cookies.getCookie(req, opts.cookie as string);
+      // The naive-double-submit-cookie check ensures the value of the
+      // specified cookie matches the value of the specified header
+      let value = req.getCookie(opts.cookie as string);
       if (req.headers[opts.header] !== value) {
         failed = true;
       }
@@ -362,6 +353,25 @@ export const csrfChecks = (options: CsrfCheckOptions = {}): Middleware => {
       res.statusCode = 401;
       res.write("The request failed the CSRF check");
       return;
+    }
+
+    await next();
+  };
+};
+
+export const securityHeadersMiddleware = (
+  options: SecurityHeadersOptions,
+): Middleware => {
+  // Because we need to pass in the options we will return the
+  // middleware, i.e. you need to call this function
+  return async (
+    _: ServerRequest,
+    res: ServerResponse,
+    next: () => Promise<void>,
+  ): Promise<void> => {
+    // Set all of the requested headers
+    for (let header of options.headers) {
+      res.setHeader(header.name, header.value);
     }
 
     await next();

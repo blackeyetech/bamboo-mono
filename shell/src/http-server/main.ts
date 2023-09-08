@@ -1,24 +1,22 @@
 // imports here
 import { SseServer, SseServerOptions } from "./sse-server.js";
-import * as httpCookies from "./cookies.js";
+import { ServerRequest, ServerResponse } from "./req-res.js";
 import {
-  ServerResponse,
-  ServerRequest,
   Middleware,
   ExpressMiddleware,
   CorsOptions,
+  CsrfChecksOptions,
+  SecurityHeadersOptions,
   bodyMiddleware,
   jsonMiddleware,
   corsMiddleware,
   expressWrapper,
-  csrfChecks as csrfMiddleware,
+  csrfChecksMiddleware,
   setServerTimingHeader,
-  CsrfCheckOptions,
+  securityHeadersMiddleware,
 } from "./middleware.js";
 import * as staticFiles from "./static-files.js";
-
 import * as logger from "../logger.js";
-
 import * as PathToRegEx from "path-to-regexp";
 
 import * as http from "node:http";
@@ -26,19 +24,8 @@ import * as https from "node:https";
 import * as os from "node:os";
 import * as fs from "node:fs";
 import * as net from "node:net";
-import * as path from "node:path";
 import * as crypto from "node:crypto";
-import { performance } from "node:perf_hooks";
-
-export { HttpCookie } from "./cookies.js";
-export {
-  ServerResponse,
-  ServerRequest,
-  Middleware,
-  ExpressMiddleware,
-  CorsOptions,
-  CsrfCheckOptions,
-} from "./middleware.js";
+import * as path from "node:path";
 
 // Types here
 export type HealthcheckCallback = () => Promise<boolean>;
@@ -314,30 +301,21 @@ export class HttpServer {
     });
   }
 
-  private async handleHttpReq(
-    origReq: http.IncomingMessage,
-    origRes: http.ServerResponse,
-    protocol: "http" | "https",
-  ) {
-    // Convert the server response to our type so we can add our extra props
-    let res: ServerResponse = origRes as ServerResponse;
-    res.serverTimingsMetrics = [];
+  private async handleHttpReq(req: ServerRequest, res: ServerResponse) {
+    // We have to do this hear for now since the url will not be set until
+    // after this object it created
 
-    // Convert the incoming message to our type so we can add our extra props
-    let req: ServerRequest = origReq as ServerRequest;
-
-    // To avoid attempted path traversals reolve the path with "/" as the base
+    // To avoid attempted path traversals resolve the path with "/" as the base
     // This will sort out ".."s, "."s and "//"s and ensure you can not end up
     // wit a path like "../secret-dir/secrets.txt"
     let url = path.resolve("/", req.url as string);
 
-    req.urlObject = new URL(url, `${protocol}://${req.headers.host}`);
-    req.params = {};
-    req.middlewareProps = {};
-    req.receiveTime = performance.now();
+    // Strip off any query strings or hashes
+    let match = url.match(/^[^?#]*/);
+    req.urlPath = match === null ? "/" : match[0];
 
     // Check if this is an API call
-    if (req.urlObject.pathname.startsWith(this._apiBaseUrl)) {
+    if (req.urlPath.startsWith(this._apiBaseUrl)) {
       await this.handleApiReq(req, res);
       return;
     }
@@ -394,7 +372,7 @@ export class HttpServer {
 
     // Next see if we have a registered callback for the HTTP req path
     for (let el of list) {
-      let result = el.matchFunc(req.urlObject.pathname);
+      let result = el.matchFunc(req.urlPath);
 
       // If result is false that means we found nothing
       if (result === false) {
@@ -441,7 +419,7 @@ export class HttpServer {
         // We don't know what this is so log it and make sure to return a 500
         this._log.error(
           "Unknown error happened while handling URL (%s) - (%s)",
-          req.urlObject?.pathname,
+          req.urlPath,
           e,
         );
 
@@ -622,23 +600,29 @@ export class HttpServer {
         );
       }
 
+      this._log.startupMsg(`Attempting to listen on (${this._baseUrl})`);
+
       const options: https.ServerOptions = {
+        IncomingMessage: ServerRequest,
+        ServerResponse: <any>ServerResponse, // Something wrong with typedefs
         key: fs.readFileSync(this._keyFile),
         cert: fs.readFileSync(this._certFile),
       };
 
-      this._log.startupMsg(`Attempting to listen on (${this._baseUrl})`);
-
       this._server = https.createServer(options, (req, res) => {
-        this.handleHttpReq(req, res, "https");
+        this.handleHttpReq(req as ServerRequest, res as ServerResponse);
       });
     } else {
       this._baseUrl = `http://${this._networkIp}:${this._networkPort}`;
 
       this._log.startupMsg(`Attempting to listen on (${this._baseUrl})`);
 
-      this._server = http.createServer((req, res) => {
-        this.handleHttpReq(req, res, "http");
+      const options: https.ServerOptions = {
+        IncomingMessage: ServerRequest,
+        ServerResponse: <any>ServerResponse, // Something wrong with typedefs
+      };
+      this._server = http.createServer(options, (req, res) => {
+        this.handleHttpReq(req as ServerRequest, res as ServerResponse);
       });
     }
 
@@ -776,18 +760,6 @@ export class HttpServer {
     );
   }
 
-  setCookies(res: ServerResponse, cookies: httpCookies.HttpCookie[]): void {
-    httpCookies.setCookies(res, cookies);
-  }
-
-  clearCookies(res: ServerResponse, cookies: string[]): void {
-    httpCookies.clearCookies(res, cookies);
-  }
-
-  getCookie(req: ServerRequest, cookieName: string): string | null {
-    return httpCookies.getCookie(req, cookieName);
-  }
-
   // Middleware methods here
   static body(options: { maxBodySize?: number } = {}): Middleware {
     // Rem we have to call bodyMiddleware since it returns the middleware
@@ -802,11 +774,15 @@ export class HttpServer {
     return corsMiddleware(options);
   }
 
-  static expressWrapper(middleware: ExpressMiddleware): Middleware {
-    return expressWrapper(middleware);
+  static csrf(middleware: CsrfChecksOptions = {}): Middleware {
+    return csrfChecksMiddleware(middleware);
   }
 
-  static csrf(middleware: CsrfCheckOptions = {}): Middleware {
-    return csrfMiddleware(middleware);
+  static secHeaders(middleware: SecurityHeadersOptions): Middleware {
+    return securityHeadersMiddleware(middleware);
+  }
+
+  static expressWrapper(middleware: ExpressMiddleware): Middleware {
+    return expressWrapper(middleware);
   }
 }

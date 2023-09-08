@@ -9,19 +9,25 @@ export { LogLevel } from "./logger.js";
 export { ReqRes, ReqOptions, ReqAborted, ReqError } from "./http-req.js";
 export { SseServerOptions, SseServer } from "./http-server/sse-server.js";
 export {
+  ServerRequest,
+  ServerResponse,
+  Cookie,
+} from "./http-server/req-res.js";
+export {
   HttpServer,
   HttpConfig,
   HttpConfigError,
-  ServerRequest,
-  ServerResponse,
-  CorsOptions,
   EndpointOptions,
   EndpointCallback,
-  Middleware,
   HealthcheckCallback,
-  HttpCookie,
   HttpError,
 } from "./http-server/main.js";
+export {
+  Middleware,
+  ExpressMiddleware,
+  CorsOptions,
+  CsrfChecksOptions,
+} from "./http-server/middleware.js";
 
 import * as readline from "node:readline";
 
@@ -62,8 +68,7 @@ let _restartHandler = async (): Promise<void> => {
 
 let _httpServerList: httpServer.HttpServer[];
 let _pluginList: BSPlugin[];
-let _globalStore: Map<string, any>;
-let _constStore: Map<string, any>;
+let _sharedStore: Map<string, any>;
 let _logger: logger.AbstractLogger;
 
 // Types here
@@ -204,8 +209,7 @@ export const bs = Object.freeze({
     bs.shutdownMsg("Exiting ...");
 
     // Clear the global and const stores
-    _globalStore.clear();
-    _constStore.clear();
+    _sharedStore.clear();
 
     // Make sure we stop all of the HttpSevers - probably best to do it first
     for (let httpServer of _httpServerList) {
@@ -345,27 +349,12 @@ export const bs = Object.freeze({
     return plugin;
   },
 
-  setGlobal: (name: string, value: any): void => {
-    // Can set a global multiple times
-    _globalStore.set(name, value);
+  save: (name: string, value: any): void => {
+    _sharedStore.set(name, value);
   },
 
-  getGlobal: (name: string): any => {
-    return _globalStore.get(name);
-  },
-
-  setConst: (name: string, value: any): boolean => {
-    // Can only set a const once
-    if (_constStore.has(name)) {
-      return false;
-    }
-
-    _constStore.set(name, value);
-    return true;
-  },
-
-  getConst: (name: string): any => {
-    return _constStore.get(name);
+  retrieve: (name: string): any => {
+    return _sharedStore.get(name);
   },
 
   sleep: async (durationInSeconds: number): Promise<void> => {
@@ -547,8 +536,7 @@ function init(): void {
   // Initialise the private variables
   _httpServerList = [];
   _pluginList = [];
-  _globalStore = new Map();
-  _constStore = new Map();
+  _sharedStore = new Map();
 
   // Initialise and start the logger
   _logger = loggerInit();

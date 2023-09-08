@@ -14,7 +14,6 @@ import { Template } from "@bs-plugins/template";
 import helmet from "helmet";
 
 // import * as http from "node:http";
-
 async function init() {
   let options: JiraConfig = { password: "", server: "", user: "" };
   bs.addPlugin("t1", Jira, options);
@@ -40,8 +39,16 @@ async function init() {
     }),
   );
   httpMan1.use(HttpServer.expressWrapper(helmet()));
+  httpMan1.use(
+    HttpServer.secHeaders({
+      headers: [
+        { name: "x-test1", value: "kewl" },
+        { name: "x-test2", value: "kewler" },
+      ],
+    }),
+  );
 
-  bs.setConst("hs", httpMan1);
+  bs.save("hs", httpMan1);
 
   bs.httpServer().endpoint(
     "PUT",
@@ -99,7 +106,7 @@ async function init() {
     sseServerOptions: { pingInterval: 10, pingEventName: "ev1" },
   });
 
-  let hs = <HttpServer>bs.getConst("hs");
+  let hs = <HttpServer>bs.retrieve("hs");
   hs.get(
     "/api/html",
     async (_, res) => {
@@ -128,7 +135,8 @@ async function init() {
   bs.httpServer().endpoint(
     "GET",
     "/api/json",
-    (_, res) => {
+    (req, res) => {
+      console.log(req.url);
       res.statusCode = 201;
       res.json = { url: "login" };
     },
@@ -224,21 +232,13 @@ let middleware2: Middleware = async (_1, _2, next) => {
 
 await bs.sleep(2);
 
-bs.setGlobal("test1", 1);
-let test1 = bs.getGlobal("test1");
-bs.info("test1 global is %j", test1);
+bs.save("test1", 1);
+let test1 = bs.retrieve("test1");
+bs.info("test1 is %j", test1);
 
-bs.setGlobal("test1", "hello");
-test1 = bs.getGlobal("test1");
-bs.info("test1 global is %j", test1);
-
-bs.info("setting const %j", bs.setConst("test2", 1));
-let test2 = bs.getConst("test2");
-bs.info("test2 const is %j", test2);
-
-bs.info("setting const %j", bs.setConst("test2", "hello"));
-test2 = bs.getConst("test2");
-bs.info("test2 const is %j", test2);
+bs.save("test1", "hello");
+test1 = bs.retrieve("test1");
+bs.info("test1 is %j", test1);
 
 // bs.restart();
 

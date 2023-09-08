@@ -1,10 +1,7 @@
 // imports here
 import * as logger from "../logger.js";
-import {
-  ServerRequest,
-  ServerResponse,
-  setServerTimingHeader,
-} from "./middleware.js";
+import { setServerTimingHeader } from "./middleware.js";
+import { ServerRequest, ServerResponse } from "./req-res.js";
 import { contentTypes } from "./content-types.js";
 
 import * as fs from "node:fs";
@@ -250,7 +247,7 @@ export class StaticFileServer {
     }
 
     // Get the file details and if it doesn't exist return a not found
-    let details = await this.getFileDetails(req.urlObject.pathname);
+    let details = await this.getFileDetails(req.urlPath);
     if (details === undefined) {
       this._notFoundHandler(req, res);
       return;

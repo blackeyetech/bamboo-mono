@@ -57,7 +57,7 @@ export default [
       file: "dist/shell.d.ts",
       format: "es",
     },
-    external: ["node:http"], // No idea why I need this ...
+    external: ["node:http", "node:net"], // This is because we use the http/net types
     plugins: [dts()],
   },
 ];

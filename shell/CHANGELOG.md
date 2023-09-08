@@ -1,5 +1,17 @@
 # @bs-core/shell
 
+## 1.7.0
+
+### Minor Changes
+
+- General refactor, moved cookie methods into ServerRequest/ServerResponse adn new security header middleware
+
+## 1.6.1
+
+### Patch Changes
+
+- Replace setGlobal()/setConst() with save() and gteGlobal()/getConst() with retrieve()
+
 ## 1.6.0
 
 ### Minor Changes
