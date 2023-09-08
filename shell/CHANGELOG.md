@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.7.1
+
+### Patch Changes
+
+- added default values for security headers middleware
+
 ## 1.7.0
 
 ### Minor Changes

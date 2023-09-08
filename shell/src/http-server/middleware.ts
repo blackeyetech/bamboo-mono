@@ -369,9 +369,39 @@ export const securityHeadersMiddleware = (
     res: ServerResponse,
     next: () => Promise<void>,
   ): Promise<void> => {
-    // Set all of the requested headers
+    let defaultHeaders: { name: string; value: string }[] = [
+      { name: "X-Frame-Options", value: "SAMEORIGIN" },
+      { name: "X-XSS-Protection", value: "0" },
+      { name: "X-Content-Type-Options", value: "nosniff" },
+      { name: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      {
+        name: "Strict-Transport-Security",
+        value: "max-age=63072000; includeSubDomains; preload",
+      },
+      { name: "X-DNS-Prefetch-Control", value: "off" },
+      {
+        name: "Content-Security-Policy",
+        value:
+          "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests",
+      },
+    ];
+
+    // Set all of the user supplied headers first
     for (let header of options.headers) {
       res.setHeader(header.name, header.value);
+    }
+
+    // Now step through all of the defaul headers
+    for (let header of defaultHeaders) {
+      // Check if the user has already supplied the header (use lower case
+      // to be safe)
+      let found = options.headers.find(
+        (el) => el.name.toLowerCase() === header.name.toLowerCase(),
+      );
+
+      if (found === undefined) {
+        res.setHeader(header.name, header.value);
+      }
     }
 
     await next();

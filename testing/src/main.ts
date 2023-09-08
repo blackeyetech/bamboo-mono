@@ -11,8 +11,6 @@ import {
 import { Jira, JiraConfig } from "@bs-plugins/jira";
 import { Template } from "@bs-plugins/template";
 
-import helmet from "helmet";
-
 // import * as http from "node:http";
 async function init() {
   let options: JiraConfig = { password: "", server: "", user: "" };
@@ -38,12 +36,12 @@ async function init() {
       credentialsAllowed: false,
     }),
   );
-  httpMan1.use(HttpServer.expressWrapper(helmet()));
   httpMan1.use(
     HttpServer.secHeaders({
       headers: [
         { name: "x-test1", value: "kewl" },
         { name: "x-test2", value: "kewler" },
+        { name: "X-Frame-Options", value: "DENY" },
       ],
     }),
   );
