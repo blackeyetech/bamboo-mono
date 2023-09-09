@@ -83,7 +83,7 @@ export class ServerResponse extends http.ServerResponse {
 
 export class ServerRequest extends http.IncomingMessage {
   // Properties here
-  public urlPath: string;
+  public urlObj: URL;
   public params: Record<string, any>;
   public middlewareProps: Record<string, any>;
 
@@ -98,7 +98,7 @@ export class ServerRequest extends http.IncomingMessage {
     super(socket);
 
     // Set this to the root as a default
-    this.urlPath = "/";
+    this.urlObj = new URL("http://localhost/");
 
     this.params = {};
     this.middlewareProps = {};

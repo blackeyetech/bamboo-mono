@@ -301,7 +301,11 @@ export class HttpServer {
     });
   }
 
-  private async handleHttpReq(req: ServerRequest, res: ServerResponse) {
+  private async handleHttpReq(
+    req: ServerRequest,
+    res: ServerResponse,
+    https: boolean,
+  ) {
     // We have to do this hear for now since the url will not be set until
     // after this object it created
 
@@ -309,13 +313,11 @@ export class HttpServer {
     // This will sort out ".."s, "."s and "//"s and ensure you can not end up
     // wit a path like "../secret-dir/secrets.txt"
     let url = path.resolve("/", req.url as string);
-
-    // Strip off any query strings or hashes
-    let match = url.match(/^[^?#]*/);
-    req.urlPath = match === null ? "/" : match[0];
+    let protocol = https ? "https" : "http";
+    req.urlObj = new URL(url, `${protocol}://${req.headers.host}`);
 
     // Check if this is an API call
-    if (req.urlPath.startsWith(this._apiBaseUrl)) {
+    if (req.urlObj.pathname.startsWith(this._apiBaseUrl)) {
       await this.handleApiReq(req, res);
       return;
     }
@@ -372,7 +374,7 @@ export class HttpServer {
 
     // Next see if we have a registered callback for the HTTP req path
     for (let el of list) {
-      let result = el.matchFunc(req.urlPath);
+      let result = el.matchFunc(req.urlObj.pathname);
 
       // If result is false that means we found nothing
       if (result === false) {
@@ -419,7 +421,7 @@ export class HttpServer {
         // We don't know what this is so log it and make sure to return a 500
         this._log.error(
           "Unknown error happened while handling URL (%s) - (%s)",
-          req.urlPath,
+          req.urlObj.pathname,
           e,
         );
 
@@ -610,7 +612,7 @@ export class HttpServer {
       };
 
       this._server = https.createServer(options, (req, res) => {
-        this.handleHttpReq(req as ServerRequest, res as ServerResponse);
+        this.handleHttpReq(req as ServerRequest, res as ServerResponse, true);
       });
     } else {
       this._baseUrl = `http://${this._networkIp}:${this._networkPort}`;
@@ -622,7 +624,7 @@ export class HttpServer {
         ServerResponse: <any>ServerResponse, // Something wrong with typedefs
       };
       this._server = http.createServer(options, (req, res) => {
-        this.handleHttpReq(req as ServerRequest, res as ServerResponse);
+        this.handleHttpReq(req as ServerRequest, res as ServerResponse, false);
       });
     }
 

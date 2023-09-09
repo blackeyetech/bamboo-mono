@@ -247,7 +247,7 @@ export class StaticFileServer {
     }
 
     // Get the file details and if it doesn't exist return a not found
-    let details = await this.getFileDetails(req.urlPath);
+    let details = await this.getFileDetails(req.urlObj.pathname);
     if (details === undefined) {
       this._notFoundHandler(req, res);
       return;

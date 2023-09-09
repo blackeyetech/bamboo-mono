@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.7.2
+
+### Patch Changes
+
+- Added urlObj back
+
 ## 1.7.1
 
 ### Patch Changes

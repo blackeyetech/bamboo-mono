@@ -1,5 +1,5 @@
 {
-  "version": "1.0.9",
+  "version": "1.0.10",
   "name": "@bs-plugins/postgresql",
   "description": "Bamboo Shell plugin for PostgreSQL",
   "exports": {
