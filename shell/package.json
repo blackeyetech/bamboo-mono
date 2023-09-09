@@ -1,5 +1,5 @@
 {
-  "version": "1.7.2",
+  "version": "1.7.3",
   "name": "@bs-core/shell",
   "description": "The Bamboo Shell",
   "exports": {

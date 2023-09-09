@@ -25,6 +25,7 @@ async function init() {
       path: "/home/parallels/dev/src/oit/mdrp/frontend/bootstrap3",
       extraContentTypes: { world: "application/octect" },
     },
+    apiBaseUrl: ["/api/", "/auth/"],
   });
 
   httpMan1.use(HttpServer.body());
@@ -137,6 +138,17 @@ async function init() {
       console.log(req.url);
       res.statusCode = 201;
       res.json = { url: "login" };
+    },
+    { etag: false },
+  );
+
+  bs.httpServer().endpoint(
+    "GET",
+    "/auth/json",
+    (req, res) => {
+      console.log(req.url);
+      res.statusCode = 201;
+      res.json = { url: "json" };
     },
     { etag: false },
   );

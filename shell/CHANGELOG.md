@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.7.3
+
+### Patch Changes
+
+- HttpSererv apiBasePaths is now an array
+
 ## 1.7.2
 
 ### Patch Changes

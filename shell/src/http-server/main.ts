@@ -79,7 +79,7 @@ export type HttpConfig = {
   httpsKeyFile?: string;
   httpsCertFile?: string;
 
-  apiBaseUrl?: string;
+  apiBaseUrl?: string[];
   ssrHandler?: (req: ServerRequest, res: ServerResponse) => Promise<void>;
   staticFileServer?: {
     path: string;
@@ -123,7 +123,7 @@ export class HttpServer {
   private _keyFile?: string;
   private _certFile?: string;
 
-  private _apiBaseUrl: string;
+  private _apiBaseUrls: string[];
   private _ssrHandler?: (
     req: ServerRequest,
     res: ServerResponse,
@@ -153,7 +153,7 @@ export class HttpServer {
 
       enableHttps: false,
 
-      apiBaseUrl: "/api/",
+      apiBaseUrl: ["/api/"],
 
       ...httpConfig,
     };
@@ -193,7 +193,7 @@ export class HttpServer {
       this._certFile = config.httpsCertFile;
     }
 
-    this._apiBaseUrl = config.apiBaseUrl;
+    this._apiBaseUrls = config.apiBaseUrl;
     this._ssrHandler = config.ssrHandler;
 
     this._defaultMiddlewareList = [];
@@ -316,10 +316,14 @@ export class HttpServer {
     let protocol = https ? "https" : "http";
     req.urlObj = new URL(url, `${protocol}://${req.headers.host}`);
 
+    this._log.trace("Received (%s) req for (%s)", req.method, url);
+    console.log(req.urlObj);
     // Check if this is an API call
-    if (req.urlObj.pathname.startsWith(this._apiBaseUrl)) {
-      await this.handleApiReq(req, res);
-      return;
+    for (let base of this._apiBaseUrls) {
+      if (req.urlObj.pathname.startsWith(base)) {
+        await this.handleApiReq(req, res);
+        return;
+      }
     }
 
     // This wasn't an API call so check if we are doing SSR
