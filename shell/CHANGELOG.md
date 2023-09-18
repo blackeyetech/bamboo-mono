@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.8.0
+
+### Minor Changes
+
+- Removed need for apiBaseUrl in HttpSErver config
+
 ## 1.7.3
 
 ### Patch Changes

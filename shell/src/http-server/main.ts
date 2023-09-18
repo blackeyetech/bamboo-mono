@@ -79,7 +79,6 @@ export type HttpConfig = {
   httpsKeyFile?: string;
   httpsCertFile?: string;
 
-  apiBaseUrl?: string[];
   ssrHandler?: (req: ServerRequest, res: ServerResponse) => Promise<void>;
   staticFileServer?: {
     path: string;
@@ -123,7 +122,6 @@ export class HttpServer {
   private _keyFile?: string;
   private _certFile?: string;
 
-  private _apiBaseUrls: string[];
   private _ssrHandler?: (
     req: ServerRequest,
     res: ServerResponse,
@@ -152,8 +150,6 @@ export class HttpServer {
       healthcheckBadRes: 503,
 
       enableHttps: false,
-
-      apiBaseUrl: ["/api/"],
 
       ...httpConfig,
     };
@@ -193,7 +189,6 @@ export class HttpServer {
       this._certFile = config.httpsCertFile;
     }
 
-    this._apiBaseUrls = config.apiBaseUrl;
     this._ssrHandler = config.ssrHandler;
 
     this._defaultMiddlewareList = [];
@@ -305,7 +300,7 @@ export class HttpServer {
     req: ServerRequest,
     res: ServerResponse,
     https: boolean,
-  ) {
+  ): Promise<void> {
     // We have to do this hear for now since the url will not be set until
     // after this object it created
 
@@ -317,13 +312,9 @@ export class HttpServer {
     req.urlObj = new URL(url, `${protocol}://${req.headers.host}`);
 
     this._log.trace("Received (%s) req for (%s)", req.method, url);
-    console.log(req.urlObj);
-    // Check if this is an API call
-    for (let base of this._apiBaseUrls) {
-      if (req.urlObj.pathname.startsWith(base)) {
-        await this.handleApiReq(req, res);
-        return;
-      }
+
+    if (await this.handleApiReq(req, res)) {
+      return;
     }
 
     // This wasn't an API call so check if we are doing SSR
@@ -399,14 +390,12 @@ export class HttpServer {
   private async handleApiReq(
     req: ServerRequest,
     res: ServerResponse,
-  ): Promise<void> {
+  ): Promise<boolean> {
     // See if this request matches a registered endpoint
     let matchedEl = this.findEndpoint(req);
     if (matchedEl === null) {
-      // Couldn't find a match so return a 404
-      res.statusCode = 404;
-      res.end();
-      return;
+      // Couldn't find a match so flag that the req has not been handled
+      return false;
     }
 
     await this.callMiddleware(
@@ -450,6 +439,9 @@ export class HttpServer {
       // End the response now
       res.end();
     }
+
+    // Flag this req has been handled
+    return true;
   }
 
   private async callMiddleware(
@@ -514,7 +506,7 @@ export class HttpServer {
       // This means there will be an empty body so check if the StatusCode has
       // been change from the default 200 - if it has leave it alone beacuse
       // the user must have set it
-      if (res.statusCode !== 200) {
+      if (res.statusCode === 200) {
         // Otherwise set the status code to indicate an empty body
         res.statusCode = 204;
       }
@@ -570,8 +562,10 @@ export class HttpServer {
 
     if (healthy) {
       res.statusCode = this._healthCheckGoodResCode;
+      res.body = "Healthy";
     } else {
       res.statusCode = this._healthCheckBadResCode;
+      res.body = "Not Healthy";
     }
   }
 

@@ -291,6 +291,7 @@ export class StaticFileServer {
     }
 
     let fileRead = fs.createReadStream(details.fullPath);
+    // NOTE: pipeline close the res when it is finished
     await streams.pipeline(fileRead, res).catch((e) => {
       this._log.trace("Error attempting to read (%s): (%s)", fileRead, e);
     });

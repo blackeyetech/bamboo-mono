@@ -25,7 +25,7 @@ async function init() {
       path: "/home/parallels/dev/src/oit/mdrp/frontend/bootstrap3",
       extraContentTypes: { world: "application/octect" },
     },
-    apiBaseUrl: ["/api/", "/auth/"],
+    healthcheckPath: "/hc",
   });
 
   httpMan1.use(HttpServer.body());
@@ -153,7 +153,10 @@ async function init() {
     { etag: false },
   );
 
-  bs.httpServer().addHealthcheck(async () => false);
+  bs.httpServer().addHealthcheck(async () => {
+    bs.info("Healthy!");
+    return true;
+  });
 }
 
 bs.setStopHandler(async () => {

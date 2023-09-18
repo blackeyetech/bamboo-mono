@@ -1,5 +1,12 @@
 # @bs-plugins/ldap
 
+## 1.0.12
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.8.0
+
 ## 1.0.11
 
 ### Patch Changes
