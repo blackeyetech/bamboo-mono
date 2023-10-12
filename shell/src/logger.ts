@@ -1,4 +1,15 @@
-// Log levels
+// imports here
+import { configMan } from "./config-man.js";
+
+import * as util from "node:util";
+
+// Config consts here
+const CFG_LOG_LEVEL = "LOG_LEVEL";
+const CFG_LOG_TIMESTAMP = "LOG_TIMESTAMP";
+const CFG_LOG_TIMESTAMP_LOCALE = "LOG_TIMESTAMP_LOCALE";
+const CFG_LOG_TIMESTAMP_TZ = "LOG_TIMESTAMP_TZ";
+
+// Enums here
 export enum LogLevel {
   COMPLETE_SILENCE = 0, // Nothing - not even fatals
   QUIET = 100, // Log nothing except fatals, errors and warnings
@@ -8,174 +19,195 @@ export enum LogLevel {
   TRACE = 400, // Log trace messages
 }
 
-export class LoggerInstance {
-  private _logger: AbstractLogger;
-  private _tag: string;
+// Private variables here
+let _timestamp: boolean;
+let _timestampLocale: string;
+let _timestampTz: string;
+let _logLevel: LogLevel;
 
-  constructor(logger: AbstractLogger, tag: string) {
-    this._logger = logger;
-    this._tag = tag;
+// Private functions here
+function timestamp(): string {
+  // If we are not supposed to generate timestamps then return nothing
+  if (!_timestamp) {
+    return "";
   }
 
-  fatal(...args: any): void {
-    this._logger.fatal(this._tag, ...args);
+  let now = new Date();
+
+  if (_timestampLocale === "ISO") {
+    // Make sure to add a trailing space!
+    return `${now.toISOString()} `;
   }
 
-  error(...args: any): void {
-    this._logger.error(this._tag, ...args);
-  }
-
-  warn(...args: any): void {
-    this._logger.warn(this._tag, ...args);
-  }
-
-  info(...args: any): void {
-    this._logger.info(this._tag, ...args);
-  }
-
-  startupMsg(...args: any): void {
-    this._logger.startupMsg(this._tag, ...args);
-  }
-
-  shutdownMsg(...args: any): void {
-    this._logger.shutdownMsg(this._tag, ...args);
-  }
-
-  debug(...args: any): void {
-    this._logger.debug(this._tag, ...args);
-  }
-
-  trace(...args: any): void {
-    this._logger.trace(this._tag, ...args);
-  }
-
-  force(...args: any): void {
-    this._logger.force(this._tag, ...args);
-  }
+  // Make sure to add a trailing space!
+  return `${now.toLocaleString(_timestampLocale, {
+    timeZone: _timestampTz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    fractionalSecondDigits: 3,
+  })} `;
 }
 
 // Logger class here
-export abstract class AbstractLogger {
-  protected _timestamp: boolean;
-  protected _timestampLocale: string;
-  protected _timestampTz: string;
-  protected _level: LogLevel;
+export const logger = Object.freeze({
+  init(): void {
+    _timestamp = <boolean>configMan.get({
+      config: CFG_LOG_TIMESTAMP,
+      type: "Boolean",
+      defaultVal: false,
+    });
 
-  protected _started: boolean;
+    _timestampLocale = <string>configMan.get({
+      config: CFG_LOG_TIMESTAMP_LOCALE,
+      type: "String",
+      defaultVal: "ISO",
+    });
 
-  constructor(
-    timestamp: boolean,
-    timestampLocale: string,
-    timestampTz: string,
-    logLevel: string,
-  ) {
-    this._started = false;
+    _timestampTz = <string>configMan.get({
+      config: CFG_LOG_TIMESTAMP_TZ,
+      type: "String",
+      defaultVal: "UTC",
+    });
 
-    this._timestamp = timestamp;
-    this._timestampLocale = timestampLocale;
-    this._timestampTz = timestampTz;
+    let level = <string>configMan.get({
+      config: CFG_LOG_LEVEL,
+      type: "String",
+      defaultVal: "",
+    });
 
-    switch (logLevel.toUpperCase()) {
+    switch (level.toUpperCase()) {
       case "": // This is in case it is not set
-        this._level = LogLevel.INFO;
+        _logLevel = LogLevel.INFO;
         break;
       case "SILENT":
-        this._level = LogLevel.COMPLETE_SILENCE;
+        _logLevel = LogLevel.COMPLETE_SILENCE;
         break;
       case "QUIET":
-        this._level = LogLevel.QUIET;
+        _logLevel = LogLevel.QUIET;
         break;
       case "INFO":
-        this._level = LogLevel.INFO;
+        _logLevel = LogLevel.INFO;
         break;
       case "STARTUP":
-        this._level = LogLevel.START_UP;
+        _logLevel = LogLevel.START_UP;
         break;
       case "DEBUG":
-        this._level = LogLevel.DEBUG;
+        _logLevel = LogLevel.DEBUG;
         break;
       case "TRACE":
-        this._level = LogLevel.TRACE;
+        _logLevel = LogLevel.TRACE;
         break;
       default:
-        this._level = LogLevel.INFO;
-        this.warn(
-          `LogLevel ${logLevel} is unknown. Setting level to ${
-            LogLevel[this._level]
-          }.`,
-        );
-        break;
-    }
-  }
-
-  start(): void {
-    // Override if you need to set something up before logging starts, e.g. open a file
-
-    // Make sure you set started if you override this method
-    this._started = true;
-  }
-
-  stop(): void {
-    // Overide if you need to tidy up before exiting, e.g. close a file
-
-    // Make sure you unset started if you override this method
-    this._started = false;
-  }
-
-  abstract fatal(tag: string, ...args: any): void;
-  abstract error(tag: string, ...args: any): void;
-  abstract warn(tag: string, ...args: any): void;
-  abstract startupMsg(tag: string, ...args: any): void;
-  abstract shutdownMsg(tag: string, ...args: any): void;
-  abstract info(tag: string, ...args: any): void;
-  abstract debug(tag: string, ...args: any): void;
-  abstract trace(tag: string, ...args: any): void;
-  abstract force(tag: string, ...args: any): void;
-
-  set level(level: LogLevel) {
-    this._level = level;
-  }
-
-  set logTimestamps(log: boolean) {
-    this._timestamp = log;
-  }
-
-  set logTimestampLocale(locale: string) {
-    this._timestampLocale = locale;
-  }
-
-  set logTimestampTz(tz: string) {
-    this._timestampTz = tz;
-  }
-
-  get started(): boolean {
-    return this._started;
-  }
-
-  protected timestamp(): string {
-    // If we are not supposed to generate timestamps then return nothing
-    if (!this._timestamp) {
-      return "";
+        throw new Error(`${CFG_LOG_LEVEL} (${level}) is unknown.`);
     }
 
-    let now = new Date();
-
-    if (this._timestampLocale === "ISO") {
-      // Make sure to add a trailing space!
-      return `${now.toISOString()} `;
+    // Now get the messages from the confgiMan for display
+    let messages = configMan.getMessages();
+    for (const message of messages) {
+      logger.startupMsg("Logger", message[0]);
     }
+    configMan.clearMessages();
+  },
 
-    // Make sure to add a trailing space!
-    return `${now.toLocaleString(this._timestampLocale, {
-      timeZone: this._timestampTz,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-      fractionalSecondDigits: 3,
-    })} `;
-  }
-}
+  fatal(tag: string, ...args: any): void {
+    // fatals are always logged
+    let msg = util.format(
+      `${timestamp()}FATAL: ${tag}: ${args[0]}`,
+      ...args.slice(1),
+    );
+    console.error(msg);
+  },
+
+  error(tag: string, ...args: any): void {
+    // errors are always logged unless level = LOG_COMPLETE_SILENCE
+    if (_logLevel > LogLevel.COMPLETE_SILENCE) {
+      let msg = util.format(
+        `${timestamp()}ERROR: ${tag}: ${args[0]}`,
+        ...args.slice(1),
+      );
+      console.error(msg);
+    }
+  },
+
+  warn(tag: string, ...args: any): void {
+    // warnings are always logged unless level = LOG_COMPLETE_SILENCE
+    if (_logLevel > LogLevel.COMPLETE_SILENCE) {
+      let msg = util.format(
+        `${timestamp()}WARN: ${tag}: ${args[0]}`,
+        ...args.slice(1),
+      );
+      console.warn(msg);
+    }
+  },
+
+  info(tag: string, ...args: any): void {
+    if (_logLevel >= LogLevel.INFO) {
+      let msg = util.format(
+        `${timestamp()}INFO: ${tag}: ${args[0]}`,
+        ...args.slice(1),
+      );
+      console.info(msg);
+    }
+  },
+
+  startupMsg(tag: string, ...args: any): void {
+    if (_logLevel >= LogLevel.START_UP) {
+      let msg = util.format(
+        `${timestamp()}STARTUP: ${tag}: ${args[0]}`,
+        ...args.slice(1),
+      );
+      console.info(msg);
+    }
+  },
+
+  shutdownMsg(tag: string, ...args: any): void {
+    if (_logLevel >= LogLevel.START_UP) {
+      let msg = util.format(
+        `${timestamp()}SHUTDOWN: ${tag}: ${args[0]}`,
+        ...args.slice(1),
+      );
+      console.info(msg);
+    }
+  },
+
+  debug(tag: string, ...args: any): void {
+    if (_logLevel >= LogLevel.DEBUG) {
+      let msg = util.format(
+        `${timestamp()}DEBUG: ${tag}: ${args[0]}`,
+        ...args.slice(1),
+      );
+      console.info(msg);
+    }
+  },
+
+  trace(tag: string, ...args: any): void {
+    if (_logLevel >= LogLevel.TRACE) {
+      let msg = util.format(
+        `${timestamp()}TRACE: ${tag}: ${args[0]}`,
+        ...args.slice(1),
+      );
+      console.info(msg);
+    }
+  },
+
+  force(tag: string, ...args: any): void {
+    // forces are always logged even if level == LOG_COMPLETE_SILENCE
+    let msg = util.format(
+      `${timestamp()}FORCED: ${tag}: ${args[0]}`,
+      ...args.slice(1),
+    );
+    console.error(msg);
+  },
+
+  setLevel(level: LogLevel) {
+    _logLevel = level;
+  },
+});
+
+// Time to setup this logger - init?!!
+logger.init();

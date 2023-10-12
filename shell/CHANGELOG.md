@@ -1,5 +1,23 @@
 # @bs-core/shell
 
+## 1.9.0
+
+### Minor Changes
+
+- Internal refactoring:
+
+  - Removed ConfigMan Types and replaced them with strings
+  - Changed ConfigMan env file store to a map()
+  - Removed setLogger() from BSPlugin and added it to the constructor
+  - Split out BSPlugin into it's own file
+  - Removed logger from ConfigMan and added a buffer for passing messages
+  - Changed Logger from being a class to being a module
+  - HttpServer now requires a name. The default is "Main"
+  - Added a defaultContentType to the StaticFile server
+  - Moved HttpError and setServerTimingHeader to req-res.ts
+  - Improved how body middleware is processing the body
+  - Improved how etag is generated
+
 ## 1.8.0
 
 ### Minor Changes

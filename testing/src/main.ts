@@ -20,7 +20,6 @@ async function init() {
   bs.addPlugin("t4", Template);
 
   let httpMan1 = await bs.addHttpServer("lo", 8080, {
-    loggerTag: "HttpMan1",
     staticFileServer: {
       path: "/home/parallels/dev/src/oit/mdrp/frontend/bootstrap3",
       extraContentTypes: { world: "application/octect" },
@@ -28,7 +27,7 @@ async function init() {
     healthcheckPath: "/hc",
   });
 
-  httpMan1.use(HttpServer.body());
+  httpMan1.use(HttpServer.body({}));
   httpMan1.use(HttpServer.json());
   httpMan1.use(
     HttpServer.cors({
@@ -101,7 +100,7 @@ async function init() {
     );
   };
 
-  bs.httpServer().endpoint("GET", "/api/ping", pong, {
+  bs.httpServer().get("/api/ping", pong, {
     sseServerOptions: { pingInterval: 10, pingEventName: "ev1" },
   });
 
@@ -116,6 +115,18 @@ async function init() {
     },
     {
       middlewareList: [middleware2, middleware2],
+    },
+  );
+
+  hs.post(
+    "/api/json",
+    async (req, res) => {
+      bs.info("received %j", req.body?.toString());
+      bs.info("%j", req.headers);
+      res.serverTimingsMetrics.push({ name: "json", duration: 3.33 });
+    },
+    {
+      middlewareList: [HttpServer.body()],
     },
   );
 

@@ -3,6 +3,7 @@ import { SseServer } from "./sse-server.js";
 
 import * as net from "node:net";
 import * as http from "node:http";
+import { performance } from "node:perf_hooks";
 
 // Types here
 export type Cookie = {
@@ -14,6 +15,14 @@ export type Cookie = {
   httpOnly?: boolean;
   sameSite?: "Strict" | "Lax" | "None";
 };
+
+// Classes here
+export class HttpError {
+  constructor(
+    public status: number,
+    public message: string = "Achtung Baby!",
+  ) {}
+}
 
 export class ServerResponse extends http.ServerResponse {
   // Properties here
@@ -137,3 +146,20 @@ export class ServerRequest extends http.IncomingMessage {
     return null;
   };
 }
+
+// Utility functions here
+export const setServerTimingHeader = (
+  res: ServerResponse,
+  receiveTime: number,
+) => {
+  // Set the total latency first
+  let lat = Math.round((performance.now() - receiveTime) * 1000) / 1000;
+  let timing = `latency;dur=${lat}`;
+
+  // Then add each additional metric added to the res
+  for (let metric of res.serverTimingsMetrics) {
+    timing += `, ${metric.name};dur=${metric.duration}`;
+  }
+
+  res.setHeader("server-timing", timing);
+};

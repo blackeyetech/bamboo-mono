@@ -1,14 +1,16 @@
 // imports here
-import * as logger from "../logger.js";
-import { setServerTimingHeader } from "./middleware.js";
-import { ServerRequest, ServerResponse } from "./req-res.js";
+import { logger } from "../logger.js";
+import {
+  ServerRequest,
+  ServerResponse,
+  setServerTimingHeader,
+} from "./req-res.js";
 import { contentTypes } from "./content-types.js";
 
 import * as fs from "node:fs";
 import * as fsPromises from "node:fs/promises";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
-import * as http from "node:http";
 import * as streams from "node:stream/promises";
 
 // Types here
@@ -23,25 +25,26 @@ type FileDetails = {
 };
 
 export type NotFoundHandler = (
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
+  req: ServerRequest,
+  res: ServerResponse,
 ) => Promise<void>;
 
 export type StaticFileServerConfig = {
   filePath: string;
-  logger: logger.AbstractLogger;
   loggerTag: string;
   defaultDirFile?: string;
   notFoundHandler?: NotFoundHandler;
 
+  defaultCharSet?: string;
   extraContentTypes?: Record<string, string>;
 };
 
 // StaticFileServer class here
 export class StaticFileServer {
   private _filePath: string;
-  private _log: logger.LoggerInstance;
+  private _loggerTag: string;
   private _defaultDirFile: string;
+  private _defaultCharSet: string;
   private _notFoundHandler: NotFoundHandler;
 
   private _staticFileMap: Map<string, FileDetails>;
@@ -50,10 +53,8 @@ export class StaticFileServer {
   constructor(serverConfig: StaticFileServerConfig) {
     let config = {
       defaultDirFile: "index.html",
-      notFoundHandler: async (
-        _: http.IncomingMessage,
-        res: http.ServerResponse,
-      ) => {
+      defaultCharSet: "charset=utf-8",
+      notFoundHandler: async (_: ServerRequest, res: ServerResponse) => {
         res.statusCode = 404;
         res.end();
       },
@@ -63,8 +64,9 @@ export class StaticFileServer {
 
     // Make sure there is no trailinog slash at the end of the path
     this._filePath = config.filePath.replace(/\/*$/, "");
-    this._log = new logger.LoggerInstance(config.logger, config.loggerTag);
+    this._loggerTag = config.loggerTag;
     this._defaultDirFile = config.defaultDirFile;
+    this._defaultCharSet = config.defaultCharSet;
     this._notFoundHandler = config.notFoundHandler;
 
     this._staticFileMap = new Map();
@@ -83,12 +85,15 @@ export class StaticFileServer {
       }
     }
 
-    // Get all of the files at start up
-    this.getFilesRecursively();
+    // Get all of the files at start up - but a constructor cant be async so
+    // run getFilesRecursively()Nat the earliest possibile time
+    setImmediate(async () => {
+      await this.getFilesRecursively();
+    });
   }
 
   // Private methods here
-  private getFilesRecursively(urlPath: string = "/"): void {
+  private async getFilesRecursively(urlPath: string = "/"): Promise<void> {
     // Note: urlPath should always start and end in "/"
     let dir = `${this._filePath}${urlPath}`;
     let dirFiles: string[] = [];
@@ -97,21 +102,21 @@ export class StaticFileServer {
     try {
       dirFiles = fs.readdirSync(dir);
     } catch (e) {
-      this._log.warn("No permissions to read from dir (%s)", dir);
+      logger.warn(this._loggerTag, "No permissions to read from dir (%s)", dir);
     }
 
     // Iterate through each file and check if it is a dir or not
     for (let file of dirFiles) {
       let fullPath = `${dir}${file}`;
-      let url = `${urlPath}${file}`;
       let stats = fs.statSync(fullPath);
+      let url = `${urlPath}${file}`;
 
       if (stats.isDirectory()) {
         // Get the files in this dir
         this.getFilesRecursively(`${url}/`);
       } else if (stats.isFile()) {
         // Add the file to the list
-        this.addFile(fullPath, `${url}`, stats);
+        await this.addFile(fullPath, `${url}`, stats);
       }
     }
   }
@@ -122,21 +127,27 @@ export class StaticFileServer {
     let type = this._contentTypes.get(ext);
 
     if (type !== undefined) {
-      return type;
+      return `${type}; ${this._defaultCharSet}`;
     }
 
     // This is the default content type
-    return "text/plain";
+    return `text/plain; ${this._defaultCharSet}`;
   }
 
-  private calculateEtag(file: string): string {
+  private async calculateEtag(file: string): Promise<string> {
     // MD5 hash the file contents to calculate the etag
-    let contents = fs.readFileSync(file, "utf-8");
+    let contents = fs.createReadStream(file);
+    let hash = crypto.createHash("sha1");
 
-    return crypto.createHash("sha1").update(contents).digest("hex");
+    await streams.pipeline(contents, hash);
+    return hash.digest("hex");
   }
 
-  private addFile(fullPath: string, urlPath: string, stats: fs.Stats): boolean {
+  private async addFile(
+    fullPath: string,
+    urlPath: string,
+    stats: fs.Stats,
+  ): Promise<boolean> {
     // Use a flag to decide if we add the file to the file map or not
     let addFile = true;
 
@@ -147,7 +158,11 @@ export class StaticFileServer {
       // There was an error which means we cant read the file so DO NOT add it
       addFile = false;
 
-      this._log.warn("No permissions to read file : (%s)", fullPath);
+      logger.warn(
+        this._loggerTag,
+        "No permissions to read file : (%s)",
+        fullPath,
+      );
     }
 
     if (addFile === false) {
@@ -161,7 +176,7 @@ export class StaticFileServer {
     // UTC string which means we get a mismatch checking "If-Modified-Since"
     const modTimeNoMs = Math.trunc(modTimeMs / 1000) * 1000;
 
-    let etag = this.calculateEtag(fullPath);
+    let etag = await this.calculateEtag(fullPath);
 
     const fileDetails: FileDetails = {
       contentType: this.lookupType(fullPath), // In case urlPath is a dir
@@ -175,7 +190,8 @@ export class StaticFileServer {
 
     this._staticFileMap.set(urlPath, fileDetails);
 
-    this._log.trace(
+    logger.trace(
+      this._loggerTag,
       "Added (%s) to file map. Details (%j)",
       urlPath,
       fileDetails,
@@ -193,7 +209,8 @@ export class StaticFileServer {
 
     // If we can't stat the file (doesn't exist) then stat will throw
     let stats = await fsPromises.stat(fullPath).catch((e) => {
-      this._log.trace(
+      logger.trace(
+        this._loggerTag,
         "Received an error when trying to stat (%s): (%s)",
         fullPath,
         e,
@@ -212,7 +229,8 @@ export class StaticFileServer {
       // Get the stats again for the default file. If we can't stat the file
       // (doesn't exist) then stat will throw
       stats = await fsPromises.stat(fullPath).catch((e) => {
-        this._log.trace(
+        logger.trace(
+          this._loggerTag,
           "Received an error when trying to stat (%s): (%s)",
           fullPath,
           e,
@@ -231,7 +249,7 @@ export class StaticFileServer {
       details.size !== stats.size
     ) {
       // Add the file to the file map and get the new details
-      this.addFile(fullPath, file, stats);
+      await this.addFile(fullPath, file, stats);
       details = this._staticFileMap.get(file);
     }
 
@@ -291,9 +309,14 @@ export class StaticFileServer {
     }
 
     let fileRead = fs.createReadStream(details.fullPath);
-    // NOTE: pipeline close the res when it is finished
+    // NOTE: pipeline will close the res when it is finished
     await streams.pipeline(fileRead, res).catch((e) => {
-      this._log.trace("Error attempting to read (%s): (%s)", fileRead, e);
+      logger.trace(
+        this._loggerTag,
+        "Error attempting to read (%s): (%s)",
+        fileRead,
+        e,
+      );
     });
   }
 }

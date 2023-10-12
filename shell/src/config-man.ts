@@ -1,28 +1,17 @@
 // imports here
-import { AbstractLogger } from "./logger.js";
-
 import * as fs from "node:fs";
 
 // Config consts here
 const CFG_ENV_FILE = "ENV_FILE";
 
 // Private variables here
-let envFileStore: Record<string, string> = {}; // Store for env file vars
-
-// enums here
-export enum Types {
-  String,
-  Boolean,
-  Number,
-}
+let _envFileStore: Map<string, string> = new Map(); // Store for env file vars
+let _messages: Set<string> = new Set();
 
 // Types here
 export type Options = {
   config: string;
-  type: Types;
-
-  logTag: string;
-  logger?: AbstractLogger;
+  type: "String" | "Boolean" | "Number";
 
   defaultVal?: string | boolean | number;
   cmdLineFlag?: string;
@@ -31,28 +20,18 @@ export type Options = {
 };
 
 export class ConfigError {
-  message: string;
-
-  constructor(message: string) {
-    this.message = message;
-  }
+  constructor(public message: string) {}
 }
-
-// Default configs here
-const DEFAULT_CONFIG_OPTIONS = {
-  silent: false,
-  redact: false,
-};
 
 // Private methods here
 function convertConfigValue(
   value: string,
-  type: Types,
+  type: "String" | "Boolean" | "Number",
 ): number | string | boolean {
   switch (type) {
-    case Types.Number:
+    case "Number":
       return parseInt(value);
-    case Types.Boolean:
+    case "Boolean":
       // Only accept y/Y to mean true
       if (value.toUpperCase() === "Y") {
         return true;
@@ -72,7 +51,7 @@ function checkCli(options: Options): undefined | string {
   // Convert to lowercase, replace '_' with '-' and prepend "--"
   let cliParam = `--${options.config.toLowerCase().replaceAll("_", "-")}`;
 
-  // Command line flags are just prepended use a '-'
+  // Command line flags are just prepended with a '-'
   let cmdLineFlag =
     options.cmdLineFlag !== undefined ? `-${options.cmdLineFlag}` : "";
 
@@ -114,14 +93,16 @@ function checkCli(options: Options): undefined | string {
       paramOrFlag = cmdLineFlag;
     }
 
+    // Placeholde to get rid of compiler error - remove when logging is added back
+    paramOrFlag;
+
     // We found it, now lets check if we can or should log that we found it
     // NOTE: If we log it we want to indicate is was found on the CLI
-    if (options.logger?.started && !options.silent) {
-      options.logger.startupMsg(
-        options.logTag,
-        "CLI parameter/flag (%s) = (%j)",
-        paramOrFlag,
-        options.redact ? "redacted" : strValue,
+    if (!options.silent) {
+      _messages.add(
+        `CLI parameter/flag (${paramOrFlag}) = (${
+          options.redact ? "redacted" : strValue
+        })`,
       );
     }
 
@@ -133,15 +114,14 @@ function checkCli(options: Options): undefined | string {
 }
 
 function init() {
-  // Check if the user has specified a .env path
-  let envFilePath = <string>get({
+  // Check if the user has specified a .env file
+  let envFile = <string>configMan.get({
     config: CFG_ENV_FILE,
-    type: Types.String,
-    logTag: "",
+    type: "String",
     defaultVal: "",
   });
 
-  if (envFilePath.length === 0) {
+  if (envFile.length === 0) {
     return;
   }
 
@@ -149,12 +129,12 @@ function init() {
 
   try {
     // Read env file and split it into lines ...
-    let contents = fs.readFileSync(envFilePath, "utf8");
+    let contents = fs.readFileSync(envFile, "utf8");
     // ... makes sure if works for DOS and linux files!
     lines = contents.split(/\r?\n/);
   } catch (e) {
     throw new ConfigError(
-      `The following error occured when trying to open the env file (${envFilePath}) - (${e})`,
+      `The following error occured when trying to open the env file (${envFile}) - (${e})`,
     );
   }
 
@@ -188,94 +168,102 @@ function init() {
 
     // Stick them in the env file store
     // NOTE: Make key upper case to match env vars
-    envFileStore[key.toUpperCase()] = value;
+    _envFileStore.set(key.toUpperCase(), value);
   }
 }
 
 // Public methods here
-export let get = (configOptions: Options): string | number | boolean => {
-  // Setup the defaults
-  let options: Options = {
-    ...DEFAULT_CONFIG_OPTIONS,
-    ...configOptions,
-  };
+export const configMan = Object.freeze({
+  get: (configOptions: Options): string | number | boolean => {
+    // Setup the defaults
+    let options: Options = {
+      ...{
+        silent: false,
+        redact: false,
+      },
+      ...configOptions,
+    };
 
-  // Check the CLI first, i.e. CLI has higher precedence then env vars
-  let strValue = checkCli(options);
+    // Check the CLI first, i.e. CLI has higher precedence then env vars
+    let strValue = checkCli(options);
 
-  if (strValue === undefined) {
-    // OK it's not in the CLI so lets check the env vars
-    // NOTE: Always convert to upper case for env vars
-    let evar = options.config.toUpperCase();
-    strValue = process.env[evar];
+    if (strValue === undefined) {
+      // OK it's not in the CLI so lets check the env vars
+      // NOTE: Always convert to upper case for env vars
+      let evar = options.config.toUpperCase();
+      strValue = process.env[evar];
 
-    if (strValue !== undefined) {
-      // We found it, now lets check if we can or should log that we found it
-      // NOTE: If we log it we want to indicate is was found in an env var
-      if (options.logger?.started && !options.silent) {
-        options.logger.startupMsg(
-          options.logTag,
-          "Env var (%s) = (%j)",
-          evar,
-          options.redact ? "redacted" : strValue,
-        );
+      if (strValue !== undefined) {
+        // We found it, now lets check if we can or should log that we found it
+        // NOTE: If we log it we want to indicate is was found in an env var
+        if (!options.silent) {
+          _messages.add(
+            `Env var (${evar}) = (${options.redact ? "redacted" : strValue})`,
+          );
+        }
       }
     }
-  }
 
-  if (strValue === undefined) {
-    // OK it's not in the env vars either so check the env file store
-    // NOTE: Always convert to upper case when checking the env file store
-    let evar = options.config.toUpperCase();
-    strValue = envFileStore[evar];
+    if (strValue === undefined) {
+      // OK it's not in the env vars either so check the env file store
+      // NOTE: Always convert to upper case when checking the env file store
+      let evar = options.config.toUpperCase();
+      strValue = _envFileStore.get(evar);
 
-    if (strValue !== undefined) {
-      // We found it, now lets check if we can or should log that we found it
-      // NOTE: If we log it we want to indicate it was found in the env file
-      if (options.logger?.started && !options.silent) {
-        options.logger.startupMsg(
-          options.logTag,
-          "Env var from env file (%s) = (%j)",
-          evar,
-          options.redact ? "redacted" : strValue,
-        );
+      if (strValue !== undefined) {
+        // We found it, now lets check if we can or should log that we found it
+        // NOTE: If we log it we want to indicate it was found in the env file
+        if (!options.silent) {
+          _messages.add(
+            `Env var from env file (${evar}) = (${
+              options.redact ? "redacted" : strValue
+            })`,
+          );
+        }
       }
     }
-  }
 
-  let value: string | number | boolean;
+    let value: string | number | boolean;
 
-  // If the value was not found in the env vars then use default provided
-  // NOTE: The default SHOULd have the correct type so do not do a conversion
-  if (strValue === undefined) {
-    // If the default was not provided then the config WAS required
-    if (options.defaultVal === undefined) {
-      // In this scenario we need to throw an error
-      throw new ConfigError(
-        `Config parameter (${options.config}) not set on the CLI or as an env var!`,
-      );
+    // If the value was not found in the env vars then use default provided
+    // NOTE: The default SHOULd have the correct type so do not do a conversion
+    if (strValue === undefined) {
+      // If the default was not provided then the config WAS required
+      if (options.defaultVal === undefined) {
+        // In this scenario we need to throw an error
+        throw new ConfigError(
+          `Config parameter (${options.config}) not set on the CLI or as an env var!`,
+        );
+      }
+
+      // Otherwise use the default value
+      value = options.defaultVal;
+
+      // We found it, now lets check if we can or should log that we found it
+      // NOTE: If we log it we want to indicate is the default value
+      if (!options.silent) {
+        _messages.add(
+          `Default value used for (${options.config}) = (${
+            options.redact ? "redacted" : value
+          })`,
+        );
+      }
+    } else {
+      // If we are here we still need to convert the string value
+      value = convertConfigValue(strValue, options.type);
     }
 
-    // Otherwise use the default value
-    value = options.defaultVal;
+    return value;
+  },
 
-    // We found it, now lets check if we can or should log that we found it
-    // NOTE: If we log it we want to indicate is the default value
-    if (options.logger?.started && !options.silent) {
-      options.logger.startupMsg(
-        options.logTag,
-        "Default value used for (%s) = (%j)",
-        options.config,
-        options.redact ? "redacted" : value,
-      );
-    }
-  } else {
-    // If we are here we still need to convert the string value
-    value = convertConfigValue(strValue, options.type);
-  }
+  getMessages: (): IterableIterator<[string, string]> => {
+    return _messages.entries();
+  },
 
-  return value;
-};
+  clearMessages: (): void => {
+    _messages.clear();
+  },
+});
 
 // Initialisation code for the module here
 init();

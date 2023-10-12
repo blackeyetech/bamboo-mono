@@ -1,16 +1,16 @@
 // imports here
-import * as logger from "./logger.js";
-import { LoggerConsole } from "./logger-console.js";
-import * as configMan from "./config-man.js";
+import { logger, LogLevel } from "./logger.js";
+import { configMan } from "./config-man.js";
 import * as httpReq from "./http-req.js";
 import * as httpServer from "./http-server/main.js";
+import { BSPlugin } from "./bs-plugin.js";
 
-export { LogLevel } from "./logger.js";
 export { ReqRes, ReqOptions, ReqAborted, ReqError } from "./http-req.js";
 export { SseServerOptions, SseServer } from "./http-server/sse-server.js";
 export {
   ServerRequest,
   ServerResponse,
+  HttpError,
   Cookie,
 } from "./http-server/req-res.js";
 export {
@@ -20,7 +20,6 @@ export {
   EndpointOptions,
   EndpointCallback,
   HealthcheckCallback,
-  HttpError,
 } from "./http-server/main.js";
 export {
   Middleware,
@@ -28,19 +27,13 @@ export {
   CorsOptions,
   CsrfChecksOptions,
 } from "./http-server/middleware.js";
+export { BSPlugin } from "./bs-plugin.js";
 
 import * as readline from "node:readline";
 
-// Config consts here
-const CFG_LOG_LEVEL = "LOG_LEVEL";
-const CFG_LOG_TIMESTAMP = "LOG_TIMESTAMP";
-const CFG_LOG_TIMESTAMP_LOCALE = "LOG_TIMESTAMP_LOCALE";
-const CFG_LOG_TIMESTAMP_TZ = "LOG_TIMESTAMP_TZ";
-
 // Misc consts here
 const LOGGER_APP_NAME = "App";
-const NODE_ENV =
-  process.env.NODE_ENV === undefined ? "development" : process.env.NODE_ENV;
+const DEFAULT_HTTP_SERVER = "Main";
 
 // NOTE: BS_VERSION is replaced with package.json#version by a
 // rollup plugin at build time
@@ -66,10 +59,9 @@ let _restartHandler = async (): Promise<void> => {
   bs.shutdownMsg("Restarted!");
 };
 
-let _httpServerList: httpServer.HttpServer[];
-let _pluginList: BSPlugin[];
+let _httpServerMap: Map<string, httpServer.HttpServer>;
+let _pluginMap: Map<string, BSPlugin>;
 let _sharedStore: Map<string, any>;
-let _logger: logger.AbstractLogger;
 
 // Types here
 export type BSConfigOptions = {
@@ -91,7 +83,7 @@ export const bs = Object.freeze({
     path: string,
     reqOptions?: httpReq.ReqOptions,
   ): Promise<httpReq.ReqRes> => {
-    return httpReq.request(origin, path, _logger, reqOptions);
+    return httpReq.request(origin, path, reqOptions);
   },
 
   // Config helper methods here
@@ -101,14 +93,16 @@ export const bs = Object.freeze({
     options?: BSConfigOptions,
   ): string => {
     // This either returns a string or it throws
-    return <string>configMan.get({
+    let value = <string>configMan.get({
       config,
-      type: configMan.Types.String,
-      logTag: LOGGER_APP_NAME,
-      logger: _logger,
+      type: "String",
       defaultVal,
       ...options,
     });
+
+    logConfigManMsgs();
+
+    return value;
   },
 
   getConfigBool: (
@@ -117,14 +111,16 @@ export const bs = Object.freeze({
     options?: BSConfigOptions,
   ): boolean => {
     // This either returns a bool or it throws
-    return <boolean>configMan.get({
+    let value = <boolean>configMan.get({
       config,
-      type: configMan.Types.Boolean,
-      logTag: LOGGER_APP_NAME,
-      logger: _logger,
+      type: "Boolean",
       defaultVal,
       ...options,
     });
+
+    logConfigManMsgs();
+
+    return value;
   },
 
   getConfigNum: (
@@ -133,55 +129,57 @@ export const bs = Object.freeze({
     options?: BSConfigOptions,
   ): number => {
     // This either returns a number or it throws
-    return <number>configMan.get({
+    let value = <number>configMan.get({
       config,
-      type: configMan.Types.Number,
-      logTag: LOGGER_APP_NAME,
-      logger: _logger,
+      type: "Number",
       defaultVal,
       ...options,
     });
+
+    logConfigManMsgs();
+
+    return value;
   },
 
-  // Log helper methods here
+  // Log convience methods here
   fatal: (...args: any): void => {
-    _logger.fatal(LOGGER_APP_NAME, ...args);
+    logger.fatal(LOGGER_APP_NAME, ...args);
   },
 
   error: (...args: any): void => {
-    _logger.error(LOGGER_APP_NAME, ...args);
+    logger.error(LOGGER_APP_NAME, ...args);
   },
 
   warn: (...args: any): void => {
-    _logger.warn(LOGGER_APP_NAME, ...args);
+    logger.warn(LOGGER_APP_NAME, ...args);
   },
 
   info: (...args: any): void => {
-    _logger.info(LOGGER_APP_NAME, ...args);
+    logger.info(LOGGER_APP_NAME, ...args);
   },
 
   startupMsg: (...args: any): void => {
-    _logger.startupMsg(LOGGER_APP_NAME, ...args);
+    logger.startupMsg(LOGGER_APP_NAME, ...args);
   },
 
   shutdownMsg: (...args: any): void => {
-    _logger.shutdownMsg(LOGGER_APP_NAME, ...args);
+    logger.shutdownMsg(LOGGER_APP_NAME, ...args);
   },
 
   debug: (...args: any): void => {
-    _logger.debug(LOGGER_APP_NAME, ...args);
+    logger.debug(LOGGER_APP_NAME, ...args);
   },
 
   trace: (...args: any): void => {
-    _logger.trace(LOGGER_APP_NAME, ...args);
+    logger.trace(LOGGER_APP_NAME, ...args);
   },
 
   force: (...args: any): void => {
-    _logger.force(LOGGER_APP_NAME, ...args);
+    logger.force(LOGGER_APP_NAME, ...args);
   },
 
-  logLevel: (level: logger.LogLevel) => {
-    _logger.level = level;
+  setLogLevel: (level: LogLevel) => {
+    logger.setLevel(level);
   },
 
   // General functions here
@@ -201,10 +199,6 @@ export const bs = Object.freeze({
     _restartHandler = handler;
   },
 
-  setLogger: (newLogger: logger.AbstractLogger): void => {
-    _logger = newLogger;
-  },
-
   exit: async (code: number, hard: boolean = true): Promise<void> => {
     bs.shutdownMsg("Exiting ...");
 
@@ -212,12 +206,12 @@ export const bs = Object.freeze({
     _sharedStore.clear();
 
     // Make sure we stop all of the HttpSevers - probably best to do it first
-    for (let httpServer of _httpServerList) {
+    for (let httpServer of [..._httpServerMap.values()]) {
       await httpServer.stop();
     }
 
     // Clear the HttpServer list
-    _httpServerList = [];
+    _httpServerMap.clear();
 
     // Stop the application second
     bs.shutdownMsg("Attempting to stop the application ...");
@@ -226,7 +220,7 @@ export const bs = Object.freeze({
     });
 
     // Stop the extensions in the reverse order you started them
-    for (let plugin of _pluginList.reverse()) {
+    for (let plugin of [..._pluginMap.values()].reverse()) {
       bs.shutdownMsg(`Attempting to stop plugin ${plugin.name} ...`);
       await plugin.stopHandler().catch((e) => {
         bs.error(e);
@@ -234,7 +228,7 @@ export const bs = Object.freeze({
     }
 
     // Clear the plugin list
-    _pluginList = [];
+    _pluginMap.clear();
 
     // If there was a finally handler provided then call it last
     if (_finallyHandler !== undefined) {
@@ -254,8 +248,6 @@ export const bs = Object.freeze({
 
     bs.shutdownMsg("So long and thanks for all the fish!");
 
-    _logger.stop();
-
     // Check if the exit should also exit the process (a hard stop)
     if (hard) {
       process.exit(code);
@@ -264,6 +256,9 @@ export const bs = Object.freeze({
 
   restart: async () => {
     bs.info("Restarting now!");
+
+    // Re-init the logger in case config values have changed
+    logger.init();
 
     // Do a soft exit
     await bs.exit(0, false);
@@ -290,12 +285,13 @@ export const bs = Object.freeze({
     networkInterface: string,
     networkPort: number,
     httpConfig: httpServer.HttpConfig = {},
+    name: string = DEFAULT_HTTP_SERVER,
     startServer: boolean = true,
   ): Promise<httpServer.HttpServer> => {
     let server = new httpServer.HttpServer(
+      name,
       networkInterface,
       networkPort,
-      _logger,
       httpConfig,
     );
 
@@ -304,18 +300,25 @@ export const bs = Object.freeze({
       await server.start();
     }
 
-    _httpServerList.push(server);
+    _httpServerMap.set(name, server);
 
     return server;
   },
 
-  httpServer: (serverNum: number = 0): httpServer.HttpServer => {
-    // Check if the requested server DOES NOT exist
-    if (serverNum >= _httpServerList.length) {
-      throw Error(`There is no http server with the number ${serverNum}`);
+  httpServer: (name: string = DEFAULT_HTTP_SERVER): httpServer.HttpServer => {
+    // Check if there are any servers first
+    if (_httpServerMap.size === 0) {
+      throw Error(`There are no http servers!!`);
     }
 
-    return _httpServerList[serverNum];
+    let server = _httpServerMap.get(name);
+
+    // Check if the requested server DOES NOT exist
+    if (server === undefined) {
+      throw Error(`There is no http servers with the name ${name}`);
+    }
+
+    return server;
   },
 
   addPlugin: (
@@ -324,7 +327,7 @@ export const bs = Object.freeze({
     config: any = {},
   ): BSPlugin => {
     // Make sure we don't have a duplicate name
-    if (_pluginList.find((plugin) => plugin.name === name) !== undefined) {
+    if (_pluginMap.has(name)) {
       throw Error(`There is already a plugin with the name ${name}`);
     }
 
@@ -332,14 +335,14 @@ export const bs = Object.freeze({
     let plugin = new pluginClass(name, config);
 
     // And then cache the plugin
-    _pluginList.push(plugin);
+    _pluginMap.set(name, plugin);
 
     return plugin;
   },
 
   plugin: (name: string): BSPlugin => {
     // Search for the plugin that has a matching name
-    let plugin = _pluginList.find((p) => p.name === name);
+    let plugin = _pluginMap.get(name);
 
     // Check if the plugin DOES NOT exist
     if (plugin === undefined) {
@@ -419,132 +422,28 @@ export const bs = Object.freeze({
   },
 });
 
-// Plugin code here
-export class BSPlugin {
-  // Properties here
-  private _name: string;
-  private _version: string;
-  private _logger: logger.AbstractLogger;
-
-  // Constructor here
-  constructor(name: string, version: string) {
-    this._name = name;
-    this._version = version;
-    this._logger = _logger;
-
-    this.startupMsg("Initialising ...");
-  }
-
-  // Protected methods (that can be overridden) here
-  protected async stop(): Promise<void> {
-    // This is a default stop method. Override it if you need to clean up
-    this.shutdownMsg("Stopped!");
-  }
-
-  // Getters here
-  get name(): string {
-    return this._name;
-  }
-
-  get version(): string {
-    return this._version;
-  }
-
-  get stopHandler(): () => Promise<void> {
-    return this.stop;
-  }
-
-  // Private methods here
-  protected setLogger(newLogger: logger.AbstractLogger): void {
-    this._logger = newLogger;
-  }
-
-  protected fatal(...args: any): void {
-    this._logger.fatal(this._name, ...args);
-  }
-
-  protected error(...args: any): void {
-    this._logger.error(this._name, ...args);
-  }
-
-  protected warn(...args: any): void {
-    this._logger.warn(this._name, ...args);
-  }
-
-  protected info(...args: any): void {
-    this._logger.info(this._name, ...args);
-  }
-
-  protected startupMsg(...args: any): void {
-    this._logger.startupMsg(this._name, ...args);
-  }
-
-  protected shutdownMsg(...args: any): void {
-    this._logger.shutdownMsg(this._name, ...args);
-  }
-
-  protected debug(...args: any): void {
-    this._logger.debug(this._name, ...args);
-  }
-
-  protected trace(...args: any): void {
-    this._logger.trace(this._name, ...args);
-  }
-
-  protected force(...args: any): void {
-    this._logger.force(this._name, ...args);
-  }
-}
-
 // Private functions here
-
-// init function for logger
-function loggerInit(): logger.AbstractLogger {
-  let timestamp = <boolean>configMan.get({
-    config: CFG_LOG_TIMESTAMP,
-    type: configMan.Types.Boolean,
-    logTag: "",
-    defaultVal: false,
-  });
-
-  let timestampLocale = <string>configMan.get({
-    config: CFG_LOG_TIMESTAMP_LOCALE,
-    type: configMan.Types.String,
-    logTag: "",
-    defaultVal: "ISO",
-  });
-
-  let timestampTz = <string>configMan.get({
-    config: CFG_LOG_TIMESTAMP_TZ,
-    type: configMan.Types.String,
-    logTag: "",
-    defaultVal: "UTC",
-  });
-
-  let logLevel = <string>configMan.get({
-    config: CFG_LOG_LEVEL,
-    type: configMan.Types.String,
-    logTag: "",
-    defaultVal: "",
-  });
-
-  // LoggerConsole is the default logger
-  return new LoggerConsole(timestamp, timestampLocale, timestampTz, logLevel);
-}
+let logConfigManMsgs = (): void => {
+  let messages = configMan.getMessages();
+  for (let message of messages) {
+    logger.startupMsg(LOGGER_APP_NAME, message[0]);
+  }
+  configMan.clearMessages();
+};
 
 function init(): void {
   // Initialise the private variables
-  _httpServerList = [];
-  _pluginList = [];
+  _httpServerMap = new Map();
+  _pluginMap = new Map();
   _sharedStore = new Map();
-
-  // Initialise and start the logger
-  _logger = loggerInit();
-  _logger.start();
 
   // Now spit out the versions
   bs.startupMsg(`Bamboo Shell version (${VERSION})`);
-  bs.startupMsg(`NODE_ENV is (${NODE_ENV})`);
+  bs.startupMsg(
+    `NODE_ENV is (${
+      process.env.NODE_ENV === undefined ? "development" : process.env.NODE_ENV
+    })`,
+  );
 
   // Now set up the event handler
   bs.startupMsg("Setting up shutdown event handlers ...");

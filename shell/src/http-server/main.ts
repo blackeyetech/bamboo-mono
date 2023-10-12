@@ -1,6 +1,13 @@
 // imports here
+import { logger } from "../logger.js";
+
 import { SseServer, SseServerOptions } from "./sse-server.js";
-import { ServerRequest, ServerResponse } from "./req-res.js";
+import {
+  ServerRequest,
+  ServerResponse,
+  HttpError,
+  setServerTimingHeader,
+} from "./req-res.js";
 import {
   Middleware,
   ExpressMiddleware,
@@ -12,11 +19,9 @@ import {
   corsMiddleware,
   expressWrapper,
   csrfChecksMiddleware,
-  setServerTimingHeader,
   securityHeadersMiddleware,
 } from "./middleware.js";
 import * as staticFiles from "./static-files.js";
-import * as logger from "../logger.js";
 import * as PathToRegEx from "path-to-regexp";
 
 import * as http from "node:http";
@@ -43,26 +48,10 @@ export type EndpointCallback = (
 ) => Promise<void> | void;
 
 export class HttpConfigError {
-  message: string;
-
-  constructor(message: string) {
-    this.message = message;
-  }
-}
-
-export class HttpError {
-  status: number;
-  message: string;
-
-  constructor(status: number, message: string) {
-    this.status = status;
-    this.message = message;
-  }
+  constructor(public message: string) {}
 }
 
 export type HttpConfig = {
-  loggerTag?: string;
-
   // NOTE: The default node keep alive is 5 secs. This needs to be set
   // higher then any load balancers in front of this App
   keepAliveTimeout?: number;
@@ -106,7 +95,8 @@ export class HttpServer {
   private _networkIp: string;
   private _baseUrl: string;
 
-  private _log: logger.LoggerInstance;
+  private _name: string;
+  private _loggerTag: string;
 
   private _healthcheckCallbacks: HealthcheckCallback[];
   private _methodListMap: Record<Method, MethodListElement[]>;
@@ -134,14 +124,12 @@ export class HttpServer {
   private _server?: http.Server;
 
   constructor(
+    name: string,
     networkInterface: string,
     networkPort: number,
-    bsLogger: logger.AbstractLogger,
     httpConfig: HttpConfig = {},
   ) {
     let config = {
-      loggerTag: `HttpServer-${networkInterface}-${networkPort}`,
-
       keepAliveTimeout: 65000,
       headerTimeout: 66000,
 
@@ -160,7 +148,8 @@ export class HttpServer {
     this._networkIp = "";
     this._baseUrl = "";
 
-    this._log = new logger.LoggerInstance(bsLogger, config.loggerTag);
+    this._name = name;
+    this._loggerTag = `HttpServer-${name}-${networkInterface}-${networkPort}`;
 
     this._networkInterface = networkInterface;
     this._networkPort = networkPort;
@@ -196,8 +185,7 @@ export class HttpServer {
     if (config.staticFileServer !== undefined) {
       this._staticFileServer = new staticFiles.StaticFileServer({
         filePath: config.staticFileServer.path,
-        logger: bsLogger,
-        loggerTag: `${config.loggerTag}/StaticFile`,
+        loggerTag: `${this._loggerTag}/StaticFile`,
         extraContentTypes: config.staticFileServer.extraContentTypes,
       });
     }
@@ -220,12 +208,19 @@ export class HttpServer {
     return this._enableHttps;
   }
 
+  get name(): string {
+    return this._name;
+  }
+
   // Private methods here
   private findInterfaceIp(networkInterface: string): string | null {
-    this._log.startupMsg(`Finding IP for interface (${networkInterface})`);
+    logger.startupMsg(
+      this._loggerTag,
+      `Finding IP for interface (${networkInterface})`,
+    );
 
     let ifaces = os.networkInterfaces();
-    this._log.startupMsg("Interfaces on host: %j", ifaces);
+    logger.startupMsg(this._loggerTag, "Interfaces on host: %j", ifaces);
 
     if (ifaces[networkInterface] === undefined) {
       return null;
@@ -237,7 +232,8 @@ export class HttpServer {
     let found = ifaces[networkInterface]?.find((i) => i.family === "IPv4");
     if (found !== undefined) {
       ip = found.address;
-      this._log.startupMsg(
+      logger.startupMsg(
+        this._loggerTag,
         `Found IP (${ip}) for interface ${networkInterface}`,
       );
     }
@@ -258,7 +254,8 @@ export class HttpServer {
     // it happens
     return new Promise((resolve, _) => {
       server.on("listening", () => {
-        this._log.startupMsg(
+        logger.startupMsg(
+          this._loggerTag,
           `Now listening on (${this._baseUrl}). HTTP manager started!`,
         );
 
@@ -271,7 +268,8 @@ export class HttpServer {
         let socketId = this._socketId++;
         this._socketMap.set(socketId, socket);
 
-        this._log.trace(
+        logger.trace(
+          this._loggerTag,
           "'connection' for socketId (%d) on remote connection (%s/%s)",
           socketId,
           socket.remoteAddress,
@@ -284,7 +282,8 @@ export class HttpServer {
           if (this._socketMap.has(socketId)) {
             this._socketMap.delete(socketId);
 
-            this._log.trace(
+            logger.trace(
+              this._loggerTag,
               "'close' for socketId (%d) on remote connection (%s/%s)",
               socketId,
               socket.remoteAddress,
@@ -296,11 +295,7 @@ export class HttpServer {
     });
   }
 
-  private async handleHttpReq(
-    req: ServerRequest,
-    res: ServerResponse,
-    https: boolean,
-  ): Promise<void> {
+  private async handleHttpReq(req: ServerRequest, res: ServerResponse) {
     // We have to do this hear for now since the url will not be set until
     // after this object it created
 
@@ -308,10 +303,15 @@ export class HttpServer {
     // This will sort out ".."s, "."s and "//"s and ensure you can not end up
     // wit a path like "../secret-dir/secrets.txt"
     let url = path.resolve("/", req.url as string);
-    let protocol = https ? "https" : "http";
+    let protocol = this._enableHttps ? "https" : "http";
     req.urlObj = new URL(url, `${protocol}://${req.headers.host}`);
 
-    this._log.trace("Received (%s) req for (%s)", req.method, url);
+    logger.trace(
+      this._loggerTag,
+      "Received (%s) req for (%s)",
+      req.method,
+      url,
+    );
 
     if (await this.handleApiReq(req, res)) {
       return;
@@ -412,7 +412,8 @@ export class HttpServer {
         message = e.message;
       } else {
         // We don't know what this is so log it and make sure to return a 500
-        this._log.error(
+        logger.error(
+          this._loggerTag,
           "Unknown error happened while handling URL (%s) - (%s)",
           req.urlObj.pathname,
           e,
@@ -427,6 +428,11 @@ export class HttpServer {
       res.write(message);
       res.end();
     });
+
+    // If there is an SSE server dont call addResponse or end res
+    if (req.sseServer !== undefined) {
+      return true;
+    }
 
     // Check if res.write() has NOT been called yet
     if (!res.headersSent) {
@@ -571,7 +577,7 @@ export class HttpServer {
 
   // Public methods here
   async start(): Promise<void> {
-    this._log.startupMsg("Initialising HTTP manager ...");
+    logger.startupMsg(this._loggerTag, "Initialising HTTP manager ...");
 
     let ip = this.findInterfaceIp(this._networkInterface);
 
@@ -583,7 +589,8 @@ export class HttpServer {
 
     this._networkIp = ip;
 
-    this._log.startupMsg(
+    logger.startupMsg(
+      this._loggerTag,
       `Will listen on interface ${this._networkInterface} (IP: ${this._networkIp})`,
     );
 
@@ -600,7 +607,10 @@ export class HttpServer {
         );
       }
 
-      this._log.startupMsg(`Attempting to listen on (${this._baseUrl})`);
+      logger.startupMsg(
+        this._loggerTag,
+        `Attempting to listen on (${this._baseUrl})`,
+      );
 
       const options: https.ServerOptions = {
         IncomingMessage: ServerRequest,
@@ -610,19 +620,22 @@ export class HttpServer {
       };
 
       this._server = https.createServer(options, (req, res) => {
-        this.handleHttpReq(req as ServerRequest, res as ServerResponse, true);
+        this.handleHttpReq(req as ServerRequest, res as ServerResponse);
       });
     } else {
       this._baseUrl = `http://${this._networkIp}:${this._networkPort}`;
 
-      this._log.startupMsg(`Attempting to listen on (${this._baseUrl})`);
+      logger.startupMsg(
+        this._loggerTag,
+        `Attempting to listen on (${this._baseUrl})`,
+      );
 
       const options: https.ServerOptions = {
         IncomingMessage: ServerRequest,
         ServerResponse: <any>ServerResponse, // Something wrong with typedefs
       };
       this._server = http.createServer(options, (req, res) => {
-        this.handleHttpReq(req as ServerRequest, res as ServerResponse, false);
+        this.handleHttpReq(req as ServerRequest, res as ServerResponse);
       });
     }
 
@@ -641,12 +654,13 @@ export class HttpServer {
   }
 
   async stop(): Promise<void> {
-    this._log.shutdownMsg("Closing all connections now ...");
+    logger.shutdownMsg(this._loggerTag, "Closing all connections now ...");
 
     // Close all the remote connections
     this._socketMap.forEach((socket: net.Socket, key: number) => {
       socket.destroy();
-      this._log.trace(
+      logger.trace(
+        this._loggerTag,
         "Destroying socketId (%d) for remote connection (%s/%s)",
         key,
         socket.remoteAddress,
@@ -658,9 +672,9 @@ export class HttpServer {
     this._socketMap.clear();
 
     if (this._server !== undefined) {
-      this._log.shutdownMsg("Closing HTTP manager port now ...");
+      logger.shutdownMsg(this._loggerTag, "Closing HTTP manager port now ...");
       this._server.close();
-      this._log.shutdownMsg("Port closed");
+      logger.shutdownMsg(this._loggerTag, "Port closed");
 
       // Just in case someone calls stop() a 2nd time
       this._server = undefined;
@@ -753,7 +767,8 @@ export class HttpServer {
       etag: options.etag,
     });
 
-    this._log.info(
+    logger.info(
+      this._loggerTag,
       "Added %s endpoint for path (%s)",
       method.toUpperCase(),
       path,

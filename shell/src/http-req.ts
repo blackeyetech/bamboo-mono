@@ -2,7 +2,7 @@
 // NODE_TLS_REJECT_UNAUTHORIZED=0
 
 // imports here
-import { AbstractLogger } from "./logger.js";
+import { logger } from "./logger.js";
 
 // Types here
 export type ReqRes = {
@@ -38,24 +38,21 @@ export type ReqOptions = {
 
 // Error classes here
 export class ReqAborted {
-  public timedOut: boolean;
-  public message: string;
-
-  constructor(timedOut: boolean, message: string) {
-    this.timedOut = timedOut;
-    this.message = message;
-  }
+  constructor(
+    public timedOut: boolean,
+    public message: string,
+  ) {}
 }
 
 export class ReqError {
-  public status: number;
-  public message: string;
-
-  constructor(status: number, message: string) {
-    this.status = status;
-    this.message = message;
-  }
+  constructor(
+    public status: number,
+    public message: string,
+  ) {}
 }
+
+// Misc consts here
+const LOG_TAG = "request";
 
 // Private methods here
 async function callFetch(
@@ -176,10 +173,9 @@ async function handleResponseData(results: Response): Promise<object | string> {
 export let request = async (
   origin: string,
   path: string,
-  logger: AbstractLogger,
   reqOptions?: ReqOptions,
 ): Promise<ReqRes> => {
-  logger.trace("httpReq", "Request for origin (%s) path (%s)", origin, path);
+  logger.trace(LOG_TAG, "Request for origin (%s) path (%s)", origin, path);
 
   // Set the default values
   let options = {
