@@ -1,5 +1,6 @@
 packages:
   - shell
+  - astro
   - plugins/template
   - plugins/o365
   - plugins/postgresql

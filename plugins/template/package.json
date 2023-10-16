@@ -1,16 +1,16 @@
 {
-  "version": "0.0.13",
+  "version": "0.0.14",
   "name": "@bs-plugins/template",
   "description": "DESCRIPTION",
+  "type": "module",
   "exports": {
-    "import": "./dist/plugin.mjs"
+    ".": "./dist/plugin.mjs"
   },
   "files": [
     "dist/plugin.mjs",
     "dist/plugin.d.ts"
   ],
   "types": "./dist/plugin.d.ts",
-  "type": "module",
   "scripts": {
     "rollup": "rollup -c rollup.config.mjs",
     "build-dev": "tsc --sourceMap && npm run rollup",

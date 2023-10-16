@@ -1,16 +1,16 @@
 {
-  "version": "1.9.1",
-  "name": "@bs-core/shell",
-  "description": "The Bamboo Shell",
+  "version": "0.0.2",
+  "name": "@bs-core/astro",
+  "description": "The Bamboo Shell Astro Adapter",
   "type": "module",
   "exports": {
-    ".": "./dist/shell.mjs"
+    ".": "./dist/astro.mjs"
   },
   "files": [
-    "dist/shell.mjs",
-    "dist/shell.d.ts"
+    "dist/astro.mjs",
+    "dist/astro.d.ts"
   ],
-  "types": "./dist/shell.d.ts",
+  "types": "./dist/astro.d.ts",
   "scripts": {
     "rollup": "rollup -c rollup.config.mjs",
     "build-dev": "tsc --sourceMap && npm run rollup",
@@ -30,7 +30,9 @@
   "keywords": [
     "Bamboo",
     "Shell",
-    "Framework"
+    "Framework",
+    "Astro",
+    "astro-adapter"
   ],
   "author": "Black Eye Technology",
   "license": "MIT",
@@ -43,7 +45,10 @@
   },
   "homepage": "https://github.com/blackeyetech/bamboo-mono#readme",
   "dependencies": {
-    "path-to-regexp": "^6.2.1"
+    "@bs-core/shell": "workspace:^"
   },
-  "private": false
+  "private": false,
+  "devDependencies": {
+    "astro": "^3.3.0"
+  }
 }

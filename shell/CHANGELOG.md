@@ -1,5 +1,14 @@
 # @bs-core/shell
 
+## 1.9.1
+
+### Patch Changes
+
+- 24cc99e: Following fixes made:
+
+  - Added check to ensure etag errors are caught and reported
+  - Changed timeout types to match the correct types
+
 ## 1.9.0
 
 ### Minor Changes

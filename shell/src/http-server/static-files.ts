@@ -134,12 +134,29 @@ export class StaticFileServer {
     return `text/plain; ${this._defaultCharSet}`;
   }
 
-  private async calculateEtag(file: string): Promise<string> {
+  private async calculateEtag(file: string): Promise<string | null> {
     // MD5 hash the file contents to calculate the etag
     let contents = fs.createReadStream(file);
     let hash = crypto.createHash("sha1");
 
-    await streams.pipeline(contents, hash);
+    // Flag to check if we successfully pipe the file to the hash
+    let failed = false;
+
+    await streams.pipeline(contents, hash).catch((e) => {
+      logger.trace(
+        this._loggerTag,
+        "Error attempting to create etag for file (%s) (%s): ",
+        file,
+        e,
+      );
+
+      failed = true;
+    });
+
+    if (failed) {
+      return null;
+    }
+
     return hash.digest("hex");
   }
 
@@ -177,6 +194,10 @@ export class StaticFileServer {
     const modTimeNoMs = Math.trunc(modTimeMs / 1000) * 1000;
 
     let etag = await this.calculateEtag(fullPath);
+    if (etag === null) {
+      // Couldn't calculate the etag so do nothing
+      return false;
+    }
 
     const fileDetails: FileDetails = {
       contentType: this.lookupType(fullPath), // In case urlPath is a dir

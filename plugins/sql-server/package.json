@@ -1,9 +1,10 @@
 {
-  "version": "1.0.13",
+  "version": "1.0.14",
   "name": "@bs-plugins/sql-server",
   "description": "Bamboo Shell plugin for SQL Server",
+  "type": "module",
   "exports": {
-    "import": "./dist/plugin.mjs"
+    ".": "./dist/plugin.mjs"
   },
   "files": [
     "dist/plugin.mjs",

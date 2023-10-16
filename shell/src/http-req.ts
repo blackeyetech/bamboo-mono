@@ -68,7 +68,7 @@ async function callFetch(
     url += `?${new URLSearchParams(options.searchParams)}`;
   }
 
-  let timeoutTimer: NodeJS.Timer | undefined;
+  let timeoutTimer: NodeJS.Timeout | undefined;
 
   // Create an AbortController if a timeout has been provided
   if (options.timeout) {

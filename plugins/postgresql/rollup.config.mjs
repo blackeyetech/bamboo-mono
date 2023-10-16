@@ -6,14 +6,12 @@ import terser from "@rollup/plugin-terser";
 import sourcemaps from "rollup-plugin-sourcemaps";
 import dts from "rollup-plugin-dts";
 
-import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 
 // Consts here
-
-// Load the package.json so we can get the version
-const pkg = JSON.parse(
-  readFileSync(new URL("./package.json", import.meta.url), "utf8"),
-);
+// Load the package.json so we can get the current version of the shell
+const require = createRequire(import.meta.url);
+const pkg = require("./package.json");
 
 // We need to know if we are building for prod or dev
 const NODE_ENV =

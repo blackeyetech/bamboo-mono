@@ -21,13 +21,14 @@ const NODE_ENV =
 let plugins = [
   replace({
     preventAssignment: true,
-    values: { PLUGIN_VERSION: pkg.version },
+    values: { BS_VERSION: pkg.version },
   }),
   commonjs(),
   resolve({ preferBuiltins: true }),
   json(),
 ];
 
+// Check if this is a dev or a prod build
 if (NODE_ENV === "development") {
   // Add sourcemaps for dev builds
   plugins.push(sourcemaps);
@@ -38,23 +39,23 @@ if (NODE_ENV === "development") {
 
 export default [
   {
+    // This is to rollup the shell lib
     input: "dist/main.js",
     output: {
       sourcemap: NODE_ENV === "development",
-      file: "dist/plugin.mjs",
+      file: "dist/astro.mjs",
       format: "es",
     },
-    external: ["@bs-core/shell"],
-
     plugins,
   },
   {
+    // This is to rollup the .d.ts files
     input: "dist/types/main.d.ts",
     output: {
-      file: "dist/plugin.d.ts",
+      file: "dist/astro.d.ts",
       format: "es",
     },
-    external: [],
+    external: [], // This is because we use the http/net types
     plugins: [dts()],
   },
 ];
