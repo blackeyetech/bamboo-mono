@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 0.0.3
+
+### Patch Changes
+
+- No longer running rollup terser()
+
 ## 0.0.2
 
 ### Patch Changes

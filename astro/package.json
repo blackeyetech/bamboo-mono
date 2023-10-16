@@ -1,5 +1,5 @@
 {
-  "version": "0.0.2",
+  "version": "0.0.3",
   "name": "@bs-core/astro",
   "description": "The Bamboo Shell Astro Adapter",
   "type": "module",
@@ -44,6 +44,9 @@
     "url": "https://github.com/blackeyetech/bamboo-mono/issues"
   },
   "homepage": "https://github.com/blackeyetech/bamboo-mono#readme",
+  "peerDependencies": {
+    "@bs-core/shell": "workspace:^"
+  },
   "dependencies": {
     "@bs-core/shell": "workspace:^"
   },

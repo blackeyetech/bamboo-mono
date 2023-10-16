@@ -14,7 +14,7 @@ type Options = {};
 function getAdapter(args: Options): AstroAdapter {
   return {
     name: ADAPTER_NAME,
-    serverEntrypoint: "", // "@bs-core/astro/main.mjs",
+    serverEntrypoint: "@bs-core/astro/astro.mjs",
     // previewEntrypoint: '@bs-core/astro/main.mjs',
     args,
     exports: [],
@@ -33,8 +33,6 @@ function getAdapter(args: Options): AstroAdapter {
 
 // exported functions
 export default (args: Options = {}): AstroIntegration => {
-  bs.debug("Astro args: %j", args);
-
   return {
     name: ADAPTER_NAME,
     hooks: {

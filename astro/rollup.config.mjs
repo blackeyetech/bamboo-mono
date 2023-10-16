@@ -2,7 +2,7 @@ import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import replace from "@rollup/plugin-replace";
-import terser from "@rollup/plugin-terser";
+// import terser from "@rollup/plugin-terser";
 import sourcemaps from "rollup-plugin-sourcemaps";
 import dts from "rollup-plugin-dts";
 
@@ -34,7 +34,7 @@ if (NODE_ENV === "development") {
   plugins.push(sourcemaps);
 } else {
   // Add terser for prod builds
-  plugins.push(terser());
+  // plugins.push(terser());
 }
 
 export default [
@@ -46,6 +46,7 @@ export default [
       file: "dist/astro.mjs",
       format: "es",
     },
+    external: ["@bs-core/shell", "astro/app"],
     plugins,
   },
   {
@@ -55,7 +56,7 @@ export default [
       file: "dist/astro.d.ts",
       format: "es",
     },
-    external: [], // This is because we use the http/net types
+    external: [],
     plugins: [dts()],
   },
 ];
