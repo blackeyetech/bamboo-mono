@@ -2,7 +2,7 @@
 import type { AstroAdapter, AstroIntegration, SSRManifest } from "astro";
 import { App } from "astro/app";
 
-import { bs, ServerRequest, ServerResponse } from "@bs-core/shell";
+import { bs, HttpConfig } from "@bs-core/shell";
 
 // Misc consts here
 const ADAPTER_NAME = "@bs-core/astro";
@@ -11,13 +11,25 @@ const ADAPTER_NAME = "@bs-core/astro";
 let _app: App;
 
 // types here
-export type InitFunc = {
-  staticFilesPath: string;
-  render: (req: ServerRequest, res: ServerResponse, match: boolean) => boolean;
-};
-
 export type Options = {
-  initFunc: InitFunc;
+  staticFilesPath?: string;
+  extraContentTypes?: Record<string, string>;
+
+  keepAliveTimeout?: number;
+  // NOTE: There is a potential race condition and the recommended
+  // solution is to make the header timeouts greater then the keep alive
+  // timeout. See - https://github.com/nodejs/node/issues/27363
+  headerTimeout?: number;
+
+  defaultRouterBasePath?: string;
+
+  healthcheckPath?: string;
+  healthcheckGoodRes?: number;
+  healthcheckBadRes?: number;
+
+  enableHttps?: boolean;
+  // httpsKeyFile?: string;
+  // httpsCertFile?: string;
 };
 
 // Private functions here
@@ -43,33 +55,78 @@ function getAdapter(args: Options): AstroAdapter {
 
 // Exported functions here
 
-// The default function will be called by Astro when the adapter is created
+// The default function is called when the bundle script is being built
 export default (args: Options): AstroIntegration => {
   return {
     name: ADAPTER_NAME,
     hooks: {
-      "astro:config:done": ({ setAdapter, config }) => {
+      "astro:config:done": ({ setAdapter }) => {
         setAdapter(getAdapter(args));
       },
-      "astro:build:done": async (options: { dir: URL }) => {
+      "astro:build:done": async (options) => {
+        // We could update the bundle file here
         // This is the directory for the static HTML
-        console.log(options.dir.pathname);
+        options.logger.info(options.dir.pathname);
       },
     },
   };
 };
 
 // We need a createExports() exported or Astro will complain
-// NOTE: We dont require any exports
+// NOTE: We dont require any exports!
 export const createExports = (): Record<string, any> => {
   return {};
 };
 
 // This is the function that will be called when the bundled script is run
-export const start = (manifest: SSRManifest, args: Options) => {
+export const start = async (
+  manifest: SSRManifest,
+  options: Options,
+): Promise<void> => {
+  bs.startupMsg("Adapter options: (%j)", options);
+
   _app = new App(manifest);
 
-  // args.initFunc(manifest.base);
+  let opts: HttpConfig = {
+    keepAliveTimeout: options.keepAliveTimeout,
+    headerTimeout: options.headerTimeout,
+    defaultRouterBasePath: options.defaultRouterBasePath,
+    healthcheckPath: options.healthcheckPath,
+    healthcheckGoodRes: options.healthcheckGoodRes,
+    healthcheckBadRes: options.healthcheckBadRes,
+    enableHttps: options.enableHttps,
+  };
 
-  // manifest.
+  if (options.enableHttps) {
+    opts.httpsCertFile = bs.getConfigStr("HTTP_CERT_FILE");
+    opts.httpsKeyFile = bs.getConfigStr("HTTP_KEY_FILE");
+  }
+
+  if (options.staticFilesPath !== undefined) {
+    opts.staticFileServer = {
+      path: options.staticFilesPath,
+      extraContentTypes: options.extraContentTypes,
+    };
+  }
+
+  let networkIf = bs.getConfigStr("HTTP_HOST", "lo");
+  let networkPort = bs.getConfigNum("HTTP_PORT", 8080);
+
+  bs.startupMsg("HttpServer config (%j)", opts);
+  // Do not start the HttpServer until we are finished setting everything up
+  let httpServer = await bs.addHttpServer(
+    networkIf,
+    networkPort,
+    opts,
+    false,
+    "Astro",
+  );
+
+  httpServer.ssrRouter;
+  _app.getAdapterLogger;
+
+  // Start the http server now!
+  await httpServer.start();
+
+  bs.startupMsg("We are ready so party on!!");
 };

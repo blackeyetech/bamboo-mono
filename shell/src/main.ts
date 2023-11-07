@@ -285,8 +285,8 @@ export const bs = Object.freeze({
     networkInterface: string,
     networkPort: number,
     httpConfig: httpServer.HttpConfig = {},
-    name: string = DEFAULT_HTTP_SERVER,
     startServer: boolean = true,
+    name: string = DEFAULT_HTTP_SERVER,
   ): Promise<httpServer.HttpServer> => {
     let server = new httpServer.HttpServer(
       name,

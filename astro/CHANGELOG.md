@@ -1,5 +1,13 @@
 # @bs-core/astro
 
+## 1.0.1
+
+### Patch Changes
+
+- Added astro config handling
+- Updated dependencies
+  - @bs-core/shell@1.11.0
+
 ## 1.0.0
 
 ### Patch Changes

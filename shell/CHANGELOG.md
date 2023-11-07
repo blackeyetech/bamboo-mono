@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.11.0
+
+### Minor Changes
+
+- Changed order of addHttpServer default parameters
+
 ## 1.10.0
 
 ### Minor Changes
