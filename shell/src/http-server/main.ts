@@ -1,13 +1,7 @@
 // imports here
 import { logger } from "../logger.js";
 
-import { SseServer, SseServerOptions } from "./sse-server.js";
-import {
-  ServerRequest,
-  ServerResponse,
-  HttpError,
-  setServerTimingHeader,
-} from "./req-res.js";
+import { ServerRequest, ServerResponse } from "./req-res.js";
 import {
   Middleware,
   ExpressMiddleware,
@@ -22,30 +16,31 @@ import {
   securityHeadersMiddleware,
 } from "./middleware.js";
 import * as staticFiles from "./static-files.js";
-import * as PathToRegEx from "path-to-regexp";
+import {
+  Router,
+  EndpointOptions,
+  EndpointCallback,
+  Method,
+  Route,
+  RouterConfig,
+} from "./router.js";
+
+export {
+  EndpointOptions,
+  EndpointCallback,
+  Router,
+  RouterConfig,
+} from "./router.js";
 
 import * as http from "node:http";
 import * as https from "node:https";
 import * as os from "node:os";
 import * as fs from "node:fs";
 import * as net from "node:net";
-import * as crypto from "node:crypto";
 import * as path from "node:path";
 
 // Types here
 export type HealthcheckCallback = () => Promise<boolean>;
-
-export type EndpointOptions = {
-  defaultMiddlewares?: boolean;
-  middlewareList?: Middleware[];
-  sseServerOptions?: SseServerOptions;
-  etag?: boolean;
-};
-
-export type EndpointCallback = (
-  req: ServerRequest,
-  res: ServerResponse,
-) => Promise<void> | void;
 
 export class HttpConfigError {
   constructor(public message: string) {}
@@ -60,6 +55,8 @@ export type HttpConfig = {
   // timeout. See - https://github.com/nodejs/node/issues/27363
   headerTimeout?: number;
 
+  defaultRouterBasePath?: string;
+
   healthcheckPath?: string;
   healthcheckGoodRes?: number;
   healthcheckBadRes?: number;
@@ -68,21 +65,10 @@ export type HttpConfig = {
   httpsKeyFile?: string;
   httpsCertFile?: string;
 
-  ssrHandler?: (req: ServerRequest, res: ServerResponse) => Promise<void>;
   staticFileServer?: {
     path: string;
     extraContentTypes?: Record<string, string>;
   };
-};
-
-type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
-type MethodListElement = {
-  matchFunc: PathToRegEx.MatchFunction<object>;
-  callback: EndpointCallback;
-
-  middlewareList: Middleware[];
-  sseServerOptions?: SseServerOptions;
-  etag: boolean;
 };
 
 // HttpServer class here
@@ -99,7 +85,6 @@ export class HttpServer {
   private _loggerTag: string;
 
   private _healthcheckCallbacks: HealthcheckCallback[];
-  private _methodListMap: Record<Method, MethodListElement[]>;
 
   private _httpKeepAliveTimeout: number;
   private _httpHeaderTimeout: number;
@@ -112,14 +97,10 @@ export class HttpServer {
   private _keyFile?: string;
   private _certFile?: string;
 
-  private _ssrHandler?: (
-    req: ServerRequest,
-    res: ServerResponse,
-    next: () => void,
-  ) => Promise<void>;
+  private _routerList: Router[];
+  private _defaultRouter: Router;
+  private _ssrRouter: Router;
   private _staticFileServer?: staticFiles.StaticFileServer;
-
-  private _defaultMiddlewareList: Middleware[];
 
   private _server?: http.Server;
 
@@ -133,7 +114,8 @@ export class HttpServer {
       keepAliveTimeout: 65000,
       headerTimeout: 66000,
 
-      healthcheckPath: "/api/healthcheck",
+      defaultRouterBasePath: "/api",
+      healthcheckPath: "/healthcheck",
       healthcheckGoodRes: 200,
       healthcheckBadRes: 503,
 
@@ -155,14 +137,6 @@ export class HttpServer {
     this._networkPort = networkPort;
 
     this._healthcheckCallbacks = [];
-    this._methodListMap = {
-      GET: [],
-      DELETE: [],
-      PATCH: [],
-      POST: [],
-      PUT: [],
-      OPTIONS: [],
-    };
 
     this._httpKeepAliveTimeout = config.keepAliveTimeout;
     this._httpHeaderTimeout = config.headerTimeout;
@@ -178,9 +152,16 @@ export class HttpServer {
       this._certFile = config.httpsCertFile;
     }
 
-    this._ssrHandler = config.ssrHandler;
+    this._routerList = [];
 
-    this._defaultMiddlewareList = [];
+    // Create the default router AFTER you initialise the _routerList
+    this._defaultRouter = this.router(config.defaultRouterBasePath);
+
+    // Make sure the SSR Router DOESNT use the not found handler - we need it
+    // to pass control to the static file server and do not add it to the
+    // _routerList
+    this._ssrRouter = new Router("/", { useNotFoundHandler: false });
+    logger.startupMsg(this._loggerTag, "SSR router created");
 
     if (config.staticFileServer !== undefined) {
       this._staticFileServer = new staticFiles.StaticFileServer({
@@ -210,6 +191,10 @@ export class HttpServer {
 
   get name(): string {
     return this._name;
+  }
+
+  get ssrRouter(): Router {
+    return this._ssrRouter;
   }
 
   // Private methods here
@@ -295,7 +280,10 @@ export class HttpServer {
     });
   }
 
-  private async handleHttpReq(req: ServerRequest, res: ServerResponse) {
+  private async handleHttpReq(
+    req: ServerRequest,
+    res: ServerResponse,
+  ): Promise<void> {
     // We have to do this hear for now since the url will not be set until
     // after this object it created
 
@@ -313,27 +301,22 @@ export class HttpServer {
       url,
     );
 
-    if (await this.handleApiReq(req, res)) {
+    // Look for a router with a basePath that matches the start of the req path
+    let pathname = req.urlObj.pathname;
+    let router = this._routerList.find((el) => el.matches(pathname));
+
+    // Try and handle the request (if router exists)
+    if ((await router?.handleApiReq(req, res)) === true) {
       return;
     }
 
-    // This wasn't an API call so check if we are doing SSR
-    if (this._ssrHandler !== undefined) {
-      // This is a flag to check if the URL path matches an SSR path
-      let wasHandled = true;
-
-      await this._ssrHandler(req, res, () => {
-        // If this is called then the URL path doesn't match an SSR path
-        wasHandled = false;
-      });
-
-      // Only return IF the URL was handled
-      if (wasHandled) {
-        return;
-      }
+    // If we're here this wasn't an API req so check if it was SSR req
+    if (await this._ssrRouter.handleApiReq(req, res)) {
+      return;
     }
 
-    // If we're here then check if we are serving static files
+    // If we're here this wasn't a SSR req so check if we're serving
+    // static files
     if (this._staticFileServer !== undefined) {
       await this._staticFileServer.handleReq(req, res);
       return;
@@ -341,214 +324,7 @@ export class HttpServer {
 
     // If we are here then we dont know this URL so return a 404
     res.statusCode = 404;
-    res.end();
-  }
-
-  private findEndpoint(req: ServerRequest): MethodListElement | null {
-    let method = <Method>req.method;
-
-    // Check for a CORS Preflight request - yes there is middleware for this
-    // but this has to be checked here because we will not have a registered
-    // endpoint under OPTIONS
-    if (
-      req.method === "OPTIONS" &&
-      req.headers["access-control-request-method"] !== undefined
-    ) {
-      // Get the method this preflight request is checking for and use that
-      // to see there is an endpoint registered for it
-      method = <Method>req.headers["access-control-request-method"];
-    }
-
-    // First, make sure we have a list for the req method
-    let list = this._methodListMap[method];
-    if (list === undefined) {
-      return null;
-    }
-
-    let matchedEl: MethodListElement | null = null;
-
-    // Next see if we have a registered callback for the HTTP req path
-    for (let el of list) {
-      let result = el.matchFunc(req.urlObj.pathname);
-
-      // If result is false that means we found nothing
-      if (result === false) {
-        continue;
-      }
-
-      // If we are here we found the callback
-      matchedEl = el;
-      // Don't forget to set the url parameters
-      req.params = result.params;
-      // Stop looking
-      break;
-    }
-
-    return matchedEl;
-  }
-
-  private async handleApiReq(
-    req: ServerRequest,
-    res: ServerResponse,
-  ): Promise<boolean> {
-    // See if this request matches a registered endpoint
-    let matchedEl = this.findEndpoint(req);
-    if (matchedEl === null) {
-      // Couldn't find a match so flag that the req has not been handled
-      return false;
-    }
-
-    await this.callMiddleware(
-      req,
-      res,
-      matchedEl,
-      matchedEl.middlewareList,
-    ).catch((e) => {
-      let message: string;
-
-      // If it is a HttpError assume the error message has already been logged
-      if (e instanceof HttpError) {
-        res.statusCode = e.status;
-        message = e.message;
-      } else {
-        // We don't know what this is so log it and make sure to return a 500
-        logger.error(
-          this._loggerTag,
-          "Unknown error happened while handling URL (%s) - (%s)",
-          req.urlObj.pathname,
-          e,
-        );
-
-        res.statusCode = 500;
-        message = "Unknown error happened";
-      }
-
-      res.setHeader("content-type", "text/plain; charset=utf-8");
-      res.setHeader("content-length", Buffer.byteLength(message));
-      res.write(message);
-      res.end();
-    });
-
-    // If there is an SSE server dont call addResponse or end res
-    if (req.sseServer !== undefined) {
-      return true;
-    }
-
-    // Check if res.write() has NOT been called yet
-    if (!res.headersSent) {
-      // Check if the callback wants us to add the body, headers etc
-      this.addResponse(req, res, matchedEl.etag);
-    }
-
-    // Check if the res.end() has NOT been called yet
-    if (!res.writableEnded) {
-      // End the response now
-      res.end();
-    }
-
-    // Flag this req has been handled
-    return true;
-  }
-
-  private async callMiddleware(
-    req: ServerRequest,
-    res: ServerResponse,
-    el: MethodListElement,
-    middlewareStack: Middleware[],
-  ): Promise<void> {
-    // Check if there handlers still be be called on the stack
-    if (middlewareStack.length) {
-      // Call the top handler and pass the rest of the handlers after it
-      await middlewareStack[0](req, res, async () => {
-        await this.callMiddleware(req, res, el, middlewareStack.slice(1));
-      });
-    } else {
-      // No more handlers but make sure is NOT an unhandled preflight check.
-      // If it is then we DO NOT want to call the endpoint handler
-      if (req.method !== "OPTIONS") {
-        await this.callEndpoint(req, res, el);
-      }
-    }
-  }
-
-  private async callEndpoint(
-    req: ServerRequest,
-    res: ServerResponse,
-    el: MethodListElement,
-  ): Promise<void> {
-    // Check if this should be a server sent event endpoint
-    if (el.sseServerOptions !== undefined) {
-      req.sseServer = new SseServer(req, res, el.sseServerOptions);
-    }
-
-    // The callback can be async or not so check for it
-    if (el.callback.constructor.name === "AsyncFunction") {
-      // This is async so use await
-      await el.callback(req, res);
-    } else {
-      // This is a synchronous call
-      el.callback(req, res);
-    }
-  }
-
-  private addResponse(req: ServerRequest, res: ServerResponse, etag: boolean) {
-    let body: string | Buffer | null = null;
-
-    // Check if a json or a body response has been passed back
-    if (res.json !== undefined) {
-      res.setHeader("content-type", "application/json; charset=utf-8");
-      body = JSON.stringify(res.json);
-    } else if (res.body !== undefined) {
-      // Check if the content-type has not been set
-      if (!res.hasHeader("content-type")) {
-        // It hasn't so set it to the default type
-        res.setHeader("content-type", "text/plain; charset=utf-8");
-      }
-      body = res.body;
-    }
-
-    // Check if the user didnt pass any data to send back (body is null)
-    if (body === null) {
-      // This means there will be an empty body so check if the StatusCode has
-      // been change from the default 200 - if it has leave it alone beacuse
-      // the user must have set it
-      if (res.statusCode === 200) {
-        // Otherwise set the status code to indicate an empty body
-        res.statusCode = 204;
-      }
-
-      // Don't forget to set the server-timing header before we leave
-      setServerTimingHeader(res, req.receiveTime);
-      // Nothing else to do so get out of here
-      return;
-    }
-
-    // Check if the user wants an etag added to the response
-    if (etag) {
-      let etag = crypto.createHash("sha1").update(body).digest("hex");
-
-      // All headers need to be set, except content-length, for a 304
-      res.setHeader("cache-control", "no-cache");
-      res.setHeader("etag", etag);
-
-      // Check if any cache validators exist on the request
-      if (req.headers["if-none-match"] === etag) {
-        // Don't forget to set the server-timing header after we do everything else
-        setServerTimingHeader(res, req.receiveTime);
-
-        res.statusCode = 304;
-        res.end();
-        return;
-      }
-    }
-
-    // Only set the length when we don't do a 304
-    res.setHeader("content-length", Buffer.byteLength(body));
-
-    // Don't forget to set the server-timing header after we do everything else
-    setServerTimingHeader(res, req.receiveTime);
-
-    res.write(body);
+    res.write("Not found");
     res.end();
   }
 
@@ -645,8 +421,7 @@ export class HttpServer {
     await this.startListening(this._server);
 
     // Now we need to add the endpoint for healthchecks
-    this.endpoint(
-      "GET",
+    this._defaultRouter.get(
       this._healthCheckPath,
       (req, res) => this.healthcheckCallback(req, res),
       { defaultMiddlewares: false },
@@ -683,96 +458,101 @@ export class HttpServer {
     return;
   }
 
-  addHealthcheck(callback: HealthcheckCallback) {
+  addHealthcheck(callback: HealthcheckCallback): void {
     this._healthcheckCallbacks.push(callback);
   }
 
-  use(middleware: Middleware) {
-    this._defaultMiddlewareList.push(middleware);
+  router(basePath: string, routerConfig: RouterConfig = {}): Router {
+    // Make sure the basePath is properly terminated
+    basePath = basePath.replace(/\/*$/, "/");
+
+    // Check to make sure this basePath does not overlap with another router's
+    // basePath
+    let found = this._routerList.find((el) => {
+      return el.matches(basePath) || el.basePath.startsWith(basePath);
+    });
+
+    // If there is an overlap with an existing router then "stop the press"!
+    if (found !== undefined) {
+      throw new Error(`${basePath} clashes with basePath of ${found.basePath}`);
+    }
+
+    // If we are here then all is good so create the new router
+    let router = new Router(basePath, routerConfig);
+    this._routerList.push(router);
+
+    logger.startupMsg(
+      this._loggerTag,
+      "(%s) router created",
+      basePath.replace(/\/$/, ""),
+    );
+
+    return router;
+  }
+
+  getRouter(basePath: string): Router | undefined {
+    // Make sure to remove any trailing slashes and then delimit properly
+    basePath = basePath.replace(/\/*$/, "/");
+
+    return this._routerList.find((el) => el.basePath === basePath);
+  }
+
+  // Methods for the default router here
+  use(middleware: Middleware): void {
+    this._defaultRouter.use(middleware);
   }
 
   del(
     path: string,
     callback: EndpointCallback,
-    endpointOptions: EndpointOptions = {},
-  ) {
-    this.endpoint("DELETE", path, callback, endpointOptions);
+    options: EndpointOptions = {},
+  ): void {
+    this._defaultRouter.endpoint("DELETE", path, callback, options);
   }
 
   get(
     path: string,
     callback: EndpointCallback,
-    endpointOptions: EndpointOptions = {},
-  ) {
-    this.endpoint("GET", path, callback, endpointOptions);
+    options: EndpointOptions = {},
+  ): void {
+    this._defaultRouter.endpoint("GET", path, callback, options);
   }
 
   patch(
     path: string,
     callback: EndpointCallback,
-    endpointOptions: EndpointOptions = {},
-  ) {
-    this.endpoint("PATCH", path, callback, endpointOptions);
+    options: EndpointOptions = {},
+  ): void {
+    this._defaultRouter.endpoint("PATCH", path, callback, options);
   }
 
   post(
     path: string,
     callback: EndpointCallback,
-    endpointOptions: EndpointOptions = {},
-  ) {
-    this.endpoint("POST", path, callback, endpointOptions);
+    options: EndpointOptions = {},
+  ): void {
+    this._defaultRouter.endpoint("POST", path, callback, options);
   }
 
   put(
     path: string,
     callback: EndpointCallback,
-    endpointOptions: EndpointOptions = {},
-  ) {
-    this.endpoint("PUT", path, callback, endpointOptions);
+    options: EndpointOptions = {},
+  ): void {
+    this._defaultRouter.endpoint("PUT", path, callback, options);
   }
 
   endpoint(
     method: Method,
     path: string,
     callback: EndpointCallback,
-    endpointOptions: EndpointOptions = {},
-  ) {
-    let options = { defaultMiddlewares: true, etag: true, ...endpointOptions };
+    options: EndpointOptions = {},
+  ): void {
+    this._defaultRouter.endpoint(method, path, callback, options);
+  }
 
-    // Then create the matching function
-    let matchFunc = PathToRegEx.match(path, {
-      decode: decodeURIComponent,
-      strict: true,
-    });
-
-    // Make sure we have the middlewares requested
-    let middlewareList: Middleware[] = [];
-
-    // Check if the user wants the default middlewares
-    if (options.defaultMiddlewares) {
-      // ... stick the default middlewares in first
-      middlewareList = [...this._defaultMiddlewareList];
-    }
-
-    if (options.middlewareList !== undefined) {
-      middlewareList = [...middlewareList, ...options.middlewareList];
-    }
-
-    // Finally add it to the list of callbacks
-    this._methodListMap[method].push({
-      matchFunc,
-      callback,
-      middlewareList,
-      sseServerOptions: options.sseServerOptions,
-      etag: options.etag,
-    });
-
-    logger.info(
-      this._loggerTag,
-      "Added %s endpoint for path (%s)",
-      method.toUpperCase(),
-      path,
-    );
+  route(path: string): Route {
+    return this._defaultRouter.route(path);
   }
 
   // Middleware methods here

@@ -56,13 +56,14 @@ export class StaticFileServer {
       defaultCharSet: "charset=utf-8",
       notFoundHandler: async (_: ServerRequest, res: ServerResponse) => {
         res.statusCode = 404;
+        res.write("File not found");
         res.end();
       },
 
       ...serverConfig,
     };
 
-    // Make sure there is no trailinog slash at the end of the path
+    // Make sure there is no trailing slash at the end of the path
     this._filePath = config.filePath.replace(/\/*$/, "");
     this._loggerTag = config.loggerTag;
     this._defaultDirFile = config.defaultDirFile;

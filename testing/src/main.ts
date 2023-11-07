@@ -50,7 +50,7 @@ async function init() {
 
   bs.httpServer().endpoint(
     "PUT",
-    "/api/test/:id",
+    "/test/:id",
     (req, res) => {
       bs.info(req.body);
       bs.info("%j", req.json);
@@ -100,13 +100,13 @@ async function init() {
     );
   };
 
-  bs.httpServer().get("/api/ping", pong, {
+  bs.httpServer().get("/ping", pong, {
     sseServerOptions: { pingInterval: 10, pingEventName: "ev1" },
   });
 
   let hs = <HttpServer>bs.retrieve("hs");
   hs.get(
-    "/api/html",
+    "/html",
     async (_, res) => {
       res.body = "<html><p>Hello from 1</p></html>";
       res.setHeader("content-type", "text/html; charset=utf-8");
@@ -119,7 +119,7 @@ async function init() {
   );
 
   hs.post(
-    "/api/json",
+    "/json",
     async (req, res) => {
       bs.info("received %j", req.body?.toString());
       bs.info("%j", req.headers);
@@ -130,12 +130,41 @@ async function init() {
     },
   );
 
-  bs.httpServer().get("/api/text", async (_1, _2) => {
-    throw new HttpError(500, "endpoint error help me!");
+  bs.httpServer()
+    .route("/text")
+    .get(async (_1, _2) => {
+      throw new HttpError(500, "get endpoint error help me!");
+    })
+    .put(async (_1, _2) => {
+      throw new HttpError(500, "put endpoint error help me!");
+    })
+    .del(async (_1, _2) => {
+      throw new HttpError(500, "del endpoint error help me!");
+    });
+
+  let router = bs.httpServer().router("/newp", {
+    notFoundHandler: async (_, res) => {
+      res.statusCode = 404;
+      res.write("Not found sucker!");
+      res.end();
+    },
   });
+  // bs.httpServer().router("/newp/d");
+
+  router
+    .route("/text")
+    .get(async (_1, res) => {
+      res.body = "Hello newp";
+    })
+    .put(async (_1, _2) => {
+      throw new HttpError(500, "put endpoint error help me!");
+    })
+    .del(async (_1, _2) => {
+      throw new HttpError(500, "del endpoint error help me!");
+    });
 
   bs.httpServer().get(
-    "/api/test",
+    "/test",
     async (_, res) => {
       res.body = "";
     },
@@ -144,7 +173,7 @@ async function init() {
 
   bs.httpServer().endpoint(
     "GET",
-    "/api/json",
+    "/json",
     (req, res) => {
       console.log(req.url);
       res.statusCode = 201;

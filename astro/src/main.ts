@@ -2,15 +2,25 @@
 import type { AstroAdapter, AstroIntegration, SSRManifest } from "astro";
 import { App } from "astro/app";
 
-import { bs } from "@bs-core/shell";
+import { bs, ServerRequest, ServerResponse } from "@bs-core/shell";
 
 // Misc consts here
 const ADAPTER_NAME = "@bs-core/astro";
 
-// types here
-type Options = {};
+// Module properties here
+let _app: App;
 
-// private methods here
+// types here
+export type InitFunc = {
+  staticFilesPath: string;
+  render: (req: ServerRequest, res: ServerResponse, match: boolean) => boolean;
+};
+
+export type Options = {
+  initFunc: InitFunc;
+};
+
+// Private functions here
 function getAdapter(args: Options): AstroAdapter {
   return {
     name: ADAPTER_NAME,
@@ -31,26 +41,35 @@ function getAdapter(args: Options): AstroAdapter {
   };
 }
 
-// exported functions
-export default (args: Options = {}): AstroIntegration => {
+// Exported functions here
+
+// The default function will be called by Astro when the adapter is created
+export default (args: Options): AstroIntegration => {
   return {
     name: ADAPTER_NAME,
     hooks: {
       "astro:config:done": ({ setAdapter, config }) => {
         setAdapter(getAdapter(args));
-
-        bs.debug("Astro config: %j", config);
+      },
+      "astro:build:done": async (options: { dir: URL }) => {
+        // This is the directory for the static HTML
+        console.log(options.dir.pathname);
       },
     },
   };
 };
 
 // We need a createExports() exported or Astro will complain
-export function createExports() {}
+// NOTE: We dont require any exports
+export const createExports = (): Record<string, any> => {
+  return {};
+};
 
-// This is the function that will be called when the bundle script is run
-export const start = (manifest: SSRManifest) => {
-  let app = new App(manifest);
+// This is the function that will be called when the bundled script is run
+export const start = (manifest: SSRManifest, args: Options) => {
+  _app = new App(manifest);
 
-  console.log(app);
+  // args.initFunc(manifest.base);
+
+  // manifest.
 };

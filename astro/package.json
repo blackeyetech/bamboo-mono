@@ -1,5 +1,5 @@
 {
-  "version": "0.0.3",
+  "version": "1.0.0",
   "name": "@bs-core/astro",
   "description": "The Bamboo Shell Astro Adapter",
   "type": "module",
@@ -12,7 +12,7 @@
   ],
   "types": "./dist/astro.d.ts",
   "scripts": {
-    "rollup": "rollup -c rollup.config.mjs",
+    "rollup": "#rollup -c rollup.config.mjs",
     "build-dev": "tsc --sourceMap && npm run rollup",
     "build-prod": "npm run clean && tsc && NODE_ENV=production npm run rollup",
     "format-ts": "prettier --write 'src/**/*.ts'",

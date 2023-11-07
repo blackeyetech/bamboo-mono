@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.10.0
+
+### Minor Changes
+
+- Added Router to HttpServer and new Route functionality
+
 ## 1.9.1
 
 ### Patch Changes
