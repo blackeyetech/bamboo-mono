@@ -59,9 +59,8 @@ function makeWebRequestHeaders(req: ServerRequest): Headers {
 }
 
 function matcher(_: string): RouterMatchFunc {
-  return (path: string) => {
-    let request = new Request(path);
-    let routeData = _app.match(request);
+  return (url: URL) => {
+    let routeData = _app.match(new Request(url));
 
     if (routeData === undefined) {
       return false;
@@ -76,13 +75,14 @@ function matcher(_: string): RouterMatchFunc {
 
 async function ssrEndpoint(
   req: ServerRequest,
-  _: ServerResponse,
+  res: ServerResponse,
 ): Promise<void> {
   let webReq = new Request(req.urlObj.href, {
     method: req.method,
     headers: makeWebRequestHeaders(req),
   });
 
+  res.json = webReq;
   console.log(webReq);
 }
 

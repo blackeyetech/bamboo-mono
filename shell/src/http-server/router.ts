@@ -22,7 +22,7 @@ export type RouterMatch = {
   matchedInfo: any;
 };
 
-export type RouterMatchFunc = (path: string) => RouterMatch | false;
+export type RouterMatchFunc = (url: URL) => RouterMatch | false;
 
 export type EndpointOptions = {
   generateMatcher?: (path: string) => RouterMatchFunc;
@@ -148,7 +148,7 @@ export class Router {
 
     // Next see if we have a registered callback for the HTTP req path
     for (let el of list) {
-      let routerMatch = el.match(req.urlObj.pathname);
+      let routerMatch = el.match(req.urlObj);
 
       // If result is false that means we found nothing
       if (routerMatch === false) {
@@ -354,8 +354,8 @@ export class Router {
       strict: true,
     });
 
-    return (path: string): RouterMatch | false => {
-      let result = match(path);
+    return (url: URL): RouterMatch | false => {
+      let result = match(url.pathname);
 
       if (result === false) {
         return false;

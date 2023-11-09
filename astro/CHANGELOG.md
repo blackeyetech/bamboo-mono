@@ -1,5 +1,13 @@
 # @bs-core/astro
 
+## 1.0.3
+
+### Patch Changes
+
+- Fixed matcher function
+- Updated dependencies
+  - @bs-core/shell@1.12.1
+
 ## 2.0.0
 
 ### Patch Changes

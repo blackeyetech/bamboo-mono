@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.12.1
+
+### Patch Changes
+
+- Changed RouterMatchFunc to take a URL instead of a path
+
 ## 1.12.0
 
 ### Minor Changes
