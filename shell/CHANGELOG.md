@@ -1,5 +1,12 @@
 # @bs-core/shell
 
+## 1.12.0
+
+### Minor Changes
+
+- - Added RouterMatch property for endpoints. Defauls to the original path-to-regexp
+  - Changed EndpointOptions.defaultMiddlewares to EndpointOptions.useDefaultMiddlewares
+
 ## 1.11.0
 
 ### Minor Changes

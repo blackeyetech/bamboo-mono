@@ -1,8 +1,14 @@
 // imports here
-import type { AstroAdapter, AstroIntegration, SSRManifest } from "astro";
-import { App } from "astro/app";
+import {
+  bs,
+  HttpConfig,
+  ServerRequest,
+  ServerResponse,
+  RouterMatchFunc,
+} from "@bs-core/shell";
 
-import { bs, HttpConfig } from "@bs-core/shell";
+import type { AstroIntegration, SSRManifest } from "astro";
+import { App } from "astro/app";
 
 // Misc consts here
 const ADAPTER_NAME = "@bs-core/astro";
@@ -10,7 +16,7 @@ const ADAPTER_NAME = "@bs-core/astro";
 // Module properties here
 let _app: App;
 
-// types here
+// Types here
 export type Options = {
   staticFilesPath?: string;
   extraContentTypes?: Record<string, string>;
@@ -28,29 +34,56 @@ export type Options = {
   healthcheckBadRes?: number;
 
   enableHttps?: boolean;
-  // httpsKeyFile?: string;
-  // httpsCertFile?: string;
 };
 
 // Private functions here
-function getAdapter(args: Options): AstroAdapter {
-  return {
-    name: ADAPTER_NAME,
-    serverEntrypoint: "@bs-core/astro/astro.mjs",
-    // previewEntrypoint: '@bs-core/astro/main.mjs',
-    args,
-    exports: [],
-    supportedAstroFeatures: {
-      hybridOutput: "stable",
-      staticOutput: "stable",
-      serverOutput: "stable",
-      assets: {
-        supportKind: "stable",
-        isSharpCompatible: false,
-        isSquooshCompatible: false,
-      },
-    },
+function makeWebRequestHeaders(req: ServerRequest): Headers {
+  // Copy all the headers for the new Request
+  const headers = new Headers();
+
+  for (const [name, value] of Object.entries(req.headers)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        headers.append(name, item);
+      }
+    } else {
+      headers.append(name, value);
+    }
+  }
+
+  return headers;
+}
+
+function matcher(_: string): RouterMatchFunc {
+  return (path: string) => {
+    let request = new Request(path);
+    let routeData = _app.match(request);
+
+    if (routeData === undefined) {
+      return false;
+    }
+
+    return {
+      params: {},
+      matchedInfo: routeData,
+    };
   };
+}
+
+async function ssrEndpoint(
+  req: ServerRequest,
+  _: ServerResponse,
+): Promise<void> {
+  let webReq = new Request(req.urlObj.href, {
+    method: req.method,
+    headers: makeWebRequestHeaders(req),
+  });
+
+  console.log(webReq);
 }
 
 // Exported functions here
@@ -61,7 +94,23 @@ export default (args: Options): AstroIntegration => {
     name: ADAPTER_NAME,
     hooks: {
       "astro:config:done": ({ setAdapter }) => {
-        setAdapter(getAdapter(args));
+        setAdapter({
+          name: ADAPTER_NAME,
+          serverEntrypoint: "@bs-core/astro",
+          // previewEntrypoint: '@bs-core/astro',
+          args,
+          exports: [],
+          supportedAstroFeatures: {
+            hybridOutput: "stable",
+            staticOutput: "stable",
+            serverOutput: "stable",
+            assets: {
+              supportKind: "stable",
+              isSharpCompatible: false,
+              isSquooshCompatible: false,
+            },
+          },
+        });
       },
       "astro:build:done": async (options) => {
         // We could update the bundle file here
@@ -73,60 +122,52 @@ export default (args: Options): AstroIntegration => {
 };
 
 // We need a createExports() exported or Astro will complain
-// NOTE: We dont require any exports!
 export const createExports = (): Record<string, any> => {
   return {};
 };
 
-// This is the function that will be called when the bundled script is run
+// This function that will be called when the bundled script is run
 export const start = async (
   manifest: SSRManifest,
   options: Options,
 ): Promise<void> => {
-  bs.startupMsg("Adapter options: (%j)", options);
+  let opts: HttpConfig = { ...options };
 
-  _app = new App(manifest);
+  if (options.staticFilesPath !== undefined) {
+    opts.staticFileServer = {
+      path: options.staticFilesPath,
+    };
 
-  let opts: HttpConfig = {
-    keepAliveTimeout: options.keepAliveTimeout,
-    headerTimeout: options.headerTimeout,
-    defaultRouterBasePath: options.defaultRouterBasePath,
-    healthcheckPath: options.healthcheckPath,
-    healthcheckGoodRes: options.healthcheckGoodRes,
-    healthcheckBadRes: options.healthcheckBadRes,
-    enableHttps: options.enableHttps,
-  };
+    if (options.extraContentTypes !== undefined) {
+      opts.staticFileServer.extraContentTypes = options.extraContentTypes;
+    }
+  }
 
   if (options.enableHttps) {
     opts.httpsCertFile = bs.getConfigStr("HTTP_CERT_FILE");
     opts.httpsKeyFile = bs.getConfigStr("HTTP_KEY_FILE");
   }
 
-  if (options.staticFilesPath !== undefined) {
-    opts.staticFileServer = {
-      path: options.staticFilesPath,
-      extraContentTypes: options.extraContentTypes,
-    };
-  }
-
   let networkIf = bs.getConfigStr("HTTP_HOST", "lo");
   let networkPort = bs.getConfigNum("HTTP_PORT", 8080);
 
-  bs.startupMsg("HttpServer config (%j)", opts);
-  // Do not start the HttpServer until we are finished setting everything up
+  // Create the Http server
+  // NOTE: Don't start it until we are finished setting everything up
   let httpServer = await bs.addHttpServer(
     networkIf,
     networkPort,
     opts,
     false,
-    "Astro",
+    "astro",
   );
 
-  httpServer.ssrRouter;
-  _app.getAdapterLogger;
+  // Create the app before setting up the SSR endpoint
+  _app = new App(manifest);
+
+  httpServer.ssrRouter.get("/", ssrEndpoint, { generateMatcher: matcher });
 
   // Start the http server now!
   await httpServer.start();
 
-  bs.startupMsg("We are ready so party on!!");
+  bs.startupMsg("We are ready now, so party on dude!!");
 };

@@ -102,6 +102,8 @@ export class ServerRequest extends http.IncomingMessage {
   public json?: any;
   public body?: Buffer;
 
+  public matchedInfo: any;
+
   // Constructor here
   constructor(socket: net.Socket) {
     super(socket);

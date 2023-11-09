@@ -16,8 +16,17 @@ import * as crypto from "node:crypto";
 // Types here
 export type HealthcheckCallback = () => Promise<boolean>;
 
+export type RouterMatch = {
+  params: Record<string, string>;
+
+  matchedInfo: any;
+};
+
+export type RouterMatchFunc = (path: string) => RouterMatch | false;
+
 export type EndpointOptions = {
-  defaultMiddlewares?: boolean;
+  generateMatcher?: (path: string) => RouterMatchFunc;
+  useDefaultMiddlewares?: boolean;
   middlewareList?: Middleware[];
   sseServerOptions?: SseServerOptions;
   etag?: boolean;
@@ -55,7 +64,7 @@ export type RouterConfig = {
 };
 
 type MethodListElement = {
-  matchFunc: PathToRegEx.MatchFunction<object>;
+  match: RouterMatchFunc;
   callback: EndpointCallback;
 
   middlewareList: Middleware[];
@@ -139,17 +148,20 @@ export class Router {
 
     // Next see if we have a registered callback for the HTTP req path
     for (let el of list) {
-      let result = el.matchFunc(req.urlObj.pathname);
+      let routerMatch = el.match(req.urlObj.pathname);
 
       // If result is false that means we found nothing
-      if (result === false) {
+      if (routerMatch === false) {
         continue;
       }
 
       // If we are here we found the callback
       matchedEl = el;
-      // Don't forget to set the url parameters
-      req.params = result.params;
+
+      // Don't forget to set the matchedInfo and params properties
+      req.matchedInfo = routerMatch.matchedInfo;
+      req.params = routerMatch.params;
+
       // Stop looking
       break;
     }
@@ -260,15 +272,12 @@ export class Router {
   }
 
   // Public methods here
-  matches(pathname: string): boolean {
+  inPath(pathname: string): boolean {
     // Make sure to use the delimited base path to ensure a correct match
     return pathname.startsWith(this._basePathDelimited);
   }
 
-  async handleApiReq(
-    req: ServerRequest,
-    res: ServerResponse,
-  ): Promise<boolean> {
+  async handleReq(req: ServerRequest, res: ServerResponse): Promise<boolean> {
     // See if this request matches a registered endpoint
     let matchedEl = this.findEndpoint(req);
     if (matchedEl === null) {
@@ -338,25 +347,46 @@ export class Router {
     this._defaultMiddlewareList.push(middleware);
   }
 
+  pathToRegexMatch(path: string): RouterMatchFunc {
+    // Then create the matching function
+    let match = PathToRegEx.match(path, {
+      decode: decodeURIComponent,
+      strict: true,
+    });
+
+    return (path: string): RouterMatch | false => {
+      let result = match(path);
+
+      if (result === false) {
+        return false;
+      }
+
+      return {
+        params: result.params as Record<string, string>,
+        matchedInfo: result,
+      };
+    };
+  }
+
   endpoint(
     method: Method,
     path: string,
     callback: EndpointCallback,
     endpointOptions: EndpointOptions = {},
   ) {
-    let options = { defaultMiddlewares: true, etag: true, ...endpointOptions };
+    let options = {
+      defaultMiddlewares: true,
+      etag: true,
+      generateMatcher: this.pathToRegexMatch,
 
-    // Then create the matching function
-    let matchFunc = PathToRegEx.match(`${this._basePath}${path}`, {
-      decode: decodeURIComponent,
-      strict: true,
-    });
+      ...endpointOptions,
+    };
 
     // Make sure we have the middlewares requested
     let middlewareList: Middleware[] = [];
 
     // Check if the user wants the default middlewares
-    if (options.defaultMiddlewares) {
+    if (options.useDefaultMiddlewares) {
       // ... stick the default middlewares in first
       middlewareList = [...this._defaultMiddlewareList];
     }
@@ -367,7 +397,7 @@ export class Router {
 
     // Finally add it to the list of callbacks
     this._methodListMap[method].push({
-      matchFunc,
+      match: options.generateMatcher(`${this._basePath}${path}`),
       callback,
       middlewareList,
       sseServerOptions: options.sseServerOptions,

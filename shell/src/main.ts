@@ -20,6 +20,8 @@ export {
   EndpointOptions,
   EndpointCallback,
   HealthcheckCallback,
+  RouterMatch,
+  RouterMatchFunc,
 } from "./http-server/main.js";
 export {
   Middleware,

@@ -28,8 +28,9 @@ import {
 export {
   EndpointOptions,
   EndpointCallback,
-  Router,
   RouterConfig,
+  RouterMatch,
+  RouterMatchFunc,
 } from "./router.js";
 
 import * as http from "node:http";
@@ -280,7 +281,7 @@ export class HttpServer {
     });
   }
 
-  private async handleHttpReq(
+  private async handleReq(
     req: ServerRequest,
     res: ServerResponse,
   ): Promise<void> {
@@ -303,15 +304,15 @@ export class HttpServer {
 
     // Look for a router with a basePath that matches the start of the req path
     let pathname = req.urlObj.pathname;
-    let router = this._routerList.find((el) => el.matches(pathname));
+    let router = this._routerList.find((el) => el.inPath(pathname));
 
     // Try and handle the request (if router exists)
-    if ((await router?.handleApiReq(req, res)) === true) {
+    if ((await router?.handleReq(req, res)) === true) {
       return;
     }
 
     // If we're here this wasn't an API req so check if it was SSR req
-    if (await this._ssrRouter.handleApiReq(req, res)) {
+    if (await this._ssrRouter.handleReq(req, res)) {
       return;
     }
 
@@ -396,7 +397,7 @@ export class HttpServer {
       };
 
       this._server = https.createServer(options, (req, res) => {
-        this.handleHttpReq(req as ServerRequest, res as ServerResponse);
+        this.handleReq(req as ServerRequest, res as ServerResponse);
       });
     } else {
       this._baseUrl = `http://${this._networkIp}:${this._networkPort}`;
@@ -411,7 +412,7 @@ export class HttpServer {
         ServerResponse: <any>ServerResponse, // Something wrong with typedefs
       };
       this._server = http.createServer(options, (req, res) => {
-        this.handleHttpReq(req as ServerRequest, res as ServerResponse);
+        this.handleReq(req as ServerRequest, res as ServerResponse);
       });
     }
 
@@ -424,7 +425,7 @@ export class HttpServer {
     this._defaultRouter.get(
       this._healthCheckPath,
       (req, res) => this.healthcheckCallback(req, res),
-      { defaultMiddlewares: false },
+      { useDefaultMiddlewares: false },
     );
   }
 
@@ -469,7 +470,7 @@ export class HttpServer {
     // Check to make sure this basePath does not overlap with another router's
     // basePath
     let found = this._routerList.find((el) => {
-      return el.matches(basePath) || el.basePath.startsWith(basePath);
+      return el.inPath(basePath) || el.basePath.startsWith(basePath);
     });
 
     // If there is an overlap with an existing router then "stop the press"!

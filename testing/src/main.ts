@@ -13,19 +13,13 @@ import { Template } from "@bs-plugins/template";
 
 // import * as http from "node:http";
 async function init() {
-  let options: JiraConfig = { password: "", server: "", user: "" };
-  bs.addPlugin("t1", Jira, options);
-  bs.addPlugin("t2", Jira, options);
-  bs.addPlugin("t3", Jira, options);
+  let jOptions: JiraConfig = { password: "", server: "", user: "" };
+  bs.addPlugin("t1", Jira, jOptions);
+  bs.addPlugin("t2", Jira, jOptions);
+  bs.addPlugin("t3", Jira, jOptions);
   bs.addPlugin("t4", Template);
 
-  let httpMan1 = await bs.addHttpServer("lo", 8080, {
-    staticFileServer: {
-      path: "/home/parallels/dev/src/oit/mdrp/frontend/bootstrap3",
-      extraContentTypes: { world: "application/octect" },
-    },
-    healthcheckPath: "/hc",
-  });
+  let httpMan1 = await bs.addHttpServer("lo", 8080);
 
   httpMan1.use(HttpServer.body({}));
   httpMan1.use(HttpServer.json());
@@ -54,15 +48,15 @@ async function init() {
     (req, res) => {
       bs.info(req.body);
       bs.info("%j", req.json);
-      res.json = { hello: "kieran" };
+      res.json = { hello: req.params["id"] };
     },
 
     {
       middlewareList: [
-        HttpServer.csrf({
-          checkType: "naive-double-submit-cookie",
-          cookie: "X-CSRF-HEADER",
-        }),
+        // HttpServer.csrf({
+        //   checkType: "naive-double-submit-cookie",
+        //   cookie: "X-CSRF-HEADER",
+        // }),
         // HttpServer.cors({
         //   headersAllowed: "*",
         //   originsAllowed: "*",
@@ -168,7 +162,7 @@ async function init() {
     async (_, res) => {
       res.body = "";
     },
-    { defaultMiddlewares: false },
+    { useDefaultMiddlewares: false },
   );
 
   bs.httpServer().endpoint(
