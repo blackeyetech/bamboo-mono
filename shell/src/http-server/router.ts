@@ -210,7 +210,11 @@ export class Router {
     }
   }
 
-  private addResponse(req: ServerRequest, res: ServerResponse, etag: boolean) {
+  private addResponse(
+    req: ServerRequest,
+    res: ServerResponse,
+    etag: boolean,
+  ): void {
     let body: string | Buffer | null = null;
 
     // Check if a json or a body response has been passed back
@@ -239,6 +243,20 @@ export class Router {
       // Don't forget to set the server-timing header before we leave
       setServerTimingHeader(res, req.receiveTime);
       // Nothing else to do so get out of here
+      return;
+    }
+
+    // We need to ensure body is a string or a Buffer or we will have problems
+    if (Buffer.isBuffer(body) === false && typeof body !== "string") {
+      logger.error(
+        this._loggerTag,
+        "(%s) response body for (%s) is not of type string or Buffer",
+        req.method,
+        req.urlObj.pathname,
+      );
+
+      res.statusCode = 500;
+      res.end();
       return;
     }
 

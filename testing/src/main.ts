@@ -147,9 +147,12 @@ async function init() {
 
   router
     .route("/text")
-    .get(async (_1, res) => {
-      res.body = "Hello newp";
-    })
+    .get(
+      async (_1, res) => {
+        res.body = '{ msg: "Hello newp" }';
+      },
+      { etag: false },
+    )
     .put(async (_1, _2) => {
       throw new HttpError(500, "put endpoint error help me!");
     })
@@ -180,11 +183,11 @@ async function init() {
     "GET",
     "/auth/json",
     (req, res) => {
-      console.log(req.url);
+      console.log(req.headers);
       res.statusCode = 201;
       res.json = { url: "json" };
     },
-    { etag: false },
+    { etag: true },
   );
 
   bs.httpServer().addHealthcheck(async () => {

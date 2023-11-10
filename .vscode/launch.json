@@ -7,7 +7,7 @@
       "name": "test - mjs",
       "cwd": "${workspaceFolder}/testing",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["dist/main.js", "--xxx=2", "--env-file=rrr"]
+      "runtimeArgs": ["dist/main.js"]
     }
   ]
 }

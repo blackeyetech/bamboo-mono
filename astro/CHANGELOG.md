@@ -1,5 +1,18 @@
 # @bs-core/astro
 
+## 1.0.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.12.2
+
+## 1.0.4
+
+### Patch Changes
+
+- Added WebResponse to be used instead of a Response
+
 ## 1.0.3
 
 ### Patch Changes

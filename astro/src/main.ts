@@ -18,6 +18,8 @@ let _app: App;
 
 // Types here
 export type Options = {
+  setupEntryPoint?: string;
+
   staticFilesPath?: string;
   extraContentTypes?: Record<string, string>;
 
@@ -36,28 +38,19 @@ export type Options = {
   enableHttps?: boolean;
 };
 
-// Private functions here
-function makeWebRequestHeaders(req: ServerRequest): Headers {
-  // Copy all the headers for the new Request
-  const headers = new Headers();
+export class WebRequest extends Request {
+  public req: ServerRequest;
+  public res: ServerResponse;
 
-  for (const [name, value] of Object.entries(req.headers)) {
-    if (value === undefined) {
-      continue;
-    }
+  constructor(req: ServerRequest, res: ServerResponse) {
+    super(req.urlObj, { method: req.method });
 
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        headers.append(name, item);
-      }
-    } else {
-      headers.append(name, value);
-    }
+    this.req = req;
+    this.res = res;
   }
-
-  return headers;
 }
 
+// Private functions here
 function matcher(_: string): RouterMatchFunc {
   return (url: URL) => {
     let routeData = _app.match(new Request(url));
@@ -66,6 +59,9 @@ function matcher(_: string): RouterMatchFunc {
       return false;
     }
 
+    // For now we will ignore the params because they are available
+    // in the Astro Request object
+    // NOTE: We need to retrun the routeData to use with _app.render()
     return {
       params: {},
       matchedInfo: routeData,
@@ -77,13 +73,15 @@ async function ssrEndpoint(
   req: ServerRequest,
   res: ServerResponse,
 ): Promise<void> {
-  let webReq = new Request(req.urlObj.href, {
-    method: req.method,
-    headers: makeWebRequestHeaders(req),
-  });
+  // Create a WebRequest object to pass to the render
+  let webReq = new WebRequest(req, res);
 
-  res.json = webReq;
-  console.log(webReq);
+  // Now render the page
+  let webRes = await _app.render(webReq, req.matchedInfo);
+
+  // And convert from a Response to a ServerResponse
+  webRes;
+  res.body;
 }
 
 // Exported functions here
@@ -131,6 +129,10 @@ export const start = async (
   manifest: SSRManifest,
   options: Options,
 ): Promise<void> => {
+  // Create the app first before doing anything else
+  _app = new App(manifest);
+
+  // Setup the options for the HTP server
   let opts: HttpConfig = { ...options };
 
   if (options.staticFilesPath !== undefined) {
@@ -151,7 +153,7 @@ export const start = async (
   let networkIf = bs.getConfigStr("HTTP_HOST", "lo");
   let networkPort = bs.getConfigNum("HTTP_PORT", 8080);
 
-  // Create the Http server
+  // Create the HTTP server
   // NOTE: Don't start it until we are finished setting everything up
   let httpServer = await bs.addHttpServer(
     networkIf,
@@ -161,13 +163,17 @@ export const start = async (
     "astro",
   );
 
-  // Create the app before setting up the SSR endpoint
-  _app = new App(manifest);
+  // Call setupEntryPoint here!
+  if (options.setupEntryPoint !== undefined) {
+    let { setup } = await import(options.setupEntryPoint);
+    await setup();
+  }
 
+  // Add the main SSR route - NOTE: the path is not important
   httpServer.ssrRouter.get("/", ssrEndpoint, { generateMatcher: matcher });
 
   // Start the http server now!
   await httpServer.start();
 
-  bs.startupMsg("We are ready now, so party on dude!!");
+  bs.startupMsg("Astro adapter is ready so party on dudes!!");
 };

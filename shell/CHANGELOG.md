@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.12.2
+
+### Patch Changes
+
+- Added check to ensure HTTP response body is a string or Buffer
+
 ## 1.12.1
 
 ### Patch Changes
