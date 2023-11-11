@@ -103,7 +103,7 @@ async function init() {
     "/html",
     async (_, res) => {
       res.body = "<html><p>Hello from 1</p></html>";
-      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
 
       res.serverTimingsMetrics.push({ name: "html", duration: 3.33 });
     },
@@ -164,6 +164,14 @@ async function init() {
     "/test",
     async (_, res) => {
       res.body = "";
+    },
+    { useDefaultMiddlewares: false },
+  );
+
+  bs.httpServer().get(
+    "/redirect",
+    async (req, res) => {
+      res.redirect(req, "/somewhere/over/the/rainbow");
     },
     { useDefaultMiddlewares: false },
   );

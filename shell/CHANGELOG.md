@@ -1,5 +1,13 @@
 # @bs-core/shell
 
+## 1.13.0
+
+### Minor Changes
+
+- Normalised all header spellings to use upper case
+- Moved setServerTimingHeader() to be part of ServerResponse
+- Added redirection() functionality to ServerResponse
+
 ## 1.12.2
 
 ### Patch Changes

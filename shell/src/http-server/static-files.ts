@@ -1,10 +1,6 @@
 // imports here
 import { logger } from "../logger.js";
-import {
-  ServerRequest,
-  ServerResponse,
-  setServerTimingHeader,
-} from "./req-res.js";
+import { ServerRequest, ServerResponse } from "./req-res.js";
 import { contentTypes } from "./content-types.js";
 
 import * as fs from "node:fs";
@@ -294,14 +290,14 @@ export class StaticFileServer {
     }
 
     // All headers need to be set, except content-length, for a 304
-    res.setHeader("cache-control", "no-cache"); // max-age=31536000, immutable
-    res.setHeader("etag", details.etag);
-    res.setHeader("last-modified", details.lastModifiedUtcStr);
-    res.setHeader("date", new Date().toUTCString());
-    res.setHeader("content-type", details.contentType);
+    res.setHeader("Cache-Control", "no-cache"); // max-age=31536000, immutable
+    res.setHeader("Etag", details.etag);
+    res.setHeader("Last-Modified", details.lastModifiedUtcStr);
+    res.setHeader("Date", new Date().toUTCString());
+    res.setHeader("Content-Type", details.contentType);
 
     // Don't forget to set the server-timing header
-    setServerTimingHeader(res, req.receiveTime);
+    res.setServerTimingHeader();
 
     // Check if any cache validators exist on the request - check etag first
     if (req.headers["if-none-match"] === details.etag) {
@@ -322,7 +318,7 @@ export class StaticFileServer {
     }
 
     // Only set the length when we don't do a 304
-    res.setHeader("content-length", details.size);
+    res.setHeader("Content-Length", details.size);
 
     // If it's a HEAD then do not set the body
     if (req.method === "HEAD") {

@@ -43,6 +43,7 @@ export class WebRequest extends Request {
   public res: ServerResponse;
 
   constructor(req: ServerRequest, res: ServerResponse) {
+    // NOTE: WE don't care about headers since they are already on req and res
     super(req.urlObj, { method: req.method });
 
     this.req = req;
@@ -79,9 +80,13 @@ async function ssrEndpoint(
   // Now render the page
   let webRes = await _app.render(webReq, req.matchedInfo);
 
-  // And convert from a Response to a ServerResponse
-  webRes;
-  res.body;
+  // This is the easiest way to get the Response body
+  res.body = await webRes.text();
+
+  // Check if Astro set any headers that we shold pass on
+  for (let header of webRes.headers.entries()) {
+    res.setHeader(header[0], header[1]);
+  }
 }
 
 // Exported functions here
@@ -110,10 +115,8 @@ export default (args: Options): AstroIntegration => {
           },
         });
       },
-      "astro:build:done": async (options) => {
-        // We could update the bundle file here
-        // This is the directory for the static HTML
-        options.logger.info(options.dir.pathname);
+      "astro:build:done": async () => {
+        // We could update the bundle file here if needed
       },
     },
   };
@@ -163,14 +166,18 @@ export const start = async (
     "astro",
   );
 
-  // Call setupEntryPoint here!
+  // Call setupEntryPoint here in case you want to setup any default
+  // middleware for the SSR endpoint
   if (options.setupEntryPoint !== undefined) {
     let { setup } = await import(options.setupEntryPoint);
     await setup();
   }
 
   // Add the main SSR route - NOTE: the path is not important
-  httpServer.ssrRouter.get("/", ssrEndpoint, { generateMatcher: matcher });
+  httpServer.ssrRouter.get("/", ssrEndpoint, {
+    generateMatcher: matcher,
+    etag: true,
+  });
 
   // Start the http server now!
   await httpServer.start();

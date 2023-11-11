@@ -26,6 +26,9 @@ export class HttpError {
 
 export class ServerResponse extends http.ServerResponse {
   // Properties here
+  private _receiveTime: number;
+  private _redirected: boolean;
+
   public serverTimingsMetrics: { name: string; duration: number }[];
 
   public json?: object | [] | string | number | boolean;
@@ -35,10 +38,37 @@ export class ServerResponse extends http.ServerResponse {
   constructor(req: http.IncomingMessage) {
     super(req);
 
+    // NOTE: This will be created at the same time as ServerRequest
+    this._receiveTime = performance.now();
+    this._redirected = false;
     this.serverTimingsMetrics = [];
   }
 
+  // Getter methods here
+  get redirected(): boolean {
+    return this._redirected;
+  }
+
   // Public functions here
+  redirect(req: ServerRequest, location: string, statusCode: number = 301) {
+    this._redirected = true;
+
+    let body = `<html><body><p>${req.urlObj.pathname} has been redirected to <a href="${location}">here</a></p></body></html>`;
+
+    this.setHeader("Location", location);
+    this.setHeader("Content-Type", "text/html; charset=utf-8");
+    this.setHeader("Content-Length", Buffer.byteLength(body));
+
+    this.statusCode = statusCode;
+
+    this.setServerTimingHeader();
+
+    // Write a little something something for good measure
+    this.write(body);
+
+    this.end();
+  }
+
   setCookies = (cookies: Cookie[]): void => {
     let setCookiesValue: string[] = [];
 
@@ -88,6 +118,19 @@ export class ServerResponse extends http.ServerResponse {
 
     this.setCookies(httpCookies);
   };
+
+  setServerTimingHeader = () => {
+    // Set the total latency first
+    let lat = Math.round((performance.now() - this._receiveTime) * 1000) / 1000;
+    let timing = `latency;dur=${lat}`;
+
+    // Then add each additional metric added to the res
+    for (let metric of this.serverTimingsMetrics) {
+      timing += `, ${metric.name};dur=${metric.duration}`;
+    }
+
+    this.setHeader("Server-Timing", timing);
+  };
 }
 
 export class ServerRequest extends http.IncomingMessage {
@@ -95,8 +138,6 @@ export class ServerRequest extends http.IncomingMessage {
   public urlObj: URL;
   public params: Record<string, any>;
   public middlewareProps: Record<string, any>;
-
-  public receiveTime: number;
 
   public sseServer?: SseServer;
   public json?: any;
@@ -113,7 +154,6 @@ export class ServerRequest extends http.IncomingMessage {
 
     this.params = {};
     this.middlewareProps = {};
-    this.receiveTime = performance.now();
   }
 
   getCookie = (cookieName: string): string | null => {
@@ -148,20 +188,3 @@ export class ServerRequest extends http.IncomingMessage {
     return null;
   };
 }
-
-// Utility functions here
-export const setServerTimingHeader = (
-  res: ServerResponse,
-  receiveTime: number,
-) => {
-  // Set the total latency first
-  let lat = Math.round((performance.now() - receiveTime) * 1000) / 1000;
-  let timing = `latency;dur=${lat}`;
-
-  // Then add each additional metric added to the res
-  for (let metric of res.serverTimingsMetrics) {
-    timing += `, ${metric.name};dur=${metric.duration}`;
-  }
-
-  res.setHeader("server-timing", timing);
-};

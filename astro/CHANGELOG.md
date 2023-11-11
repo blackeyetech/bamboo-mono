@@ -1,5 +1,16 @@
 # @bs-core/astro
 
+## 1.2.0
+
+### Minor Changes
+
+- Adapter now fully functional
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.13.0
+
 ## 1.0.5
 
 ### Patch Changes
@@ -21,7 +32,7 @@
 - Updated dependencies
   - @bs-core/shell@1.12.1
 
-## 2.0.0
+## 1.0.2
 
 ### Patch Changes
 

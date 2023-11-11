@@ -2,12 +2,7 @@
 import { logger } from "../logger.js";
 
 import { SseServer, SseServerOptions } from "./sse-server.js";
-import {
-  ServerRequest,
-  ServerResponse,
-  HttpError,
-  setServerTimingHeader,
-} from "./req-res.js";
+import { ServerRequest, ServerResponse, HttpError } from "./req-res.js";
 import { Middleware } from "./middleware.js";
 import * as PathToRegEx from "path-to-regexp";
 
@@ -219,13 +214,13 @@ export class Router {
 
     // Check if a json or a body response has been passed back
     if (res.json !== undefined) {
-      res.setHeader("content-type", "application/json; charset=utf-8");
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
       body = JSON.stringify(res.json);
     } else if (res.body !== undefined) {
       // Check if the content-type has not been set
-      if (!res.hasHeader("content-type")) {
+      if (!res.hasHeader("Content-Type")) {
         // It hasn't so set it to the default type
-        res.setHeader("content-type", "text/plain; charset=utf-8");
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
       }
       body = res.body;
     }
@@ -241,8 +236,9 @@ export class Router {
       }
 
       // Don't forget to set the server-timing header before we leave
-      setServerTimingHeader(res, req.receiveTime);
-      // Nothing else to do so get out of here
+      res.setServerTimingHeader();
+
+      // Nothing else to do including calculating and etag so get out of here
       return;
     }
 
@@ -265,13 +261,13 @@ export class Router {
       let etag = crypto.createHash("sha1").update(body).digest("hex");
 
       // All headers need to be set, except content-length, for a 304
-      res.setHeader("cache-control", "no-cache");
-      res.setHeader("etag", etag);
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Etag", etag);
 
       // Check if any cache validators exist on the request
       if (req.headers["if-none-match"] === etag) {
         // Don't forget to set the server-timing header after we do everything else
-        setServerTimingHeader(res, req.receiveTime);
+        res.setServerTimingHeader();
 
         res.statusCode = 304;
         res.end();
@@ -280,10 +276,10 @@ export class Router {
     }
 
     // Only set the length when we don't do a 304
-    res.setHeader("content-length", Buffer.byteLength(body));
+    res.setHeader("Content-Length", Buffer.byteLength(body));
 
     // Don't forget to set the server-timing header after we do everything else
-    setServerTimingHeader(res, req.receiveTime);
+    res.setServerTimingHeader();
 
     res.write(body);
     res.end();
@@ -334,11 +330,17 @@ export class Router {
         message = "Unknown error happened";
       }
 
-      res.setHeader("content-type", "text/plain; charset=utf-8");
-      res.setHeader("content-length", Buffer.byteLength(message));
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Length", Buffer.byteLength(message));
       res.write(message);
       res.end();
     });
+
+    // Check if the endpoint has been redirected
+    if (res.redirected) {
+      // No need to do any more
+      return true;
+    }
 
     // If there is an SSE server dont call addResponse or res.end()
     if (req.sseServer !== undefined) {
@@ -394,7 +396,7 @@ export class Router {
   ) {
     let options = {
       defaultMiddlewares: true,
-      etag: true,
+      etag: false,
       generateMatcher: this.pathToRegexMatch,
 
       ...endpointOptions,
