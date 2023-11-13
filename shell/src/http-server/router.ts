@@ -363,10 +363,6 @@ export class Router {
     return true;
   }
 
-  use(middleware: Middleware): void {
-    this._defaultMiddlewareList.push(middleware);
-  }
-
   pathToRegexMatch(path: string): RouterMatchFunc {
     // Then create the matching function
     let match = PathToRegEx.match(path, {
@@ -388,12 +384,18 @@ export class Router {
     };
   }
 
+  use(middleware: Middleware): Router {
+    this._defaultMiddlewareList.push(middleware);
+
+    return this;
+  }
+
   endpoint(
     method: Method,
     path: string,
     callback: EndpointCallback,
     endpointOptions: EndpointOptions = {},
-  ) {
+  ): Router {
     let options = {
       defaultMiddlewares: true,
       etag: false,
@@ -415,9 +417,12 @@ export class Router {
       middlewareList = [...middlewareList, ...options.middlewareList];
     }
 
+    // GEt the full path - check if the path already includes the basePath
+    let fullPath = this.inPath(path) ? path : `${this._basePath}${path}`;
+
     // Finally add it to the list of callbacks
     this._methodListMap[method].push({
-      match: options.generateMatcher(`${this._basePath}${path}`),
+      match: options.generateMatcher(fullPath),
       callback,
       middlewareList,
       sseServerOptions: options.sseServerOptions,
@@ -426,11 +431,12 @@ export class Router {
 
     logger.startupMsg(
       this._loggerTag,
-      "Added %s endpoint for path (%s%s)",
+      "Added %s endpoint for path (%s)",
       method.toUpperCase(),
-      this._basePath,
-      path,
+      fullPath,
     );
+
+    return this;
   }
 
   // endpoint helper methods here
@@ -438,40 +444,45 @@ export class Router {
     path: string,
     callback: EndpointCallback,
     endpointOptions: EndpointOptions = {},
-  ): void {
+  ): Router {
     this.endpoint("DELETE", path, callback, endpointOptions);
+    return this;
   }
 
   get(
     path: string,
     callback: EndpointCallback,
     endpointOptions: EndpointOptions = {},
-  ): void {
+  ): Router {
     this.endpoint("GET", path, callback, endpointOptions);
+    return this;
   }
 
   patch(
     path: string,
     callback: EndpointCallback,
     endpointOptions: EndpointOptions = {},
-  ): void {
+  ): Router {
     this.endpoint("PATCH", path, callback, endpointOptions);
+    return this;
   }
 
   post(
     path: string,
     callback: EndpointCallback,
     endpointOptions: EndpointOptions = {},
-  ): void {
+  ): Router {
     this.endpoint("POST", path, callback, endpointOptions);
+    return this;
   }
 
   put(
     path: string,
     callback: EndpointCallback,
     endpointOptions: EndpointOptions = {},
-  ): void {
+  ): Router {
     this.endpoint("PUT", path, callback, endpointOptions);
+    return this;
   }
 
   route(path: string): Route {

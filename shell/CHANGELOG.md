@@ -1,5 +1,21 @@
 # @bs-core/shell
 
+## 1.13.1
+
+### Patch Changes
+
+- Renamed HttpServer.router() to HttpServer.addRouter() to conform with all of the other methods
+- Now checking to see if the path supplied to endpoint() already contains the bastPath
+- The following HttpServer methods now return the Router object to allow for chaining:
+
+  - use()
+  - del()
+  - get()
+  - patch()
+  - post()
+  - put()
+  - endpoint()
+
 ## 1.13.0
 
 ### Minor Changes
@@ -24,8 +40,8 @@
 
 ### Minor Changes
 
-- - Added RouterMatch property for endpoints. Defauls to the original path-to-regexp
-  - Changed EndpointOptions.defaultMiddlewares to EndpointOptions.useDefaultMiddlewares
+- Added RouterMatch property for endpoints. Defaults to the original path-to-regexp
+- Changed EndpointOptions.defaultMiddlewares to EndpointOptions.useDefaultMiddlewares
 
 ## 1.11.0
 
@@ -43,10 +59,8 @@
 
 ### Patch Changes
 
-- 24cc99e: Following fixes made:
-
-  - Added check to ensure etag errors are caught and reported
-  - Changed timeout types to match the correct types
+- Added check to ensure etag errors are caught and reported
+- Changed timeout types to match the correct types
 
 ## 1.9.0
 
@@ -70,7 +84,7 @@
 
 ### Minor Changes
 
-- Removed need for apiBaseUrl in HttpSErver config
+- Removed need for apiBaseUrl in HttpServer config
 
 ## 1.7.3
 

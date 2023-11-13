@@ -98,8 +98,8 @@ export class HttpServer {
   private _keyFile?: string;
   private _certFile?: string;
 
-  private _routerList: Router[];
-  private _defaultRouter: Router;
+  private _apiRouterList: Router[];
+  private _defaultApiRouter: Router;
   private _ssrRouter: Router;
   private _staticFileServer?: staticFiles.StaticFileServer;
 
@@ -153,14 +153,14 @@ export class HttpServer {
       this._certFile = config.httpsCertFile;
     }
 
-    this._routerList = [];
+    this._apiRouterList = [];
 
     // Create the default router AFTER you initialise the _routerList
-    this._defaultRouter = this.router(config.defaultRouterBasePath);
+    this._defaultApiRouter = this.addRouter(config.defaultRouterBasePath);
 
-    // Make sure the SSR Router DOESNT use the not found handler - we need it
+    // Make sure the SSR Router DOES NOT use the not found handler - we need it
     // to pass control to the static file server and do not add it to the
-    // _routerList
+    // _apiRouterList since it doesnt have a fixed base path
     this._ssrRouter = new Router("/", { useNotFoundHandler: false });
     logger.startupMsg(this._loggerTag, "SSR router created");
 
@@ -304,7 +304,7 @@ export class HttpServer {
 
     // Look for a router with a basePath that matches the start of the req path
     let pathname = req.urlObj.pathname;
-    let router = this._routerList.find((el) => el.inPath(pathname));
+    let router = this._apiRouterList.find((el) => el.inPath(pathname));
 
     // Try and handle the request (if router exists)
     if ((await router?.handleReq(req, res)) === true) {
@@ -422,7 +422,7 @@ export class HttpServer {
     await this.startListening(this._server);
 
     // Now we need to add the endpoint for healthchecks
-    this._defaultRouter.get(
+    this._defaultApiRouter.get(
       this._healthCheckPath,
       (req, res) => this.healthcheckCallback(req, res),
       { useDefaultMiddlewares: false },
@@ -463,13 +463,13 @@ export class HttpServer {
     this._healthcheckCallbacks.push(callback);
   }
 
-  router(basePath: string, routerConfig: RouterConfig = {}): Router {
+  addRouter(basePath: string, routerConfig: RouterConfig = {}): Router {
     // Make sure the basePath is properly terminated
     basePath = basePath.replace(/\/*$/, "/");
 
     // Check to make sure this basePath does not overlap with another router's
     // basePath
-    let found = this._routerList.find((el) => {
+    let found = this._apiRouterList.find((el) => {
       return el.inPath(basePath) || el.basePath.startsWith(basePath);
     });
 
@@ -480,7 +480,7 @@ export class HttpServer {
 
     // If we are here then all is good so create the new router
     let router = new Router(basePath, routerConfig);
-    this._routerList.push(router);
+    this._apiRouterList.push(router);
 
     logger.startupMsg(
       this._loggerTag,
@@ -495,52 +495,52 @@ export class HttpServer {
     // Make sure to remove any trailing slashes and then delimit properly
     basePath = basePath.replace(/\/*$/, "/");
 
-    return this._routerList.find((el) => el.basePath === basePath);
+    return this._apiRouterList.find((el) => el.basePath === basePath);
   }
 
   // Methods for the default router here
-  use(middleware: Middleware): void {
-    this._defaultRouter.use(middleware);
+  use(middleware: Middleware): Router {
+    return this._defaultApiRouter.use(middleware);
   }
 
   del(
     path: string,
     callback: EndpointCallback,
     options: EndpointOptions = {},
-  ): void {
-    this._defaultRouter.endpoint("DELETE", path, callback, options);
+  ): Router {
+    return this._defaultApiRouter.endpoint("DELETE", path, callback, options);
   }
 
   get(
     path: string,
     callback: EndpointCallback,
     options: EndpointOptions = {},
-  ): void {
-    this._defaultRouter.endpoint("GET", path, callback, options);
+  ): Router {
+    return this._defaultApiRouter.endpoint("GET", path, callback, options);
   }
 
   patch(
     path: string,
     callback: EndpointCallback,
     options: EndpointOptions = {},
-  ): void {
-    this._defaultRouter.endpoint("PATCH", path, callback, options);
+  ): Router {
+    return this._defaultApiRouter.endpoint("PATCH", path, callback, options);
   }
 
   post(
     path: string,
     callback: EndpointCallback,
     options: EndpointOptions = {},
-  ): void {
-    this._defaultRouter.endpoint("POST", path, callback, options);
+  ): Router {
+    return this._defaultApiRouter.endpoint("POST", path, callback, options);
   }
 
   put(
     path: string,
     callback: EndpointCallback,
     options: EndpointOptions = {},
-  ): void {
-    this._defaultRouter.endpoint("PUT", path, callback, options);
+  ): Router {
+    return this._defaultApiRouter.endpoint("PUT", path, callback, options);
   }
 
   endpoint(
@@ -548,12 +548,12 @@ export class HttpServer {
     path: string,
     callback: EndpointCallback,
     options: EndpointOptions = {},
-  ): void {
-    this._defaultRouter.endpoint(method, path, callback, options);
+  ): Router {
+    return this._defaultApiRouter.endpoint(method, path, callback, options);
   }
 
   route(path: string): Route {
-    return this._defaultRouter.route(path);
+    return this._defaultApiRouter.route(path);
   }
 
   // Middleware methods here

@@ -136,7 +136,7 @@ async function init() {
       throw new HttpError(500, "del endpoint error help me!");
     });
 
-  let router = bs.httpServer().router("/newp", {
+  let router = bs.httpServer().addRouter("/newp", {
     notFoundHandler: async (_, res) => {
       res.statusCode = 404;
       res.write("Not found sucker!");
@@ -181,8 +181,16 @@ async function init() {
     "/json",
     (req, res) => {
       console.log(req.url);
-      res.statusCode = 201;
-      res.json = { url: "login" };
+      res.json = { url: "json" };
+    },
+    { etag: false },
+  );
+  bs.httpServer().endpoint(
+    "GET",
+    "/api/json2",
+    (req, res) => {
+      console.log(req.url);
+      res.json = { url: "json2" };
     },
     { etag: false },
   );
