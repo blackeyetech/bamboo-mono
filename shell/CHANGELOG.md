@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.13.2
+
+### Patch Changes
+
+- Changed default option for endpoints to use the default middleware of the router
+
 ## 1.13.1
 
 ### Patch Changes

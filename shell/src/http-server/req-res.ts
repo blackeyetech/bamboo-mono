@@ -50,20 +50,22 @@ export class ServerResponse extends http.ServerResponse {
   }
 
   // Public functions here
-  redirect(req: ServerRequest, location: string, statusCode: number = 301) {
+  redirect(
+    req: ServerRequest,
+    location: string,
+    statusCode: 300 | 301 | 302 | 303 | 304 | 305 | 306 | 307 | 308 = 301,
+  ) {
     this._redirected = true;
 
-    let body = `<html><body><p>${req.urlObj.pathname} has been redirected to <a href="${location}">here</a></p></body></html>`;
-
-    this.setHeader("Location", location);
-    this.setHeader("Content-Type", "text/html; charset=utf-8");
-    this.setHeader("Content-Length", Buffer.byteLength(body));
-
     this.statusCode = statusCode;
+    this.setHeader("Location", location);
 
     this.setServerTimingHeader();
 
     // Write a little something something for good measure
+    let body = `<html><body><p>${req.urlObj.pathname} has been redirected to <a href="${location}">here</a></p></body></html>`;
+    this.setHeader("Content-Type", "text/html; charset=utf-8");
+    this.setHeader("Content-Length", Buffer.byteLength(body));
     this.write(body);
 
     this.end();

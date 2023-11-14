@@ -13,6 +13,12 @@ import { App } from "astro/app";
 // Misc consts here
 const ADAPTER_NAME = "@bs-core/astro";
 
+const HTTP_CERT_FILE = "HTTP_CERT_FILE";
+const HTTP_KEY_FILE = "HTTP_KEY_FILE";
+const HTTP_ENABLE_HTTPS = "HTTP_ENABLE_HTTPS";
+const HTTP_HOST = "HTTP_HOST";
+const HTTP_PORT = "HTTP_PORT";
+
 // Module properties here
 let _app: App;
 
@@ -34,8 +40,6 @@ export type Options = {
   healthcheckPath?: string;
   healthcheckGoodRes?: number;
   healthcheckBadRes?: number;
-
-  enableHttps?: boolean;
 };
 
 export class WebRequest extends Request {
@@ -135,7 +139,7 @@ export const start = async (
   // Create the app first before doing anything else
   _app = new App(manifest);
 
-  // Setup the options for the HTP server
+  // Setup the options for the HTTP server
   let opts: HttpConfig = { ...options };
 
   if (options.staticFilesPath !== undefined) {
@@ -148,13 +152,15 @@ export const start = async (
     }
   }
 
-  if (options.enableHttps) {
-    opts.httpsCertFile = bs.getConfigStr("HTTP_CERT_FILE");
-    opts.httpsKeyFile = bs.getConfigStr("HTTP_KEY_FILE");
+  let enableHttps = bs.getConfigBool(HTTP_ENABLE_HTTPS, false);
+
+  if (enableHttps) {
+    opts.httpsCertFile = bs.getConfigStr(HTTP_CERT_FILE);
+    opts.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
   }
 
-  let networkIf = bs.getConfigStr("HTTP_HOST", "lo");
-  let networkPort = bs.getConfigNum("HTTP_PORT", 8080);
+  let networkIf = bs.getConfigStr(HTTP_HOST, "lo");
+  let networkPort = bs.getConfigNum(HTTP_PORT, 8080);
 
   // Create the HTTP server
   // NOTE: Don't start it until we are finished setting everything up
@@ -182,5 +188,5 @@ export const start = async (
   // Start the http server now!
   await httpServer.start();
 
-  bs.startupMsg("Astro adapter is ready so party on dudes!!");
+  bs.startupMsg("Astro adapter is ready - so party on dudes!!");
 };

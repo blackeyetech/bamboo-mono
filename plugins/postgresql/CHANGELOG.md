@@ -1,5 +1,12 @@
 # @bs-plugins/postgresql
 
+## 1.0.22
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.13.2
+
 ## 1.0.21
 
 ### Patch Changes

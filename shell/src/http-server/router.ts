@@ -397,7 +397,7 @@ export class Router {
     endpointOptions: EndpointOptions = {},
   ): Router {
     let options = {
-      defaultMiddlewares: true,
+      useDefaultMiddlewares: true,
       etag: false,
       generateMatcher: this.pathToRegexMatch,
 
