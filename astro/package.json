@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "1.1.3",
   "name": "@bs-core/astro",
   "description": "The Bamboo Shell Astro Adapter",
   "type": "module",
