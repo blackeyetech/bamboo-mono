@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.14.0
+
+### Minor Changes
+
+- - Removed ServerRequest parameter from redirect() method
+
 ## 1.13.2
 
 ### Patch Changes

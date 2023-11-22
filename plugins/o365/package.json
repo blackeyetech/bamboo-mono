@@ -1,5 +1,5 @@
 {
-  "version": "1.0.22",
+  "version": "1.0.23",
   "name": "@bs-plugins/o365",
   "description": "Bamboo Shell plugin for Office 365",
   "type": "module",
