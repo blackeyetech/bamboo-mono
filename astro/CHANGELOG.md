@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.3.0
+
+### Minor Changes
+
+- Changed HTTP_PORT config parameter to HTTP_IF
+
 ## 1.2.0
 
 ### Minor Changes

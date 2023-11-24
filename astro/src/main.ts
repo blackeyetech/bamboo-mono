@@ -16,7 +16,7 @@ const ADAPTER_NAME = "@bs-core/astro";
 const HTTP_CERT_FILE = "HTTP_CERT_FILE";
 const HTTP_KEY_FILE = "HTTP_KEY_FILE";
 const HTTP_ENABLE_HTTPS = "HTTP_ENABLE_HTTPS";
-const HTTP_HOST = "HTTP_HOST";
+const HTTP_IF = "HTTP_IF";
 const HTTP_PORT = "HTTP_PORT";
 
 // Module properties here
@@ -159,7 +159,7 @@ export const start = async (
     opts.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
   }
 
-  let networkIf = bs.getConfigStr(HTTP_HOST, "lo");
+  let networkIf = bs.getConfigStr(HTTP_IF, "lo");
   let networkPort = bs.getConfigNum(HTTP_PORT, 8080);
 
   // Create the HTTP server
