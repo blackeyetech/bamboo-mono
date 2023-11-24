@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.3.1
+
+### Patch Changes
+
+- Changed name of HttpServer from "astro" to the default
+
 ## 1.3.0
 
 ### Minor Changes

@@ -164,13 +164,7 @@ export const start = async (
 
   // Create the HTTP server
   // NOTE: Don't start it until we are finished setting everything up
-  let httpServer = await bs.addHttpServer(
-    networkIf,
-    networkPort,
-    opts,
-    false,
-    "astro",
-  );
+  let httpServer = await bs.addHttpServer(networkIf, networkPort, opts, false);
 
   // Call setupEntryPoint here in case you want to setup any default
   // middleware for the SSR endpoint
