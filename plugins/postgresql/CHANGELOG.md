@@ -1,5 +1,11 @@
 # @bs-plugins/postgresql
 
+## 1.1.0
+
+### Minor Changes
+
+- Made @bs-core/shell a peerDependency
+
 ## 1.0.23
 
 ### Patch Changes

@@ -170,8 +170,8 @@ async function init() {
 
   bs.httpServer().get(
     "/redirect",
-    async (req, res) => {
-      res.redirect(req, "/somewhere/over/the/rainbow");
+    async (_, res) => {
+      res.redirect("/somewhere/over/the/rainbow");
     },
     { useDefaultMiddlewares: false },
   );

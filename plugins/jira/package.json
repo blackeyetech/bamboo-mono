@@ -1,5 +1,5 @@
 {
-  "version": "1.0.23",
+  "version": "1.1.0",
   "name": "@bs-plugins/jira",
   "description": "Bamboo Shell plugin for JIRA",
   "type": "module",
@@ -35,7 +35,10 @@
   ],
   "author": "Black Eye Technology",
   "license": "MIT",
-  "dependencies": {
+  "devDependencies": {
+    "@bs-core/shell": "workspace:^"
+  },
+  "peerDependencies": {
     "@bs-core/shell": "workspace:^"
   },
   "private": false

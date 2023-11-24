@@ -1,5 +1,17 @@
 # testing
 
+## 0.1.0
+
+### Minor Changes
+
+- Made @bs-core/shell a peerDependency
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-plugins/template@0.1.0
+  - @bs-plugins/jira@1.1.0
+
 ## 0.0.22
 
 ### Patch Changes

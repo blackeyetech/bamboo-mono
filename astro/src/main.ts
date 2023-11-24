@@ -175,6 +175,7 @@ export const start = async (
   // Call setupEntryPoint here in case you want to setup any default
   // middleware for the SSR endpoint
   if (options.setupEntryPoint !== undefined) {
+    // NOTE: We expect an exported function named "setup"
     let { setup } = await import(options.setupEntryPoint);
     await setup();
   }
@@ -188,5 +189,5 @@ export const start = async (
   // Start the http server now!
   await httpServer.start();
 
-  bs.startupMsg("Astro adapter is ready - so party on dudes!!");
+  bs.startupMsg("Astro adapter is primed - so party on dudes!!");
 };

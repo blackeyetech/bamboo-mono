@@ -1,5 +1,5 @@
 {
-  "version": "0.0.23",
+  "version": "0.1.0",
   "name": "@bs-plugins/template",
   "description": "DESCRIPTION",
   "type": "module",
@@ -34,8 +34,10 @@
   ],
   "author": "Black Eye Technology",
   "license": "MIT",
-  "dependencies": {
+  "devDependencies": {
     "@bs-core/shell": "workspace:^"
   },
-  "private": false
+  "peerDependencies": {
+    "@bs-core/shell": "workspace:^"
+  }
 }

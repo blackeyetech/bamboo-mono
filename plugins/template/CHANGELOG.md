@@ -1,5 +1,11 @@
 # @bs-plugins/template
 
+## 0.1.0
+
+### Minor Changes
+
+- Made @bs-core/shell a peerDependency
+
 ## 0.0.23
 
 ### Patch Changes

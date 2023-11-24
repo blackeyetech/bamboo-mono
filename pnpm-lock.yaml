@@ -58,72 +58,70 @@ importers:
         version: 5.2.2
 
   astro:
-    dependencies:
+    devDependencies:
       "@bs-core/shell":
         specifier: workspace:^
         version: link:../shell
-    devDependencies:
       astro:
         specifier: ^3.3.0
         version: 3.3.0(@types/node@18.18.5)(typescript@5.2.2)
 
   plugins/jira:
-    dependencies:
+    devDependencies:
       "@bs-core/shell":
         specifier: workspace:^
         version: link:../../shell
 
   plugins/ldap:
     dependencies:
-      "@bs-core/shell":
-        specifier: workspace:^
-        version: link:../../shell
       ldapjs:
         specifier: ^3.0.3
         version: 3.0.3
     devDependencies:
+      "@bs-core/shell":
+        specifier: workspace:^
+        version: link:../../shell
       "@types/ldapjs":
         specifier: ^2.2.5
         version: 2.2.5
 
   plugins/o365:
-    dependencies:
+    devDependencies:
       "@bs-core/shell":
         specifier: workspace:^
         version: link:../../shell
-    devDependencies:
       "@microsoft/microsoft-graph-types":
         specifier: ^2.35.0
         version: 2.35.0
 
   plugins/postgresql:
     dependencies:
-      "@bs-core/shell":
-        specifier: workspace:^
-        version: link:../../shell
       pg:
         specifier: ^8.11.1
         version: 8.11.1
     devDependencies:
+      "@bs-core/shell":
+        specifier: workspace:^
+        version: link:../../shell
       "@types/pg":
         specifier: ^8.10.2
         version: 8.10.2
 
   plugins/sql-server:
     dependencies:
-      "@bs-core/shell":
-        specifier: workspace:^
-        version: link:../../shell
       mssql:
         specifier: ^9.1.1
         version: 9.1.1
     devDependencies:
+      "@bs-core/shell":
+        specifier: workspace:^
+        version: link:../../shell
       "@types/mssql":
         specifier: ^8.1.2
         version: 8.1.2
 
   plugins/template:
-    dependencies:
+    devDependencies:
       "@bs-core/shell":
         specifier: workspace:^
         version: link:../../shell

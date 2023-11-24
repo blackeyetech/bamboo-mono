@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.2.0
+
+### Minor Changes
+
+- Made @bs-core/shell a peerDependency
+
 ## 1.1.3
 
 ### Patch Changes

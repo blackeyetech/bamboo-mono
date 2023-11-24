@@ -1,5 +1,5 @@
 {
-  "version": "1.0.23",
+  "version": "1.1.0",
   "name": "@bs-plugins/postgresql",
   "description": "Bamboo Shell plugin for PostgreSQL",
   "type": "module",
@@ -36,11 +36,14 @@
   "author": "Black Eye Technology",
   "license": "MIT",
   "dependencies": {
-    "@bs-core/shell": "workspace:^",
     "pg": "^8.11.1"
   },
   "devDependencies": {
+    "@bs-core/shell": "workspace:^",
     "@types/pg": "^8.10.2"
+  },
+  "peerDependencies": {
+    "@bs-core/shell": "workspace:^"
   },
   "private": false
 }
