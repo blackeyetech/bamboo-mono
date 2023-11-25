@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.14.1
+
+### Patch Changes
+
+- Fixed healthcheck returning too soon because it was not set up as an async call
+
 ## 1.14.0
 
 ### Minor Changes

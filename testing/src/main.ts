@@ -19,7 +19,10 @@ async function init() {
   bs.addPlugin("t3", Jira, jOptions);
   bs.addPlugin("t4", Template);
 
-  let httpMan1 = await bs.addHttpServer("lo", 8080);
+  let httpMan1 = await bs.addHttpServer("lo", 8080, {
+    healthcheckPath: "/",
+    defaultRouterBasePath: "/",
+  });
 
   httpMan1.use(HttpServer.body({}));
   httpMan1.use(HttpServer.json());
@@ -136,29 +139,29 @@ async function init() {
       throw new HttpError(500, "del endpoint error help me!");
     });
 
-  let router = bs.httpServer().addRouter("/newp", {
-    notFoundHandler: async (_, res) => {
-      res.statusCode = 404;
-      res.write("Not found sucker!");
-      res.end();
-    },
-  });
-  // bs.httpServer().router("/newp/d");
+  // let router = bs.httpServer().addRouter("/newp", {
+  //   notFoundHandler: async (_, res) => {
+  //     res.statusCode = 404;
+  //     res.write("Not found sucker!");
+  //     res.end();
+  //   },
+  // });
+  // // bs.httpServer().router("/newp/d");
 
-  router
-    .route("/text")
-    .get(
-      async (_1, res) => {
-        res.body = '{ msg: "Hello newp" }';
-      },
-      { etag: false },
-    )
-    .put(async (_1, _2) => {
-      throw new HttpError(500, "put endpoint error help me!");
-    })
-    .del(async (_1, _2) => {
-      throw new HttpError(500, "del endpoint error help me!");
-    });
+  // router
+  //   .route("/text")
+  //   .get(
+  //     async (_1, res) => {
+  //       res.body = '{ msg: "Hello newp" }';
+  //     },
+  //     { etag: false },
+  //   )
+  //   .put(async (_1, _2) => {
+  //     throw new HttpError(500, "put endpoint error help me!");
+  //   })
+  //   .del(async (_1, _2) => {
+  //     throw new HttpError(500, "del endpoint error help me!");
+  //   });
 
   bs.httpServer().get(
     "/test",
@@ -188,8 +191,9 @@ async function init() {
   bs.httpServer().endpoint(
     "GET",
     "/api/json2",
-    (req, res) => {
+    async (req, res) => {
       console.log(req.url);
+      await bs.sleep(3);
       res.json = { url: "json2" };
     },
     { etag: false },
@@ -198,7 +202,7 @@ async function init() {
   bs.httpServer().endpoint(
     "GET",
     "/auth/json",
-    (req, res) => {
+    async (req, res) => {
       console.log(req.headers);
       res.statusCode = 201;
       res.json = { url: "json" };
@@ -208,7 +212,8 @@ async function init() {
 
   bs.httpServer().addHealthcheck(async () => {
     bs.info("Healthy!");
-    return true;
+    await bs.sleep(3);
+    return false;
   });
 }
 

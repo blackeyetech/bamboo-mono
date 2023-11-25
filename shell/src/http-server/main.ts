@@ -424,7 +424,7 @@ export class HttpServer {
     // Now we need to add the endpoint for healthchecks
     this._defaultApiRouter.get(
       this._healthCheckPath,
-      (req, res) => this.healthcheckCallback(req, res),
+      async (req, res) => this.healthcheckCallback(req, res),
       { useDefaultMiddlewares: false },
     );
   }
