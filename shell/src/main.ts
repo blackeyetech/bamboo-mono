@@ -20,6 +20,7 @@ export {
   EndpointOptions,
   EndpointCallback,
   HealthcheckCallback,
+  Router,
   RouterMatch,
   RouterMatchFunc,
 } from "./http-server/main.js";

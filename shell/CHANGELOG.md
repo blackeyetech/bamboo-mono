@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.14.2
+
+### Patch Changes
+
+- Now exporting Router
+
 ## 1.14.1
 
 ### Patch Changes

@@ -28,6 +28,7 @@ import {
 export {
   EndpointOptions,
   EndpointCallback,
+  Router,
   RouterConfig,
   RouterMatch,
   RouterMatchFunc,
