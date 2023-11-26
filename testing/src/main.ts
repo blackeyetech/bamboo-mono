@@ -324,3 +324,5 @@ let t3 = bs.plugin("t3");
 bs.info(t3.name);
 let t4 = bs.plugin("t4");
 bs.info(t4.name);
+
+bs.getConfigStr("xxxx", "oo", { silent: true });

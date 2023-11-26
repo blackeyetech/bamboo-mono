@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.3.4
+
+### Patch Changes
+
+- Now setting enableHttps flag properly
+
 ## 1.3.3
 
 ### Patch Changes

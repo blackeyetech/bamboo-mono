@@ -155,6 +155,7 @@ export const start = async (
   let enableHttps = bs.getConfigBool(HTTP_ENABLE_HTTPS, false);
 
   if (enableHttps) {
+    opts.enableHttps = true;
     opts.httpsCertFile = bs.getConfigStr(HTTP_CERT_FILE);
     opts.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
   }
