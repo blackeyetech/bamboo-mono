@@ -1,11 +1,11 @@
 # @bs-plugins/template
 
-## 1.0.0
+## 0.2.0
 
 ### Minor Changes
 
-- - Updated dependencies
-  - Now bundling sourcemaps with package
+- Updated dependencies
+- Now bundling sourcemaps with package
 
 ### Patch Changes
 

@@ -1,11 +1,11 @@
 # @bs-plugins/jira
 
-## 2.0.0
+## 1.2.0
 
 ### Minor Changes
 
-- - Updated dependencies
-  - Now bundling sourcemaps with package
+- Updated dependencies
+- Now bundling sourcemaps with package
 
 ### Patch Changes
 
