@@ -4,8 +4,8 @@
 
 ### Minor Changes
 
-- - Updated dependencies
-  - Now bundling sourcemaps with package
+- Updated dependencies
+- Now bundling sourcemaps with package
 
 ## 1.14.2
 
