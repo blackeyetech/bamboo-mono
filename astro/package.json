@@ -1,5 +1,5 @@
 {
-  "version": "1.3.4",
+  "version": "2.0.0",
   "name": "@bs-core/astro",
   "description": "The Bamboo Shell Astro Adapter",
   "type": "module",
@@ -8,7 +8,8 @@
   },
   "files": [
     "dist/astro.mjs",
-    "dist/astro.d.ts"
+    "dist/astro.d.ts",
+    "dist/astro.mjs.map"
   ],
   "types": "./dist/astro.d.ts",
   "scripts": {
@@ -49,7 +50,7 @@
   },
   "private": false,
   "devDependencies": {
-    "astro": "^3.3.0",
-    "@bs-core/shell": "workspace:^"
+    "@bs-core/shell": "workspace:^",
+    "astro": "^4.0.9"
   }
 }

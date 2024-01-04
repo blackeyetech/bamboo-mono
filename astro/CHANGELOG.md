@@ -1,5 +1,17 @@
 # @bs-core/astro
 
+## 2.0.0
+
+### Minor Changes
+
+- - Updated dependencies
+  - Now bundling sourcemaps with package
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.15.0
+
 ## 1.3.4
 
 ### Patch Changes

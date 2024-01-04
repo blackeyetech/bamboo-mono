@@ -16,16 +16,10 @@ export class SseServer {
   constructor(
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    sseOptions: SseServerOptions,
+    opts: SseServerOptions,
   ) {
-    let opts = {
-      // Defaults first
-      retryInterval: 0,
-      pingInterval: 0,
-      pingEventName: "ping",
-
-      ...sseOptions,
-    };
+    let retryInterval = opts.retryInterval ?? 0;
+    let pingInterval = opts.pingInterval ?? 0;
 
     this._res = res;
     this._lastEventId = <string>req.headers["last-event-id"];
@@ -42,21 +36,20 @@ export class SseServer {
     res.statusCode = 200;
 
     // Check if we should set a new delay interval
-    if (opts.retryInterval > 0) {
-      this.setRetry(opts.retryInterval);
+    if (retryInterval > 0) {
+      this.setRetry(retryInterval);
     }
 
     // Check if we should setup a heartbeat ping
-    if (opts.pingInterval > 0) {
-      let event =
-        opts.pingEventName === undefined ? "ping" : opts.pingEventName;
+    if (pingInterval > 0) {
+      let event = opts.pingEventName ?? "ping";
 
       // Setup a timer to send the heartbeat
       let interval = setInterval(() => {
         this.sendData(this._pingSeqNum, { event });
         // Don't forget to increment the ping seq num
         this._pingSeqNum += 1;
-      }, opts.pingInterval * 1000);
+      }, pingInterval * 1000);
 
       // Make sure to stop the timer if the connection closes
       res.addListener("close", () => {

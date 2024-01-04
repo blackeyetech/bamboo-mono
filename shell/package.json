@@ -1,5 +1,5 @@
 {
-  "version": "1.14.2",
+  "version": "1.15.0",
   "name": "@bs-core/shell",
   "description": "The Bamboo Shell",
   "type": "module",
@@ -8,7 +8,8 @@
   },
   "files": [
     "dist/shell.mjs",
-    "dist/shell.d.ts"
+    "dist/shell.d.ts",
+    "dist/shell.mjs.map"
   ],
   "types": "./dist/shell.d.ts",
   "scripts": {

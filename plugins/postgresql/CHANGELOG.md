@@ -1,5 +1,17 @@
 # @bs-plugins/postgresql
 
+## 2.0.0
+
+### Minor Changes
+
+- - Updated dependencies
+  - Now bundling sourcemaps with package
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.15.0
+
 ## 1.1.2
 
 ### Patch Changes

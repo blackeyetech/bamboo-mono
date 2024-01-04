@@ -3,7 +3,6 @@ import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
-import sourcemaps from "rollup-plugin-sourcemaps";
 import dts from "rollup-plugin-dts";
 
 import { createRequire } from "node:module";
@@ -28,11 +27,8 @@ let plugins = [
   json(),
 ];
 
-// Check if this is a dev or a prod build
-if (NODE_ENV === "development") {
-  // Add sourcemaps for dev builds
-  plugins.push(sourcemaps);
-} else {
+// Check if this is a prod build
+if (NODE_ENV !== "development") {
   // Add terser for prod builds
   plugins.push(terser());
 }
@@ -45,6 +41,7 @@ export default [
       sourcemap: NODE_ENV === "development",
       file: "dist/shell.mjs",
       format: "es",
+      sourcemap: true
     },
     plugins,
   },

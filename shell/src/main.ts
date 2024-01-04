@@ -5,6 +5,7 @@ import * as httpReq from "./http-req.js";
 import * as httpServer from "./http-server/main.js";
 import { BSPlugin } from "./bs-plugin.js";
 
+export { LogLevel } from "./logger.js";
 export { ReqRes, ReqOptions, ReqAborted, ReqError } from "./http-req.js";
 export { SseServerOptions, SseServer } from "./http-server/sse-server.js";
 export {
@@ -222,7 +223,7 @@ export const bs = Object.freeze({
       bs.error(e);
     });
 
-    // Stop the extensions in the reverse order you started them
+    // Stop the plugins in the reverse order you started them
     for (let plugin of [..._pluginMap.values()].reverse()) {
       bs.shutdownMsg(`Attempting to stop plugin ${plugin.name} ...`);
       await plugin.stopHandler().catch((e) => {
@@ -242,7 +243,7 @@ export const bs = Object.freeze({
       });
     }
 
-    // Remove the even handlers for catching exit events
+    // Remove the event handlers for catching exit events
     process.removeListener("SIGINT", _shutdownHandler);
     process.removeListener("SIGTERM", _shutdownHandler);
     process.removeListener("beforeExit", _shutdownHandler);

@@ -1,5 +1,5 @@
 {
-  "version": "1.1.2",
+  "version": "2.0.0",
   "name": "@bs-plugins/ldap",
   "description": "Bamboo Shell plugin for LDAP",
   "type": "module",
@@ -8,7 +8,8 @@
   },
   "files": [
     "dist/plugin.mjs",
-    "dist/plugin.d.ts"
+    "dist/plugin.d.ts",
+    "dist/plugin.mjs.map"
   ],
   "types": "./dist/plugin.d.ts",
   "scripts": {
@@ -36,7 +37,7 @@
   "author": "Black Eye Technology",
   "license": "MIT",
   "dependencies": {
-    "ldapjs": "^3.0.3"
+    "ldapjs": "^3.0.7"
   },
   "devDependencies": {
     "@bs-core/shell": "workspace:^",

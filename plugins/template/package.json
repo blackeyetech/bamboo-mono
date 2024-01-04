@@ -1,5 +1,5 @@
 {
-  "version": "0.1.2",
+  "version": "1.0.0",
   "name": "@bs-plugins/template",
   "description": "DESCRIPTION",
   "type": "module",
@@ -8,7 +8,8 @@
   },
   "files": [
     "dist/plugin.mjs",
-    "dist/plugin.d.ts"
+    "dist/plugin.d.ts",
+    "dist/plugin.mjs.map"
   ],
   "types": "./dist/plugin.d.ts",
   "scripts": {

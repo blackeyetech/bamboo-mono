@@ -110,21 +110,16 @@ export class HttpServer {
     name: string,
     networkInterface: string,
     networkPort: number,
-    httpConfig: HttpConfig = {},
+    config: HttpConfig = {},
   ) {
-    let config = {
-      keepAliveTimeout: 65000,
-      headerTimeout: 66000,
+    this._httpKeepAliveTimeout = config.keepAliveTimeout ?? 65000;
+    this._httpHeaderTimeout = config.headerTimeout ?? 66000;
 
-      defaultRouterBasePath: "/api",
-      healthcheckPath: "/healthcheck",
-      healthcheckGoodRes: 200,
-      healthcheckBadRes: 503,
+    this._healthCheckPath = config.healthcheckPath ?? "/healthcheck";
+    this._healthCheckGoodResCode = config.healthcheckGoodRes ?? 200;
+    this._healthCheckBadResCode = config.healthcheckBadRes ?? 503;
 
-      enableHttps: false,
-
-      ...httpConfig,
-    };
+    this._enableHttps = config.enableHttps ?? false;
 
     this._socketMap = new Map();
     this._socketId = 0;
@@ -140,24 +135,17 @@ export class HttpServer {
 
     this._healthcheckCallbacks = [];
 
-    this._httpKeepAliveTimeout = config.keepAliveTimeout;
-    this._httpHeaderTimeout = config.headerTimeout;
+    this._apiRouterList = [];
 
-    this._healthCheckPath = config.healthcheckPath;
-    this._healthCheckGoodResCode = config.healthcheckGoodRes;
-    this._healthCheckBadResCode = config.healthcheckBadRes;
-
-    this._enableHttps = config.enableHttps;
+    // Create the default router AFTER you initialise the _routerList
+    this._defaultApiRouter = this.addRouter(
+      config.defaultRouterBasePath ?? "/api",
+    );
 
     if (this._enableHttps) {
       this._keyFile = config.httpsKeyFile;
       this._certFile = config.httpsCertFile;
     }
-
-    this._apiRouterList = [];
-
-    // Create the default router AFTER you initialise the _routerList
-    this._defaultApiRouter = this.addRouter(config.defaultRouterBasePath);
 
     // Make sure the SSR Router DOES NOT use the not found handler - we need it
     // to pass control to the static file server and do not add it to the

@@ -364,7 +364,7 @@ export class PostgreSql extends BSPlugin {
       throw new PostgresSqlError(e.severity, e.code, e.detail, e.toString());
     });
 
-    return res.rowCount;
+    return res.rowCount ?? 0;
   }
 
   async delete(
@@ -407,7 +407,7 @@ export class PostgreSql extends BSPlugin {
       throw new PostgresSqlError(e.severity, e.code, e.detail, e.toString());
     });
 
-    return res.rowCount;
+    return res.rowCount ?? 0;
   }
 
   async query(query: string, client?: pg.PoolClient): Promise<any[]> {
@@ -431,7 +431,7 @@ export class PostgreSql extends BSPlugin {
       throw new PostgresSqlError(e.severity, e.code, e.detail, e.toString());
     });
 
-    return res.rowCount;
+    return res.rowCount ?? 0;
   }
 
   async connect(): Promise<pg.PoolClient> {

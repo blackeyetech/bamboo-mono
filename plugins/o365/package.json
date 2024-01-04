@@ -1,5 +1,5 @@
 {
-  "version": "1.1.2",
+  "version": "2.0.0",
   "name": "@bs-plugins/o365",
   "description": "Bamboo Shell plugin for Office 365",
   "type": "module",
@@ -8,7 +8,8 @@
   },
   "files": [
     "dist/plugin.mjs",
-    "dist/plugin.d.ts"
+    "dist/plugin.d.ts",
+    "dist/plugin.mjs.map"
   ],
   "types": "./dist/plugin.d.ts",
   "scripts": {
@@ -38,7 +39,7 @@
   "license": "MIT",
   "devDependencies": {
     "@bs-core/shell": "workspace:^",
-    "@microsoft/microsoft-graph-types": "^2.35.0"
+    "@microsoft/microsoft-graph-types": "^2.40.0"
   },
   "peerDependencies": {
     "@bs-core/shell": "workspace:^"

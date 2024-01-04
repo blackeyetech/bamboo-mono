@@ -1,5 +1,12 @@
 # @bs-core/shell
 
+## 1.15.0
+
+### Minor Changes
+
+- - Updated dependencies
+  - Now bundling sourcemaps with package
+
 ## 1.14.2
 
 ### Patch Changes
