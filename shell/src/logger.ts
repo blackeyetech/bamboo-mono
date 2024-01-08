@@ -26,6 +26,11 @@ let _timestampTz: string;
 let _logLevel: LogLevel;
 
 // Private functions here
+/**
+ * Generates a timestamp string to prefix log messages.
+ * Returns an empty string if timestamps are disabled. Otherwise returns
+ * the formatted timestamp string.
+ */
 function timestamp(): string {
   // If we are not supposed to generate timestamps then return nothing
   if (!_timestamp) {
@@ -56,29 +61,11 @@ function timestamp(): string {
 // Logger class here
 export const logger = Object.freeze({
   init(): void {
-    _timestamp = <boolean>configMan.get({
-      config: CFG_LOG_TIMESTAMP,
-      type: "Boolean",
-      defaultVal: false,
-    });
+    _timestamp = configMan.getBool(CFG_LOG_TIMESTAMP, false);
+    _timestampLocale = configMan.getStr(CFG_LOG_TIMESTAMP_LOCALE, "ISO");
+    _timestampTz = configMan.getStr(CFG_LOG_TIMESTAMP_TZ, "UTC");
 
-    _timestampLocale = <string>configMan.get({
-      config: CFG_LOG_TIMESTAMP_LOCALE,
-      type: "String",
-      defaultVal: "ISO",
-    });
-
-    _timestampTz = <string>configMan.get({
-      config: CFG_LOG_TIMESTAMP_TZ,
-      type: "String",
-      defaultVal: "UTC",
-    });
-
-    let level = <string>configMan.get({
-      config: CFG_LOG_LEVEL,
-      type: "String",
-      defaultVal: "",
-    });
+    let level = configMan.getStr(CFG_LOG_LEVEL, "");
 
     switch (level.toUpperCase()) {
       case "": // This is in case it is not set

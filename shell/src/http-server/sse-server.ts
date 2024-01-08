@@ -20,6 +20,7 @@ export class SseServer {
   ) {
     let retryInterval = opts.retryInterval ?? 0;
     let pingInterval = opts.pingInterval ?? 0;
+    let pingEventName = opts.pingEventName ?? "ping";
 
     this._res = res;
     this._lastEventId = <string>req.headers["last-event-id"];
@@ -42,11 +43,9 @@ export class SseServer {
 
     // Check if we should setup a heartbeat ping
     if (pingInterval > 0) {
-      let event = opts.pingEventName ?? "ping";
-
       // Setup a timer to send the heartbeat
       let interval = setInterval(() => {
-        this.sendData(this._pingSeqNum, { event });
+        this.sendData(this._pingSeqNum, { event: pingEventName });
         // Don't forget to increment the ping seq num
         this._pingSeqNum += 1;
       }, pingInterval * 1000);

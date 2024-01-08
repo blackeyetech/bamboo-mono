@@ -107,7 +107,6 @@ export class HttpServer {
   private _server?: http.Server;
 
   constructor(
-    name: string,
     networkInterface: string,
     networkPort: number,
     config: HttpConfig = {},
@@ -127,8 +126,8 @@ export class HttpServer {
     this._networkIp = "";
     this._baseUrl = "";
 
-    this._name = name;
-    this._loggerTag = `HttpServer-${name}-${networkInterface}-${networkPort}`;
+    this._name = `${networkInterface}-${networkPort}`;
+    this._loggerTag = `HttpServer-${this._name}`;
 
     this._networkInterface = networkInterface;
     this._networkPort = networkPort;

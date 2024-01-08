@@ -1,11 +1,12 @@
 // imports here
 import { logger, LogLevel } from "./logger.js";
-import { configMan } from "./config-man.js";
+import { configMan, ConfigOptions } from "./config-man.js";
 import * as httpReq from "./http-req.js";
 import * as httpServer from "./http-server/main.js";
 import { BSPlugin } from "./bs-plugin.js";
 
 export { LogLevel } from "./logger.js";
+export { ConfigOptions, ConfigError } from "./config-man.js";
 export { ReqRes, ReqOptions, ReqAborted, ReqError } from "./http-req.js";
 export { SseServerOptions, SseServer } from "./http-server/sse-server.js";
 export {
@@ -37,7 +38,6 @@ import * as readline from "node:readline";
 
 // Misc consts here
 const LOGGER_APP_NAME = "App";
-const DEFAULT_HTTP_SERVER = "Main";
 
 // NOTE: BS_VERSION is replaced with package.json#version by a
 // rollup plugin at build time
@@ -63,17 +63,11 @@ let _restartHandler = async (): Promise<void> => {
   bs.shutdownMsg("Restarted!");
 };
 
-let _httpServerMap: Map<string, httpServer.HttpServer>;
+let _httpServerList: httpServer.HttpServer[];
 let _pluginMap: Map<string, BSPlugin>;
 let _sharedStore: Map<string, any>;
 
 // Types here
-export type BSConfigOptions = {
-  cmdLineFlag?: string;
-  silent?: boolean;
-  redact?: boolean;
-};
-
 export type BSQuestionOptions = {
   muteAnswer?: boolean;
   muteChar?: string;
@@ -91,54 +85,60 @@ export const bs = Object.freeze({
   },
 
   // Config helper methods here
+  /**
+   * Gets a string config value.
+   *
+   * @param config - The config key to get.
+   * @param defaultVal - The default value if config not found.
+   * @param options - Options for getting the config.
+   * @returns The string config value.
+   */
   getConfigStr: (
     config: string,
     defaultVal?: string,
-    options?: BSConfigOptions,
+    options?: ConfigOptions,
   ): string => {
-    // This either returns a string or it throws
-    let value = <string>configMan.get({
-      config,
-      type: "String",
-      defaultVal,
-      ...options,
-    });
+    let value = configMan.getStr(config, defaultVal, options);
 
     logConfigManMsgs();
 
     return value;
   },
 
+  /**
+   * Gets a boolean config value.
+   *
+   * @param config - The config key to get.
+   * @param defaultVal - The default value if config not found.
+   * @param options - Options for getting the config.
+   * @returns The boolean config value.
+   */
   getConfigBool: (
     config: string,
     defaultVal?: boolean,
-    options?: BSConfigOptions,
+    options?: ConfigOptions,
   ): boolean => {
-    // This either returns a bool or it throws
-    let value = <boolean>configMan.get({
-      config,
-      type: "Boolean",
-      defaultVal,
-      ...options,
-    });
+    let value = configMan.getBool(config, defaultVal, options);
 
     logConfigManMsgs();
 
     return value;
   },
 
+  /**
+   * Gets a number config value.
+   *
+   * @param config - The config key to get.
+   * @param defaultVal - The default value if config not found.
+   * @param options - Options for getting the config.
+   * @returns The number config value.
+   */
   getConfigNum: (
     config: string,
     defaultVal?: number,
-    options?: BSConfigOptions,
+    options?: ConfigOptions,
   ): number => {
-    // This either returns a number or it throws
-    let value = <number>configMan.get({
-      config,
-      type: "Number",
-      defaultVal,
-      ...options,
-    });
+    let value = <number>configMan.getNum(config, defaultVal, options);
 
     logConfigManMsgs();
 
@@ -210,12 +210,12 @@ export const bs = Object.freeze({
     _sharedStore.clear();
 
     // Make sure we stop all of the HttpSevers - probably best to do it first
-    for (let httpServer of [..._httpServerMap.values()]) {
+    for (let httpServer of _httpServerList) {
       await httpServer.stop();
     }
 
     // Clear the HttpServer list
-    _httpServerMap.clear();
+    _httpServerList = [];
 
     // Stop the application second
     bs.shutdownMsg("Attempting to stop the application ...");
@@ -290,10 +290,8 @@ export const bs = Object.freeze({
     networkPort: number,
     httpConfig: httpServer.HttpConfig = {},
     startServer: boolean = true,
-    name: string = DEFAULT_HTTP_SERVER,
   ): Promise<httpServer.HttpServer> => {
     let server = new httpServer.HttpServer(
-      name,
       networkInterface,
       networkPort,
       httpConfig,
@@ -304,25 +302,23 @@ export const bs = Object.freeze({
       await server.start();
     }
 
-    _httpServerMap.set(name, server);
+    _httpServerList.push(server);
 
     return server;
   },
 
-  httpServer: (name: string = DEFAULT_HTTP_SERVER): httpServer.HttpServer => {
-    // Check if there are any servers first
-    if (_httpServerMap.size === 0) {
+  httpServer: (index: number = 0): httpServer.HttpServer => {
+    // Check if there are any http servers first
+    if (_httpServerList.length === 0) {
       throw Error(`There are no http servers!!`);
     }
 
-    let server = _httpServerMap.get(name);
-
     // Check if the requested server DOES NOT exist
-    if (server === undefined) {
-      throw Error(`There is no http servers with the name ${name}`);
+    if (index >= _httpServerList.length) {
+      throw Error(`There is no http servers with the index ${index}`);
     }
 
-    return server;
+    return _httpServerList[index];
   },
 
   addPlugin: (
@@ -357,6 +353,14 @@ export const bs = Object.freeze({
   },
 
   save: (name: string, value: any): void => {
+    if (_sharedStore.has(name)) {
+      throw Error(`There is already a value saved with the name ${name}`);
+    }
+
+    _sharedStore.set(name, value);
+  },
+
+  update: (name: string, value: any): void => {
     _sharedStore.set(name, value);
   },
 
@@ -437,7 +441,7 @@ let logConfigManMsgs = (): void => {
 
 function init(): void {
   // Initialise the private variables
-  _httpServerMap = new Map();
+  _httpServerList = [];
   _pluginMap = new Map();
   _sharedStore = new Map();
 
