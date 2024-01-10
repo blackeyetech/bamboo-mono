@@ -1,6 +1,5 @@
 {
-  "extends": "./tsconfig.base.json",
-
+  "extends": "../tsconfig.json",
   "compilerOptions": {
     /* Projects */
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo" /* Specify the path to .tsbuildinfo incremental compilation file. */,

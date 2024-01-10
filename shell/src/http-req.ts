@@ -2,7 +2,13 @@
 // NODE_TLS_REJECT_UNAUTHORIZED=0
 
 // imports here
-import { logger } from "./logger.js";
+import { Logger } from "./logger.js";
+
+// Misc consts here
+const LOG_TAG = "request";
+
+// Module private variables here
+const _logger = new Logger(LOG_TAG);
 
 // Types here
 export type ReqRes = {
@@ -50,9 +56,6 @@ export class ReqError {
     public message: string,
   ) {}
 }
-
-// Misc consts here
-const LOG_TAG = "request";
 
 // Private methods here
 async function callFetch(
@@ -175,7 +178,7 @@ export let request = async (
   path: string,
   reqOptions?: ReqOptions,
 ): Promise<ReqRes> => {
-  logger.trace(LOG_TAG, "Request for origin (%s) path (%s)", origin, path);
+  _logger.trace("Request for origin (%s) path (%s)", origin, path);
 
   // Set the default values
   let options = {

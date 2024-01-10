@@ -1,13 +1,18 @@
 // imports here
-import { logger } from "./logger.js";
+import { Logger } from "./logger.js";
 
 // BSPlugin class here
 export class BSPlugin {
+  private _name: string;
+  private _version: string;
+  private _logger: Logger;
+
   // Constructor here
-  constructor(
-    private _name: string,
-    private _version: string,
-  ) {
+  constructor(name: string, version: string) {
+    this._name = name;
+    this._version = version;
+    this._logger = new Logger(this._name);
+
     this.startupMsg("Initialising ...");
   }
 
@@ -34,38 +39,38 @@ export class BSPlugin {
 
   // Log convinence methods
   protected fatal(...args: any): void {
-    logger.fatal(this._name, ...args);
+    this._logger.fatal(...args);
   }
 
   protected error(...args: any): void {
-    logger.error(this._name, ...args);
+    this._logger.error(...args);
   }
 
   protected warn(...args: any): void {
-    logger.warn(this._name, ...args);
+    this._logger.warn(...args);
   }
 
   protected info(...args: any): void {
-    logger.info(this._name, ...args);
+    this._logger.info(...args);
   }
 
   protected startupMsg(...args: any): void {
-    logger.startupMsg(this._name, ...args);
+    this._logger.startupMsg(...args);
   }
 
   protected shutdownMsg(...args: any): void {
-    logger.shutdownMsg(this._name, ...args);
+    this._logger.shutdownMsg(...args);
   }
 
   protected debug(...args: any): void {
-    logger.debug(this._name, ...args);
+    this._logger.debug(...args);
   }
 
   protected trace(...args: any): void {
-    logger.trace(this._name, ...args);
+    this._logger.trace(...args);
   }
 
   protected force(...args: any): void {
-    logger.force(this._name, ...args);
+    this._logger.force(...args);
   }
 }

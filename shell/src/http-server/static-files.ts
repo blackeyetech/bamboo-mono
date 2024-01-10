@@ -1,5 +1,5 @@
 // imports here
-import { logger } from "../logger.js";
+import { Logger } from "../logger.js";
 import { ServerRequest, ServerResponse } from "./req-res.js";
 import { contentTypes } from "./content-types.js";
 
@@ -18,6 +18,7 @@ type FileDetails = {
   lastModifiedUtcStr: string;
   etag: string;
   fullPath: string;
+  immutable: boolean;
 };
 
 export type NotFoundHandler = (
@@ -27,7 +28,9 @@ export type NotFoundHandler = (
 
 export type StaticFileServerConfig = {
   filePath: string;
-  loggerTag: string;
+  loggerName: string;
+
+  immutableRegex?: RegExp;
   defaultDirFile?: string;
   notFoundHandler?: NotFoundHandler;
 
@@ -37,8 +40,10 @@ export type StaticFileServerConfig = {
 
 // StaticFileServer class here
 export class StaticFileServer {
+  private _logger: Logger;
+
   private _filePath: string;
-  private _loggerTag: string;
+  private _immutableRegex: RegExp;
   private _defaultDirFile: string;
   private _defaultCharSet: string;
   private _notFoundHandler: NotFoundHandler;
@@ -48,6 +53,7 @@ export class StaticFileServer {
 
   constructor(serverConfig: StaticFileServerConfig) {
     let config = {
+      immutableRegex: /^.+\.[a-fA-F0-9]+\.[a-zA-Z0-9-]+$/,
       defaultDirFile: "index.html",
       defaultCharSet: "charset=utf-8",
       notFoundHandler: async (_: ServerRequest, res: ServerResponse) => {
@@ -60,8 +66,10 @@ export class StaticFileServer {
     };
 
     // Make sure there is no trailing slash at the end of the path
+    this._logger = new Logger(config.loggerName);
+
     this._filePath = config.filePath.replace(/\/*$/, "");
-    this._loggerTag = config.loggerTag;
+    this._immutableRegex = config.immutableRegex;
     this._defaultDirFile = config.defaultDirFile;
     this._defaultCharSet = config.defaultCharSet;
     this._notFoundHandler = config.notFoundHandler;
@@ -99,7 +107,7 @@ export class StaticFileServer {
     try {
       dirFiles = fs.readdirSync(dir);
     } catch (e) {
-      logger.warn(this._loggerTag, "No permissions to read from dir (%s)", dir);
+      this._logger.warn("No permissions to read from dir (%s)", dir);
     }
 
     // Iterate through each file and check if it is a dir or not
@@ -140,8 +148,7 @@ export class StaticFileServer {
     let failed = false;
 
     await streams.pipeline(contents, hash).catch((e) => {
-      logger.trace(
-        this._loggerTag,
+      this._logger.trace(
         "Error attempting to create etag for file (%s) (%s): ",
         file,
         e,
@@ -172,11 +179,7 @@ export class StaticFileServer {
       // There was an error which means we cant read the file so DO NOT add it
       addFile = false;
 
-      logger.warn(
-        this._loggerTag,
-        "No permissions to read file : (%s)",
-        fullPath,
-      );
+      this._logger.warn("No permissions to read file : (%s)", fullPath);
     }
 
     if (addFile === false) {
@@ -196,6 +199,8 @@ export class StaticFileServer {
       return false;
     }
 
+    let immutable = this._immutableRegex.test(fullPath);
+
     const fileDetails: FileDetails = {
       contentType: this.lookupType(fullPath), // In case urlPath is a dir
       size: stats.size,
@@ -204,12 +209,12 @@ export class StaticFileServer {
       lastModifiedUtcStr: new Date(modTimeNoMs).toUTCString(),
       etag,
       fullPath: fullPath,
+      immutable,
     };
 
     this._staticFileMap.set(urlPath, fileDetails);
 
-    logger.trace(
-      this._loggerTag,
+    this._logger.trace(
       "Added (%s) to file map. Details (%j)",
       urlPath,
       fileDetails,
@@ -227,8 +232,7 @@ export class StaticFileServer {
 
     // If we can't stat the file (doesn't exist) then stat will throw
     let stats = await fsPromises.stat(fullPath).catch((e) => {
-      logger.trace(
-        this._loggerTag,
+      this._logger.trace(
         "Received an error when trying to stat (%s): (%s)",
         fullPath,
         e,
@@ -247,8 +251,7 @@ export class StaticFileServer {
       // Get the stats again for the default file. If we can't stat the file
       // (doesn't exist) then stat will throw
       stats = await fsPromises.stat(fullPath).catch((e) => {
-        logger.trace(
-          this._loggerTag,
+        this._logger.trace(
           "Received an error when trying to stat (%s): (%s)",
           fullPath,
           e,
@@ -289,8 +292,12 @@ export class StaticFileServer {
       return;
     }
 
+    let cacheControl = details.immutable
+      ? "max-age=31536000, immutable"
+      : "no-cache";
+
     // All headers need to be set, except content-length, for a 304
-    res.setHeader("Cache-Control", "no-cache"); // max-age=31536000, immutable
+    res.setHeader("Cache-Control", cacheControl);
     res.setHeader("Etag", details.etag);
     res.setHeader("Last-Modified", details.lastModifiedUtcStr);
     res.setHeader("Date", new Date().toUTCString());
@@ -329,12 +336,7 @@ export class StaticFileServer {
     let fileRead = fs.createReadStream(details.fullPath);
     // NOTE: pipeline will close the res when it is finished
     await streams.pipeline(fileRead, res).catch((e) => {
-      logger.trace(
-        this._loggerTag,
-        "Error attempting to read (%s): (%s)",
-        fileRead,
-        e,
-      );
+      this._logger.trace("Error attempting to read (%s): (%s)", fileRead, e);
     });
   }
 }

@@ -1,5 +1,13 @@
 # @bs-core/astro
 
+## 1.4.1
+
+### Patch Changes
+
+- Minor internal refactoring
+- Updated dependencies
+  - @bs-core/shell@1.16.0
+
 ## 1.4.0
 
 ### Minor Changes

@@ -20,6 +20,8 @@ const HTTP_IF = "HTTP_IF";
 const HTTP_PORT = "HTTP_PORT";
 
 // Module properties here
+
+/** The Astro App instance. */
 let _app: App;
 
 // Types here
@@ -66,7 +68,7 @@ function matcher(_: string): RouterMatchFunc {
 
     // For now we will ignore the params because they are available
     // in the Astro Request object
-    // NOTE: We need to retrun the routeData to use with _app.render()
+    // NOTE: We need to return routeData so it can be use with _app.render()
     return {
       params: {},
       matchedInfo: routeData,
@@ -139,25 +141,32 @@ export const start = async (
   // Create the app first before doing anything else
   _app = new App(manifest);
 
-  // Setup the options for the HTTP server
-  let opts: HttpConfig = { ...options };
+  // Setup the config for the HTTP server
+  let httpConfig: HttpConfig = {
+    keepAliveTimeout: options.keepAliveTimeout,
+    headerTimeout: options.headerTimeout,
+    defaultRouterBasePath: options.defaultRouterBasePath,
+    healthcheckPath: options.healthcheckPath,
+    healthcheckGoodRes: options.healthcheckGoodRes,
+    healthcheckBadRes: options.healthcheckBadRes,
+  };
 
   if (options.staticFilesPath !== undefined) {
-    opts.staticFileServer = {
+    httpConfig.staticFileServer = {
       path: options.staticFilesPath,
     };
 
     if (options.extraContentTypes !== undefined) {
-      opts.staticFileServer.extraContentTypes = options.extraContentTypes;
+      httpConfig.staticFileServer.extraContentTypes = options.extraContentTypes;
     }
   }
 
   let enableHttps = bs.getConfigBool(HTTP_ENABLE_HTTPS, false);
 
   if (enableHttps) {
-    opts.enableHttps = true;
-    opts.httpsCertFile = bs.getConfigStr(HTTP_CERT_FILE);
-    opts.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
+    httpConfig.enableHttps = true;
+    httpConfig.httpsCertFile = bs.getConfigStr(HTTP_CERT_FILE);
+    httpConfig.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
   }
 
   let networkIf = bs.getConfigStr(HTTP_IF, "lo");
@@ -165,7 +174,12 @@ export const start = async (
 
   // Create the HTTP server
   // NOTE: Don't start it until we are finished setting everything up
-  let httpServer = await bs.addHttpServer(networkIf, networkPort, opts, false);
+  let httpServer = await bs.addHttpServer(
+    networkIf,
+    networkPort,
+    httpConfig,
+    false,
+  );
 
   // Call setupEntryPoint here in case you want to setup any default
   // middleware for the SSR endpoint
@@ -184,5 +198,5 @@ export const start = async (
   // Start the http server now!
   await httpServer.start();
 
-  bs.startupMsg("Astro adapter is primed - so party on dudes!!");
+  bs.startupMsg("Astro adapter is primed - party on!!");
 };

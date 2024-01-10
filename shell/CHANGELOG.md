@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.0
+
+### Minor Changes
+
+- Minor internal refactoring
+
 ## 1.15.0
 
 ### Minor Changes

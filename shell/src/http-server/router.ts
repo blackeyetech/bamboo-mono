@@ -1,5 +1,5 @@
 // imports here
-import { logger } from "../logger.js";
+import { Logger } from "../logger.js";
 
 import { SseServer, SseServerOptions } from "./sse-server.js";
 import { ServerRequest, ServerResponse, HttpError } from "./req-res.js";
@@ -73,8 +73,8 @@ export class Router {
   private _basePath: string;
   private _useNotFoundHandler: boolean;
   private _notFoundHandler: NotFoundHandler;
-  private _loggerTag: string;
 
+  private _logger: Logger;
   private _methodListMap: Record<Method, MethodListElement[]>;
   private _defaultMiddlewareList: Middleware[];
 
@@ -98,7 +98,7 @@ export class Router {
     this._useNotFoundHandler = config.useNotFoundHandler;
     this._notFoundHandler = config.notFoundHandler;
 
-    this._loggerTag = `Router (${this._basePath})`;
+    this._logger = new Logger(`Router (${this._basePath})`);
 
     this._methodListMap = {
       GET: [],
@@ -244,8 +244,7 @@ export class Router {
 
     // We need to ensure body is a string or a Buffer or we will have problems
     if (Buffer.isBuffer(body) === false && typeof body !== "string") {
-      logger.error(
-        this._loggerTag,
+      this._logger.error(
         "(%s) response body for (%s) is not of type string or Buffer",
         req.method,
         req.urlObj.pathname,
@@ -319,8 +318,7 @@ export class Router {
         message = e.message;
       } else {
         // We don't know what this is so log it and make sure to return a 500
-        logger.error(
-          this._loggerTag,
+        this._logger.error(
           "Unknown error happened while handling URL (%s) - (%s)",
           req.urlObj.pathname,
           e,
@@ -429,8 +427,7 @@ export class Router {
       etag: options.etag,
     });
 
-    logger.startupMsg(
-      this._loggerTag,
+    this._logger.startupMsg(
       "Added %s endpoint for path (%s)",
       method.toUpperCase(),
       fullPath,

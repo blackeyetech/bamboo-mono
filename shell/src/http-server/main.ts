@@ -1,5 +1,5 @@
 // imports here
-import { logger } from "../logger.js";
+import { Logger } from "../logger.js";
 
 import { ServerRequest, ServerResponse } from "./req-res.js";
 import {
@@ -70,11 +70,13 @@ export type HttpConfig = {
   staticFileServer?: {
     path: string;
     extraContentTypes?: Record<string, string>;
+    immutableRegex?: RegExp;
   };
 };
 
 // HttpServer class here
 export class HttpServer {
+  private _logger: Logger;
   private _socketMap: Map<number, net.Socket>;
   private _socketId: number;
 
@@ -84,7 +86,6 @@ export class HttpServer {
   private _baseUrl: string;
 
   private _name: string;
-  private _loggerTag: string;
 
   private _healthcheckCallbacks: HealthcheckCallback[];
 
@@ -111,6 +112,9 @@ export class HttpServer {
     networkPort: number,
     config: HttpConfig = {},
   ) {
+    this._name = `${networkInterface}-${networkPort}`;
+    this._logger = new Logger(`HttpServer-${this._name}`);
+
     this._httpKeepAliveTimeout = config.keepAliveTimeout ?? 65000;
     this._httpHeaderTimeout = config.headerTimeout ?? 66000;
 
@@ -125,9 +129,6 @@ export class HttpServer {
 
     this._networkIp = "";
     this._baseUrl = "";
-
-    this._name = `${networkInterface}-${networkPort}`;
-    this._loggerTag = `HttpServer-${this._name}`;
 
     this._networkInterface = networkInterface;
     this._networkPort = networkPort;
@@ -150,13 +151,14 @@ export class HttpServer {
     // to pass control to the static file server and do not add it to the
     // _apiRouterList since it doesnt have a fixed base path
     this._ssrRouter = new Router("/", { useNotFoundHandler: false });
-    logger.startupMsg(this._loggerTag, "SSR router created");
+    this._logger.startupMsg("SSR router created");
 
     if (config.staticFileServer !== undefined) {
       this._staticFileServer = new staticFiles.StaticFileServer({
         filePath: config.staticFileServer.path,
-        loggerTag: `${this._loggerTag}/StaticFile`,
+        loggerName: `HttpServer-${this._name}/StaticFile`,
         extraContentTypes: config.staticFileServer.extraContentTypes,
+        immutableRegex: config.staticFileServer.immutableRegex,
       });
     }
   }
@@ -188,13 +190,10 @@ export class HttpServer {
 
   // Private methods here
   private findInterfaceIp(networkInterface: string): string | null {
-    logger.startupMsg(
-      this._loggerTag,
-      `Finding IP for interface (${networkInterface})`,
-    );
+    this._logger.startupMsg(`Finding IP for interface (${networkInterface})`);
 
     let ifaces = os.networkInterfaces();
-    logger.startupMsg(this._loggerTag, "Interfaces on host: %j", ifaces);
+    this._logger.startupMsg("Interfaces on host: %j", ifaces);
 
     if (ifaces[networkInterface] === undefined) {
       return null;
@@ -206,8 +205,7 @@ export class HttpServer {
     let found = ifaces[networkInterface]?.find((i) => i.family === "IPv4");
     if (found !== undefined) {
       ip = found.address;
-      logger.startupMsg(
-        this._loggerTag,
+      this._logger.startupMsg(
         `Found IP (${ip}) for interface ${networkInterface}`,
       );
     }
@@ -228,8 +226,7 @@ export class HttpServer {
     // it happens
     return new Promise((resolve, _) => {
       server.on("listening", () => {
-        logger.startupMsg(
-          this._loggerTag,
+        this._logger.startupMsg(
           `Now listening on (${this._baseUrl}). HTTP manager started!`,
         );
 
@@ -242,8 +239,7 @@ export class HttpServer {
         let socketId = this._socketId++;
         this._socketMap.set(socketId, socket);
 
-        logger.trace(
-          this._loggerTag,
+        this._logger.trace(
           "'connection' for socketId (%d) on remote connection (%s/%s)",
           socketId,
           socket.remoteAddress,
@@ -256,8 +252,7 @@ export class HttpServer {
           if (this._socketMap.has(socketId)) {
             this._socketMap.delete(socketId);
 
-            logger.trace(
-              this._loggerTag,
+            this._logger.trace(
               "'close' for socketId (%d) on remote connection (%s/%s)",
               socketId,
               socket.remoteAddress,
@@ -283,12 +278,7 @@ export class HttpServer {
     let protocol = this._enableHttps ? "https" : "http";
     req.urlObj = new URL(url, `${protocol}://${req.headers.host}`);
 
-    logger.trace(
-      this._loggerTag,
-      "Received (%s) req for (%s)",
-      req.method,
-      url,
-    );
+    this._logger.trace("Received (%s) req for (%s)", req.method, url);
 
     // Look for a router with a basePath that matches the start of the req path
     let pathname = req.urlObj.pathname;
@@ -342,7 +332,7 @@ export class HttpServer {
 
   // Public methods here
   async start(): Promise<void> {
-    logger.startupMsg(this._loggerTag, "Initialising HTTP manager ...");
+    this._logger.startupMsg("Initialising HTTP manager ...");
 
     let ip = this.findInterfaceIp(this._networkInterface);
 
@@ -354,8 +344,7 @@ export class HttpServer {
 
     this._networkIp = ip;
 
-    logger.startupMsg(
-      this._loggerTag,
+    this._logger.startupMsg(
       `Will listen on interface ${this._networkInterface} (IP: ${this._networkIp})`,
     );
 
@@ -372,10 +361,7 @@ export class HttpServer {
         );
       }
 
-      logger.startupMsg(
-        this._loggerTag,
-        `Attempting to listen on (${this._baseUrl})`,
-      );
+      this._logger.startupMsg(`Attempting to listen on (${this._baseUrl})`);
 
       const options: https.ServerOptions = {
         IncomingMessage: ServerRequest,
@@ -390,10 +376,7 @@ export class HttpServer {
     } else {
       this._baseUrl = `http://${this._networkIp}:${this._networkPort}`;
 
-      logger.startupMsg(
-        this._loggerTag,
-        `Attempting to listen on (${this._baseUrl})`,
-      );
+      this._logger.startupMsg(`Attempting to listen on (${this._baseUrl})`);
 
       const options: https.ServerOptions = {
         IncomingMessage: ServerRequest,
@@ -418,13 +401,12 @@ export class HttpServer {
   }
 
   async stop(): Promise<void> {
-    logger.shutdownMsg(this._loggerTag, "Closing all connections now ...");
+    this._logger.shutdownMsg("Closing all connections now ...");
 
     // Close all the remote connections
     this._socketMap.forEach((socket: net.Socket, key: number) => {
       socket.destroy();
-      logger.trace(
-        this._loggerTag,
+      this._logger.trace(
         "Destroying socketId (%d) for remote connection (%s/%s)",
         key,
         socket.remoteAddress,
@@ -436,9 +418,9 @@ export class HttpServer {
     this._socketMap.clear();
 
     if (this._server !== undefined) {
-      logger.shutdownMsg(this._loggerTag, "Closing HTTP manager port now ...");
+      this._logger.shutdownMsg("Closing HTTP manager port now ...");
       this._server.close();
-      logger.shutdownMsg(this._loggerTag, "Port closed");
+      this._logger.shutdownMsg("Port closed");
 
       // Just in case someone calls stop() a 2nd time
       this._server = undefined;
@@ -470,11 +452,7 @@ export class HttpServer {
     let router = new Router(basePath, routerConfig);
     this._apiRouterList.push(router);
 
-    logger.startupMsg(
-      this._loggerTag,
-      "(%s) router created",
-      basePath.replace(/\/$/, ""),
-    );
+    this._logger.startupMsg("(%s) router created", basePath.replace(/\/$/, ""));
 
     return router;
   }

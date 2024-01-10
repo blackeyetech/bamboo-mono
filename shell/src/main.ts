@@ -1,11 +1,11 @@
 // imports here
-import { logger, LogLevel } from "./logger.js";
+import { Logger, LogLevel } from "./logger.js";
 import { configMan, ConfigOptions } from "./config-man.js";
 import * as httpReq from "./http-req.js";
 import * as httpServer from "./http-server/main.js";
 import { BSPlugin } from "./bs-plugin.js";
 
-export { LogLevel } from "./logger.js";
+export { Logger, LogLevel } from "./logger.js";
 export { ConfigOptions, ConfigError } from "./config-man.js";
 export { ReqRes, ReqOptions, ReqAborted, ReqError } from "./http-req.js";
 export { SseServerOptions, SseServer } from "./http-server/sse-server.js";
@@ -43,7 +43,12 @@ const LOGGER_APP_NAME = "App";
 // rollup plugin at build time
 const VERSION: string = "BS_VERSION";
 
-// Private variables here
+// Module private variables here
+let _logger: Logger;
+let _httpServerList: httpServer.HttpServer[];
+let _pluginMap: Map<string, BSPlugin>;
+let _sharedStore: Map<string, any>;
+
 const _shutdownHandler = async (): Promise<void> => {
   await bs.exit(0);
 };
@@ -62,10 +67,6 @@ let _stopHandler = async (): Promise<void> => {
 let _restartHandler = async (): Promise<void> => {
   bs.shutdownMsg("Restarted!");
 };
-
-let _httpServerList: httpServer.HttpServer[];
-let _pluginMap: Map<string, BSPlugin>;
-let _sharedStore: Map<string, any>;
 
 // Types here
 export type BSQuestionOptions = {
@@ -147,43 +148,43 @@ export const bs = Object.freeze({
 
   // Log convience methods here
   fatal: (...args: any): void => {
-    logger.fatal(LOGGER_APP_NAME, ...args);
+    _logger.fatal(...args);
   },
 
   error: (...args: any): void => {
-    logger.error(LOGGER_APP_NAME, ...args);
+    _logger.error(...args);
   },
 
   warn: (...args: any): void => {
-    logger.warn(LOGGER_APP_NAME, ...args);
+    _logger.warn(...args);
   },
 
   info: (...args: any): void => {
-    logger.info(LOGGER_APP_NAME, ...args);
+    _logger.info(...args);
   },
 
   startupMsg: (...args: any): void => {
-    logger.startupMsg(LOGGER_APP_NAME, ...args);
+    _logger.startupMsg(...args);
   },
 
   shutdownMsg: (...args: any): void => {
-    logger.shutdownMsg(LOGGER_APP_NAME, ...args);
+    _logger.shutdownMsg(...args);
   },
 
   debug: (...args: any): void => {
-    logger.debug(LOGGER_APP_NAME, ...args);
+    _logger.debug(...args);
   },
 
   trace: (...args: any): void => {
-    logger.trace(LOGGER_APP_NAME, ...args);
+    _logger.trace(...args);
   },
 
   force: (...args: any): void => {
-    logger.force(LOGGER_APP_NAME, ...args);
+    _logger.force(...args);
   },
 
   setLogLevel: (level: LogLevel) => {
-    logger.setLevel(level);
+    _logger.setLevel(level);
   },
 
   // General functions here
@@ -262,7 +263,7 @@ export const bs = Object.freeze({
     bs.info("Restarting now!");
 
     // Re-init the logger in case config values have changed
-    logger.init();
+    _logger = new Logger(LOGGER_APP_NAME);
 
     // Do a soft exit
     await bs.exit(0, false);
@@ -434,13 +435,14 @@ export const bs = Object.freeze({
 let logConfigManMsgs = (): void => {
   let messages = configMan.getMessages();
   for (let message of messages) {
-    logger.startupMsg(LOGGER_APP_NAME, message[0]);
+    _logger.startupMsg(message[0]);
   }
   configMan.clearMessages();
 };
 
 function init(): void {
   // Initialise the private variables
+  _logger = new Logger(LOGGER_APP_NAME);
   _httpServerList = [];
   _pluginMap = new Map();
   _sharedStore = new Map();

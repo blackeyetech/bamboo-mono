@@ -20,8 +20,12 @@ async function init() {
   bs.addPlugin("t4", Template);
 
   let httpMan1 = await bs.addHttpServer("lo", 8080, {
-    healthcheckPath: "/",
-    defaultRouterBasePath: "/",
+    //healthcheckPath: "/",
+    // defaultRouterBasePath: "/",
+    staticFileServer: {
+      path: "/home/parallels/dev/src/test/frontend/bootstrap3",
+      immutableRegex: /^.+\.min\.[a-zA-Z0-9-]+$/,
+    },
   });
 
   httpMan1.use(HttpServer.body({}));
@@ -307,7 +311,7 @@ bs.save("test1", 1);
 let test1 = bs.retrieve("test1");
 bs.info("test1 is %j", test1);
 
-bs.save("test1", "hello");
+bs.update("test1", "hello");
 test1 = bs.retrieve("test1");
 bs.info("test1 is %j", test1);
 
