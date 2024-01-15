@@ -1,5 +1,13 @@
 # @bs-core/shell
 
+## 1.16.1
+
+### Patch Changes
+
+- Changed bundling to include TS source maps
+- - Renamed HttpServer.addRouter() to HttpServer.router() to conform with all of the other methods (had changed to addRouter but that was not consistent)
+  - The built in middelware is now static methods of the Router class as opposed to the HttpServer class
+
 ## 1.16.0
 
 ### Minor Changes

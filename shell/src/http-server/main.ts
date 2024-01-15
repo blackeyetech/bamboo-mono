@@ -2,19 +2,7 @@
 import { Logger } from "../logger.js";
 
 import { ServerRequest, ServerResponse } from "./req-res.js";
-import {
-  Middleware,
-  ExpressMiddleware,
-  CorsOptions,
-  CsrfChecksOptions,
-  SecurityHeadersOptions,
-  bodyMiddleware,
-  jsonMiddleware,
-  corsMiddleware,
-  expressWrapper,
-  csrfChecksMiddleware,
-  securityHeadersMiddleware,
-} from "./middleware.js";
+import { Middleware } from "./middleware.js";
 import * as staticFiles from "./static-files.js";
 import {
   Router,
@@ -457,11 +445,15 @@ export class HttpServer {
     return router;
   }
 
-  getRouter(basePath: string): Router | undefined {
-    // Make sure to remove any trailing slashes and then delimit properly
-    basePath = basePath.replace(/\/*$/, "/");
+  router(basePath?: string): Router | undefined {
+    if (basePath === undefined) {
+      return this._defaultApiRouter;
+    }
 
-    return this._apiRouterList.find((el) => el.basePath === basePath);
+    // Make sure to remove any trailing slashes and then delimit properly
+    let basePathSanitised = basePath.replace(/\/*$/, "/");
+
+    return this._apiRouterList.find((el) => el.basePath === basePathSanitised);
   }
 
   // Methods for the default router here
@@ -474,7 +466,7 @@ export class HttpServer {
     callback: EndpointCallback,
     options: EndpointOptions = {},
   ): Router {
-    return this._defaultApiRouter.endpoint("DELETE", path, callback, options);
+    return this._defaultApiRouter.del(path, callback, options);
   }
 
   get(
@@ -482,7 +474,7 @@ export class HttpServer {
     callback: EndpointCallback,
     options: EndpointOptions = {},
   ): Router {
-    return this._defaultApiRouter.endpoint("GET", path, callback, options);
+    return this._defaultApiRouter.get(path, callback, options);
   }
 
   patch(
@@ -490,7 +482,7 @@ export class HttpServer {
     callback: EndpointCallback,
     options: EndpointOptions = {},
   ): Router {
-    return this._defaultApiRouter.endpoint("PATCH", path, callback, options);
+    return this._defaultApiRouter.patch(path, callback, options);
   }
 
   post(
@@ -498,7 +490,7 @@ export class HttpServer {
     callback: EndpointCallback,
     options: EndpointOptions = {},
   ): Router {
-    return this._defaultApiRouter.endpoint("POST", path, callback, options);
+    return this._defaultApiRouter.post(path, callback, options);
   }
 
   put(
@@ -506,7 +498,7 @@ export class HttpServer {
     callback: EndpointCallback,
     options: EndpointOptions = {},
   ): Router {
-    return this._defaultApiRouter.endpoint("PUT", path, callback, options);
+    return this._defaultApiRouter.put(path, callback, options);
   }
 
   endpoint(
@@ -520,31 +512,5 @@ export class HttpServer {
 
   route(path: string): Route {
     return this._defaultApiRouter.route(path);
-  }
-
-  // Middleware methods here
-  static body(options: { maxBodySize?: number } = {}): Middleware {
-    // Rem we have to call bodyMiddleware since it returns the middleware
-    return bodyMiddleware(options);
-  }
-
-  static json(): Middleware {
-    return jsonMiddleware;
-  }
-
-  static cors(options: CorsOptions = {}): Middleware {
-    return corsMiddleware(options);
-  }
-
-  static csrf(middleware: CsrfChecksOptions = {}): Middleware {
-    return csrfChecksMiddleware(middleware);
-  }
-
-  static secHeaders(middleware: SecurityHeadersOptions): Middleware {
-    return securityHeadersMiddleware(middleware);
-  }
-
-  static expressWrapper(middleware: ExpressMiddleware): Middleware {
-    return expressWrapper(middleware);
   }
 }

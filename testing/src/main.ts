@@ -6,6 +6,7 @@ import {
   Middleware,
   EndpointCallback,
   HttpError,
+  Router,
 } from "@bs-core/shell";
 
 import { Jira, JiraConfig } from "@bs-plugins/jira";
@@ -28,17 +29,17 @@ async function init() {
     },
   });
 
-  httpMan1.use(HttpServer.body({}));
-  httpMan1.use(HttpServer.json());
+  httpMan1.use(Router.body({}));
+  httpMan1.use(Router.json());
   httpMan1.use(
-    HttpServer.cors({
+    Router.cors({
       headersAllowed: "*",
       originsAllowed: "*",
       credentialsAllowed: false,
     }),
   );
   httpMan1.use(
-    HttpServer.secHeaders({
+    Router.secHeaders({
       headers: [
         { name: "x-test1", value: "kewl" },
         { name: "x-test2", value: "kewler" },
@@ -127,7 +128,7 @@ async function init() {
       res.serverTimingsMetrics.push({ name: "json", duration: 3.33 });
     },
     {
-      middlewareList: [HttpServer.body()],
+      middlewareList: [Router.body()],
     },
   );
 

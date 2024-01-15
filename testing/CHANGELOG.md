@@ -1,5 +1,16 @@
 # testing
 
+## 0.1.5
+
+### Patch Changes
+
+- Changed bundling to include TS source maps
+- Updated dependencies
+- Updated dependencies
+  - @bs-plugins/template@0.2.2
+  - @bs-plugins/jira@1.2.2
+  - @bs-core/shell@1.16.1
+
 ## 0.1.4
 
 ### Patch Changes

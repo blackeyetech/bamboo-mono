@@ -1,5 +1,14 @@
 # @bs-plugins/o365
 
+## 1.2.2
+
+### Patch Changes
+
+- Changed bundling to include TS source maps
+- Updated dependencies
+- Updated dependencies
+  - @bs-core/shell@1.16.1
+
 ## 1.2.1
 
 ### Patch Changes

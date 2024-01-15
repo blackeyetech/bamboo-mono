@@ -3,7 +3,19 @@ import { Logger } from "../logger.js";
 
 import { SseServer, SseServerOptions } from "./sse-server.js";
 import { ServerRequest, ServerResponse, HttpError } from "./req-res.js";
-import { Middleware } from "./middleware.js";
+import {
+  Middleware,
+  ExpressMiddleware,
+  CorsOptions,
+  CsrfChecksOptions,
+  SecurityHeadersOptions,
+  bodyMiddleware,
+  jsonMiddleware,
+  corsMiddleware,
+  expressWrapper,
+  csrfChecksMiddleware,
+  securityHeadersMiddleware,
+} from "./middleware.js";
 import * as PathToRegEx from "path-to-regexp";
 
 import * as crypto from "node:crypto";
@@ -526,5 +538,31 @@ export class Router {
         return server.route(path);
       },
     };
+  }
+
+  // Middleware methods here
+  static body(options: { maxBodySize?: number } = {}): Middleware {
+    // Rem we have to call bodyMiddleware since it returns the middleware
+    return bodyMiddleware(options);
+  }
+
+  static json(): Middleware {
+    return jsonMiddleware();
+  }
+
+  static cors(options: CorsOptions = {}): Middleware {
+    return corsMiddleware(options);
+  }
+
+  static csrf(middleware: CsrfChecksOptions = {}): Middleware {
+    return csrfChecksMiddleware(middleware);
+  }
+
+  static secHeaders(middleware: SecurityHeadersOptions): Middleware {
+    return securityHeadersMiddleware(middleware);
+  }
+
+  static expressWrapper(middleware: ExpressMiddleware): Middleware {
+    return expressWrapper(middleware);
   }
 }

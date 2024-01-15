@@ -1,5 +1,14 @@
 # @bs-core/astro
 
+## 1.4.2
+
+### Patch Changes
+
+- Changed bundling to include TS source maps
+- Updated dependencies
+- Updated dependencies
+  - @bs-core/shell@1.16.1
+
 ## 1.4.1
 
 ### Patch Changes

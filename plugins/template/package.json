@@ -1,5 +1,5 @@
 {
-  "version": "0.2.1",
+  "version": "0.2.2",
   "name": "@bs-plugins/template",
   "description": "DESCRIPTION",
   "type": "module",
@@ -14,7 +14,7 @@
   "types": "./dist/plugin.d.ts",
   "scripts": {
     "rollup": "rollup -c rollup.config.mjs",
-    "build-dev": "tsc --sourceMap && npm run rollup",
+    "build-dev": "tsc && npm run rollup",
     "build-prod": "npm run clean && tsc && npm run rollup",
     "format-ts": "prettier --write 'src/**/*.ts'",
     "format-js": "prettier --write 'dist/**/*.{js,ts}'",

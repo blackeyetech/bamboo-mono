@@ -31,6 +31,7 @@ export {
   ExpressMiddleware,
   CorsOptions,
   CsrfChecksOptions,
+  SecurityHeadersOptions,
 } from "./http-server/middleware.js";
 export { BSPlugin } from "./bs-plugin.js";
 

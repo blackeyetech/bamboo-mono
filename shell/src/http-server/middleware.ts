@@ -35,65 +35,67 @@ export type SecurityHeadersOptions = {
 };
 
 // Middleware functions here
-export const jsonMiddleware = async (
-  req: ServerRequest,
-  _: ServerResponse,
-  next: () => Promise<void>,
-): Promise<void> => {
-  // Before we do anything make sure there is a body!
-  let body: Buffer | undefined;
+export const jsonMiddleware = (): Middleware => {
+  return async (
+    req: ServerRequest,
+    _: ServerResponse,
+    next: () => Promise<void>,
+  ): Promise<void> => {
+    // Before we do anything make sure there is a body!
+    let body: Buffer | undefined;
 
-  if (Buffer.isBuffer(req.body)) {
-    body = req.body;
-  }
-
-  if (body === undefined || body.length === 0) {
-    // No body to parse so call next middleware and then return
-    await next();
-    return;
-  }
-
-  let jsonBody: any;
-  let parseOk = true;
-  let errMessage = "";
-
-  // Now check the content-type header to find out what sort of data we have
-  const contentTypeHeader = req.headers["content-type"];
-
-  if (contentTypeHeader !== undefined) {
-    let contentType = contentTypeHeader.split(";")[0];
-
-    switch (contentType) {
-      case "application/json":
-        try {
-          jsonBody = JSON.parse(body.toString());
-        } catch (_) {
-          // Set the error message you want to return
-          errMessage = "Can not parse JSON body!";
-
-          parseOk = false;
-        }
-        break;
-      case "application/x-www-form-urlencoded":
-        let qry = new URLSearchParams(body.toString());
-        jsonBody = {};
-
-        for (let [key, value] of qry.entries()) {
-          jsonBody[key] = value;
-        }
-        break;
-      default:
-        break;
+    if (Buffer.isBuffer(req.body)) {
+      body = req.body;
     }
-  }
 
-  // If the parsing failed then return an error
-  if (!parseOk) {
-    throw new HttpError(400, errMessage);
-  }
+    if (body === undefined || body.length === 0) {
+      // No body to parse so call next middleware and then return
+      await next();
+      return;
+    }
 
-  req.json = jsonBody;
-  await next();
+    let jsonBody: any;
+    let parseOk = true;
+    let errMessage = "";
+
+    // Now check the content-type header to find out what sort of data we have
+    const contentTypeHeader = req.headers["content-type"];
+
+    if (contentTypeHeader !== undefined) {
+      let contentType = contentTypeHeader.split(";")[0];
+
+      switch (contentType) {
+        case "application/json":
+          try {
+            jsonBody = JSON.parse(body.toString());
+          } catch (_) {
+            // Set the error message you want to return
+            errMessage = "Can not parse JSON body!";
+
+            parseOk = false;
+          }
+          break;
+        case "application/x-www-form-urlencoded":
+          let qry = new URLSearchParams(body.toString());
+          jsonBody = {};
+
+          for (let [key, value] of qry.entries()) {
+            jsonBody[key] = value;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+
+    // If the parsing failed then return an error
+    if (!parseOk) {
+      throw new HttpError(400, errMessage);
+    }
+
+    req.json = jsonBody;
+    await next();
+  };
 };
 
 export const bodyMiddleware = (
