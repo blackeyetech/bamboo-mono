@@ -1,5 +1,13 @@
 # @bs-plugins/ldap
 
+## 1.2.3
+
+### Patch Changes
+
+- Tidy up of locations for transpiled JS files
+- Updated dependencies
+  - @bs-core/shell@1.16.2
+
 ## 1.2.2
 
 ### Patch Changes
