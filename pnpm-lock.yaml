@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  "@rollup/pluginutils": ^5.0.2
+
 importers:
   .:
     devDependencies:
@@ -1910,21 +1913,6 @@ packages:
       terser: 5.26.0
     dev: true
 
-  /@rollup/pluginutils@3.1.0(rollup@4.9.2):
-    resolution:
-      {
-        integrity: sha512-GksZ6pr6TpIjHm8h9lSQ8pi8BE9VeubNT0OMJ3B5uZJ8pz73NPiqOtCog/x2/QzM1ENChPKxMDhiQuRHsqc+lg==,
-      }
-    engines: { node: ">= 8.0.0" }
-    peerDependencies:
-      rollup: ^1.20.0||^2.0.0
-    dependencies:
-      "@types/estree": 0.0.39
-      estree-walker: 1.0.1
-      picomatch: 2.3.1
-      rollup: 4.9.2
-    dev: true
-
   /@rollup/pluginutils@5.1.0(rollup@4.9.2):
     resolution:
       {
@@ -2177,13 +2165,6 @@ packages:
       }
     dependencies:
       "@types/ms": 0.7.34
-    dev: true
-
-  /@types/estree@0.0.39:
-    resolution:
-      {
-        integrity: sha512-EYNwp3bU+98cpU4lAWYYL7Zz+2gryWH1qbdDTidVd6hkiR6weksdbMadyXKXNPEkQFhXM+hVO9ZygomHXp+AIw==,
-      }
     dev: true
 
   /@types/estree@1.0.5:
@@ -3708,13 +3689,6 @@ packages:
       }
     engines: { node: ">=4" }
     hasBin: true
-    dev: true
-
-  /estree-walker@1.0.1:
-    resolution:
-      {
-        integrity: sha512-1fMXF3YP4pZZVozF8j/ZLfvnR8NSIljt56UhbZ5PeeDmmGHpgpdwQt7ITlGvYaQukCvuBRMLEiKiYC+oeIg4cg==,
-      }
     dev: true
 
   /estree-walker@2.0.2:
@@ -7033,7 +7007,7 @@ packages:
       "@types/node":
         optional: true
     dependencies:
-      "@rollup/pluginutils": 3.1.0(rollup@4.9.2)
+      "@rollup/pluginutils": 5.1.0(rollup@4.9.2)
       "@types/node": 18.19.4
       rollup: 4.9.2
       source-map-resolve: 0.6.0

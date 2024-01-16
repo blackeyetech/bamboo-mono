@@ -2,12 +2,12 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     /* Projects */
-    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo" /* Specify the path to .tsbuildinfo incremental compilation file. */,
+    "tsBuildInfoFile": "./out/tsconfig.tsbuildinfo" /* Specify the path to .tsbuildinfo incremental compilation file. */,
 
     /* Modules */
     "rootDir": "./src" /* Specify the root folder within your source files. */,
-    "outDir": "./dist" /* Specify an output folder for all emitted files. */,
-    "declarationDir": "./dist/types" /* Specify the output directory for generated declaration files. */
+    "outDir": "./out" /* Specify an output folder for all emitted files. */,
+    "declarationDir": "./out/types" /* Specify the output directory for generated declaration files. */
   },
 
   "include": ["src/**/*.ts"]
