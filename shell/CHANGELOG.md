@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.2
+
+### Patch Changes
+
+- Tidy up of locations for transpiled JS files
+
 ## 1.16.1
 
 ### Patch Changes

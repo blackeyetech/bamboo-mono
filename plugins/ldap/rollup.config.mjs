@@ -31,7 +31,7 @@ let plugins = [
 
 export default [
   {
-    input: "dist/main.js",
+    input: "out/main.js",
     output: {
       file: "dist/plugin.mjs",
       format: "es",
@@ -41,7 +41,7 @@ export default [
     external: ["ldapjs", "@bs-core/shell"],
   },
   {
-    input: "dist/types/main.d.ts",
+    input: "out/types/main.d.ts",
     output: {
       file: "dist/plugin.d.ts",
       format: "es",

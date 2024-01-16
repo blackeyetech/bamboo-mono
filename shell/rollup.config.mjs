@@ -32,7 +32,7 @@ let plugins = [
 export default [
   {
     // This is to rollup the shell lib
-    input: "dist/main.js",
+    input: "out/main.js",
     output: {
       file: "dist/shell.mjs",
       format: "es",
@@ -42,7 +42,7 @@ export default [
   },
   {
     // This is to rollup the .d.ts files
-    input: "dist/types/main.d.ts",
+    input: "out/types/main.d.ts",
     output: {
       file: "dist/shell.d.ts",
       format: "es",

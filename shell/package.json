@@ -1,5 +1,5 @@
 {
-  "version": "1.16.1",
+  "version": "1.16.2",
   "name": "@bs-core/shell",
   "description": "The Bamboo Shell",
   "type": "module",
@@ -21,7 +21,7 @@
     "format-misc": "prettier --write '**/*.{json,md,yaml}'",
     "install-bin": "npm install -g $(npm pack . | tail -1)",
     "test": "echo \"No tests\" && exit 0",
-    "clean": "rm -rf ./dist",
+    "clean": "rm -rf ./dist ./out",
     "prepare": "npm run clean && npm run build-prod",
     "prepublishOnly": "npm test"
   },
