@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.3
+
+### Patch Changes
+
+- Added check to see if this.\_immutableRegex is undefined
+
 ## 1.16.2
 
 ### Patch Changes

@@ -199,7 +199,10 @@ export class StaticFileServer {
       return false;
     }
 
-    let immutable = this._immutableRegex.test(fullPath);
+    let immutable =
+      this._immutableRegex === undefined
+        ? false
+        : this._immutableRegex.test(fullPath);
 
     const fileDetails: FileDetails = {
       contentType: this.lookupType(fullPath), // In case urlPath is a dir
