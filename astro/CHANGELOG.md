@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.4.4
+
+### Patch Changes
+
+- Added immutableRegex to the Astro adapter config
+
 ## 1.4.3
 
 ### Patch Changes

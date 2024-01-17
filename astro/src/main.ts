@@ -30,6 +30,7 @@ export type Options = {
 
   staticFilesPath?: string;
   extraContentTypes?: Record<string, string>;
+  immutableRegex?: RegExp;
 
   keepAliveTimeout?: number;
   // NOTE: There is a potential race condition and the recommended
@@ -158,6 +159,10 @@ export const start = async (
 
     if (options.extraContentTypes !== undefined) {
       httpConfig.staticFileServer.extraContentTypes = options.extraContentTypes;
+    }
+
+    if (options.immutableRegex !== undefined) {
+      httpConfig.staticFileServer.immutableRegex = options.immutableRegex;
     }
   }
 
