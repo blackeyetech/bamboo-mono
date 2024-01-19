@@ -1,5 +1,14 @@
 # testing
 
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.16.4
+  - @bs-plugins/jira@1.2.5
+  - @bs-plugins/template@0.2.5
+
 ## 0.1.7
 
 ### Patch Changes
