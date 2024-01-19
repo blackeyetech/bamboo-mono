@@ -30,6 +30,7 @@ export type Options = {
 
   staticFilesPath?: string;
   extraContentTypes?: Record<string, string>;
+  immutableRegex?: RegExp;
 
   keepAliveTimeout?: number;
   // NOTE: There is a potential race condition and the recommended
@@ -84,7 +85,7 @@ async function ssrEndpoint(
   let webReq = new WebRequest(req, res);
 
   // Now render the page
-  let webRes = await _app.render(webReq, req.matchedInfo);
+  let webRes = await _app.render(webReq, { routeData: req.matchedInfo });
 
   // This is the easiest way to get the Response body
   res.body = await webRes.text();
@@ -158,6 +159,10 @@ export const start = async (
 
     if (options.extraContentTypes !== undefined) {
       httpConfig.staticFileServer.extraContentTypes = options.extraContentTypes;
+    }
+
+    if (options.immutableRegex !== undefined) {
+      httpConfig.staticFileServer.immutableRegex = options.immutableRegex;
     }
   }
 
