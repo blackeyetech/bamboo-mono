@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.4.7
+
+### Patch Changes
+
+- Updated \_app.render to use the new method signature
+
 ## 1.4.6
 
 ### Patch Changes

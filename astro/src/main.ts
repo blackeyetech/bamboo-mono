@@ -85,7 +85,7 @@ async function ssrEndpoint(
   let webReq = new WebRequest(req, res);
 
   // Now render the page
-  let webRes = await _app.render(webReq, req.matchedInfo);
+  let webRes = await _app.render(webReq, { routeData: req.matchedInfo });
 
   // This is the easiest way to get the Response body
   res.body = await webRes.text();
