@@ -3,7 +3,7 @@ import { Logger } from "../logger.js";
 
 import { ServerRequest, ServerResponse } from "./req-res.js";
 import { Middleware } from "./middleware.js";
-import * as staticFileSrv from "./static-file-server.js";
+import { StaticFileServer } from "./static-file-server.js";
 import {
   Router,
   EndpointOptions,
@@ -58,7 +58,7 @@ export type HttpConfig = {
   staticFileServer?: {
     path: string;
     extraContentTypes?: Record<string, string>;
-    immutableRegex?: RegExp;
+    immutableRegExp?: RegExp | string;
   };
 };
 
@@ -91,7 +91,7 @@ export class HttpServer {
   private _apiRouterList: Router[];
   private _defaultApiRouter: Router;
   private _ssrRouter: Router;
-  private _staticFileServer?: staticFileSrv.StaticFileServer;
+  private _staticFileServer?: StaticFileServer;
 
   private _server?: http.Server;
 
@@ -142,24 +142,12 @@ export class HttpServer {
     this._logger.startupMsg("SSR router created");
 
     if (config.staticFileServer !== undefined) {
-      let staticFileConfig: staticFileSrv.StaticFileServerConfig = {
-        filePath: config.staticFileServer.path,
+      this._staticFileServer = new StaticFileServer({
         loggerName: `HttpServer-${this._name}/StaticFile`,
-      };
-
-      if (config.staticFileServer.extraContentTypes !== undefined) {
-        staticFileConfig.extraContentTypes =
-          config.staticFileServer.extraContentTypes;
-      }
-
-      if (config.staticFileServer.immutableRegex !== undefined) {
-        staticFileConfig.immutableRegex =
-          config.staticFileServer.immutableRegex;
-      }
-
-      this._staticFileServer = new staticFileSrv.StaticFileServer(
-        staticFileConfig,
-      );
+        filePath: config.staticFileServer.path,
+        extraContentTypes: config.staticFileServer.extraContentTypes,
+        immutableRegExp: config.staticFileServer.immutableRegExp,
+      });
     }
   }
 

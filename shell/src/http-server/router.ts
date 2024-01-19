@@ -60,14 +60,14 @@ export type Route = {
   del: (callback: EndpointCallback, endpointOptions?: EndpointOptions) => Route;
 };
 
-export type NotFoundHandler = (
+export type RouterNotFoundHandler = (
   req: ServerRequest,
   res: ServerResponse,
 ) => Promise<void>;
 
 export type RouterConfig = {
   useNotFoundHandler?: boolean;
-  notFoundHandler?: NotFoundHandler;
+  notFoundHandler?: RouterNotFoundHandler;
 };
 
 type MethodListElement = {
@@ -79,36 +79,35 @@ type MethodListElement = {
   etag: boolean;
 };
 
+// Misc here
+const defaultNotFoundHandler: RouterNotFoundHandler = async (
+  _: ServerRequest,
+  res: ServerResponse,
+) => {
+  res.statusCode = 404;
+  res.write("API route not found");
+  res.end();
+};
+
 // Router class here
 export class Router {
   private _basePathDelimited: string;
   private _basePath: string;
   private _useNotFoundHandler: boolean;
-  private _notFoundHandler: NotFoundHandler;
+  private _notFoundHandler: RouterNotFoundHandler;
 
   private _logger: Logger;
   private _methodListMap: Record<Method, MethodListElement[]>;
   private _defaultMiddlewareList: Middleware[];
 
-  constructor(basePath: string, routerConfig: RouterConfig = {}) {
-    let config = {
-      useNotFoundHandler: true,
-      notFoundHandler: async (_: ServerRequest, res: ServerResponse) => {
-        res.statusCode = 404;
-        res.write("API route not found");
-        res.end();
-      },
-
-      ...routerConfig,
-    };
-
+  constructor(basePath: string, config: RouterConfig = {}) {
     // Make sure to properly delimit the basePath
     this._basePathDelimited = basePath.replace(/\/*$/, "/");
     // Make sure to strip off the trailing slashes
     this._basePath = basePath.replace(/\/*$/, "");
 
-    this._useNotFoundHandler = config.useNotFoundHandler;
-    this._notFoundHandler = config.notFoundHandler;
+    this._useNotFoundHandler = config.useNotFoundHandler ?? true;
+    this._notFoundHandler = config.notFoundHandler ?? defaultNotFoundHandler;
 
     this._logger = new Logger(`Router (${this._basePath})`);
 

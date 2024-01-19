@@ -1,5 +1,13 @@
 # @bs-core/astro
 
+## 1.4.8
+
+### Patch Changes
+
+- Changed Static File Server immutable RegExp option to be a RegExp or a string
+- Updated dependencies
+  - @bs-core/shell@1.16.5
+
 ## 1.4.7
 
 ### Patch Changes

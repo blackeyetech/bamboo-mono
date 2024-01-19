@@ -30,7 +30,7 @@ export type Options = {
 
   staticFilesPath?: string;
   extraContentTypes?: Record<string, string>;
-  immutableRegex?: RegExp;
+  immutableRegexSrc?: string;
 
   keepAliveTimeout?: number;
   // NOTE: There is a potential race condition and the recommended
@@ -155,15 +155,9 @@ export const start = async (
   if (options.staticFilesPath !== undefined) {
     httpConfig.staticFileServer = {
       path: options.staticFilesPath,
+      extraContentTypes: options.extraContentTypes,
+      immutableRegExp: options.immutableRegexSrc,
     };
-
-    if (options.extraContentTypes !== undefined) {
-      httpConfig.staticFileServer.extraContentTypes = options.extraContentTypes;
-    }
-
-    if (options.immutableRegex !== undefined) {
-      httpConfig.staticFileServer.immutableRegex = options.immutableRegex;
-    }
   }
 
   let enableHttps = bs.getConfigBool(HTTP_ENABLE_HTTPS, false);

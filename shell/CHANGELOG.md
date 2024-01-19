@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.5
+
+### Patch Changes
+
+- Changed Static File Server immutable RegExp option to be a RegExp or a string
+
 ## 1.16.4
 
 ### Patch Changes

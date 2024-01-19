@@ -21,58 +21,65 @@ type FileDetails = {
   immutable: boolean;
 };
 
-export type NotFoundHandler = (
+export type StaticNotFoundHandler = (
   req: ServerRequest,
   res: ServerResponse,
 ) => Promise<void>;
 
 export type StaticFileServerConfig = {
-  filePath: string;
   loggerName: string;
+  filePath: string;
 
-  immutableRegex?: RegExp;
+  immutableRegExp?: RegExp | string;
   defaultDirFile?: string;
-  notFoundHandler?: NotFoundHandler;
+  notFoundHandler?: StaticNotFoundHandler;
 
   defaultCharSet?: string;
   extraContentTypes?: Record<string, string>;
 };
 
+// Misc here
+const defaultNotFoundHandler: StaticNotFoundHandler = async (
+  _: ServerRequest,
+  res: ServerResponse,
+) => {
+  res.statusCode = 404;
+  res.write("File not found");
+  res.end();
+};
 // StaticFileServer class here
 export class StaticFileServer {
   private _logger: Logger;
 
   private _filePath: string;
-  private _immutableRegex: RegExp;
+  private _immutableRegExp?: RegExp;
   private _defaultDirFile: string;
   private _defaultCharSet: string;
-  private _notFoundHandler: NotFoundHandler;
+  private _notFoundHandler: StaticNotFoundHandler;
 
   private _staticFileMap: Map<string, FileDetails>;
   private _contentTypes: Map<string, string>;
 
-  constructor(serverConfig: StaticFileServerConfig) {
-    let config = {
-      immutableRegex: /^.+\.[a-fA-F0-9]+\.[a-zA-Z0-9-]+$/,
-      defaultDirFile: "index.html",
-      defaultCharSet: "charset=utf-8",
-      notFoundHandler: async (_: ServerRequest, res: ServerResponse) => {
-        res.statusCode = 404;
-        res.write("File not found");
-        res.end();
-      },
-
-      ...serverConfig,
-    };
-
+  constructor(config: StaticFileServerConfig) {
     // Make sure there is no trailing slash at the end of the path
     this._logger = new Logger(config.loggerName);
+    this._logger.startupMsg("Creating static file server ...");
 
     this._filePath = config.filePath.replace(/\/*$/, "");
-    this._immutableRegex = config.immutableRegex;
-    this._defaultDirFile = config.defaultDirFile;
-    this._defaultCharSet = config.defaultCharSet;
-    this._notFoundHandler = config.notFoundHandler;
+
+    // Check if user has provided an immutable config value
+    if (config.immutableRegExp !== undefined) {
+      // Check if user has provided a regexp or string
+      if (config.immutableRegExp instanceof RegExp) {
+        this._immutableRegExp = config.immutableRegExp;
+      } else {
+        this._immutableRegExp = new RegExp(config.immutableRegExp);
+      }
+    }
+
+    this._defaultDirFile = config.defaultDirFile ?? "index.html";
+    this._defaultCharSet = config.defaultCharSet ?? "charset=utf-8";
+    this._notFoundHandler = config.notFoundHandler ?? defaultNotFoundHandler;
 
     this._staticFileMap = new Map();
     this._contentTypes = new Map();
@@ -91,7 +98,7 @@ export class StaticFileServer {
     }
 
     // Get all of the files at start up - but a constructor cant be async so
-    // run getFilesRecursively()Nat the earliest possibile time
+    // run getFilesRecursively() at the earliest possibile time
     setImmediate(async () => {
       await this.getFilesRecursively();
     });
@@ -199,7 +206,10 @@ export class StaticFileServer {
       return false;
     }
 
-    let immutable = this._immutableRegex.test(fullPath);
+    let immutable =
+      this._immutableRegExp === undefined
+        ? false
+        : this._immutableRegExp.test(fullPath);
 
     const fileDetails: FileDetails = {
       contentType: this.lookupType(fullPath), // In case urlPath is a dir
