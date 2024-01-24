@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.4.10
+
+### Patch Changes
+
+- Added maintenance configuration
+
 ## 1.4.9
 
 ### Patch Changes

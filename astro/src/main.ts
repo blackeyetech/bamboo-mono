@@ -18,6 +18,7 @@ const HTTP_KEY_FILE = "HTTP_KEY_FILE";
 const HTTP_ENABLE_HTTPS = "HTTP_ENABLE_HTTPS";
 const HTTP_IF = "HTTP_IF";
 const HTTP_PORT = "HTTP_PORT";
+const HTTP_MAINTENANCE_MODE = "HTTP_MAINTENANCE_MODE";
 
 // Module properties here
 
@@ -43,6 +44,8 @@ export type Options = {
   healthcheckPath?: string;
   healthcheckGoodRes?: number;
   healthcheckBadRes?: number;
+
+  maintenanceRoute?: string;
 };
 
 export class WebRequest extends Request {
@@ -150,6 +153,8 @@ export const start = async (
     healthcheckPath: options.healthcheckPath,
     healthcheckGoodRes: options.healthcheckGoodRes,
     healthcheckBadRes: options.healthcheckBadRes,
+    maintenanceRoute: options.maintenanceRoute,
+    startInMaintenanceMode: bs.getConfigBool(HTTP_MAINTENANCE_MODE, false),
   };
 
   if (options.staticFilesPath !== undefined) {
