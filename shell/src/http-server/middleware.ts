@@ -9,18 +9,30 @@ export type Middleware = (
   next: () => Promise<void>,
 ) => Promise<void>;
 
+export type BodyOptions = {
+  maxBodySize?: number;
+};
+
 export type ExpressMiddleware = (
   req: http.IncomingMessage,
   res: http.ServerResponse,
   next: (e?: any) => void,
 ) => void;
 
+export type CorsMethods = "GET" | "PUT" | "POST" | "DELETE" | "PATCH";
+
 export type CorsOptions = {
+  // Origins allowed
   originsAllowed?: "*" | string[];
+  // Methods allowed
+  methodsAllowed?: "*" | CorsMethods[];
+  // Headers allowed by the browser to be sent on the req
   headersAllowed?: "*" | string[];
-  headersExposed?: string[];
-  methodsAllowed?: string[];
+  // Headers that the browser can expose on the res
+  headersExposed?: "*" | string[];
+  // Flag to indicate if you can send credential headers
   credentialsAllowed?: boolean;
+  // Max age of the CORS preflight request in seconds
   maxAge?: number;
 };
 
@@ -98,14 +110,9 @@ export const jsonMiddleware = (): Middleware => {
   };
 };
 
-export const bodyMiddleware = (
-  options: { maxBodySize?: number } = {},
-): Middleware => {
-  // Because we need to pass in options we will return the middleware,
-  // i.e. you need to call this function
-  let opts = {
-    maxBodySize: 1024 * 1024,
-    ...options,
+export const bodyMiddleware = (options: BodyOptions = {}): Middleware => {
+  let opts: Required<BodyOptions> = {
+    maxBodySize: options.maxBodySize ?? 1024 * 1024,
   };
 
   return async (
@@ -144,19 +151,39 @@ export const bodyMiddleware = (
 };
 
 export const corsMiddleware = (options: CorsOptions = {}): Middleware => {
-  // Because we need to pass in options we will return the middleware,
-  // i.e. you need to call this function
-  let opts: CorsOptions = {
-    // Defaults first
-    originsAllowed: "*",
-    headersAllowed: "*",
-    headersExposed: [],
-    methodsAllowed: ["GET", "PUT", "POST", "DELETE", "PATCH"],
-    credentialsAllowed: false,
-    maxAge: 86400,
+  let opts: Required<CorsOptions> = {
+    originsAllowed: options.originsAllowed ?? "*",
+    methodsAllowed: options.methodsAllowed ?? [],
+    headersAllowed: options.headersAllowed ?? [],
+    headersExposed: options.headersExposed ?? [],
 
-    ...options,
+    credentialsAllowed: options.credentialsAllowed ?? false,
+    maxAge: options.maxAge ?? 60 * 60, // 1 hour
   };
+
+  // NOTE: If credentialsAllowed is enabled then other headers cant be a "*"
+  if (opts.credentialsAllowed) {
+    if (opts.originsAllowed === "*") {
+      throw new Error(
+        "The originsAllowed MUST be specified when credentialsAllowed is true",
+      );
+    }
+    if (opts.methodsAllowed === "*") {
+      throw new Error(
+        "The methodsAllowed MUST be specified when credentialsAllowed is true",
+      );
+    }
+    if (opts.headersAllowed === "*") {
+      throw new Error(
+        "The headersAllowed MUST be specified when credentialsAllowed is true",
+      );
+    }
+    if (opts.headersExposed === "*") {
+      throw new Error(
+        "The headersExposed MUST be specified when credentialsAllowed is true",
+      );
+    }
+  }
 
   return async (
     req: ServerRequest,
@@ -169,25 +196,46 @@ export const corsMiddleware = (options: CorsOptions = {}): Middleware => {
     if (req.method === "OPTIONS") {
       // The origin MUST be available or this is not valid
       if (origin === undefined) {
-        throw new HttpError(400);
+        throw new HttpError(400, "No origin header sent with the CORS request");
       }
 
-      // Access-Control-Allow-Origin
-      if (
-        opts.originsAllowed === "*" ||
-        opts.originsAllowed?.includes(origin)
-      ) {
+      // Set Access-Control-Allow-Origin
+      if (opts.originsAllowed === "*" || opts.originsAllowed.includes(origin)) {
+        // Best to set this to the origin for this req and NOT allowed origins
         res.setHeader("Access-Control-Allow-Origin", origin);
+      } else {
+        throw new HttpError(400, `The origin ${origin} is not allowed`);
       }
 
-      // Access-Control-Allow-Headers
-      let reqHeaders = req.headers["access-control-request-headers"];
+      // Set Access-Control-Allow-Methods
+      // We know this header exists otherwise we couldn't have gotten here
+      let reqMethod = req.headers[
+        "access-control-request-method"
+      ] as CorsMethods;
 
-      if (reqHeaders !== undefined) {
-        // If we allow any header then return the headers sent by client
+      if (opts.methodsAllowed === "*") {
+        res.setHeader("Access-Control-Allow-Methods", "*");
+      } else if (opts.methodsAllowed.length === 0) {
+        // No methods being specified implies you should use the reqMethod
+        res.setHeader("Access-Control-Allow-Methods", reqMethod);
+      } else if (opts.methodsAllowed.includes(reqMethod)) {
+        res.setHeader(
+          "Access-Control-Allow-Methods",
+          opts.methodsAllowed.join(","),
+        );
+      } else {
+        throw new HttpError(
+          400,
+          `The access-control-request-method ${reqMethod} is not allowed`,
+        );
+      }
+
+      // Set Access-Control-Allow-Headers
+      if (req.headers["access-control-request-headers"] !== undefined) {
         if (opts.headersAllowed === "*") {
-          res.setHeader("Access-Control-Allow-Headers", reqHeaders);
-        } else if (opts.headersAllowed !== undefined) {
+          res.setHeader("Access-Control-Allow-Headers", "*");
+        } else if (opts.headersAllowed.length) {
+          // Let the browser handle this one
           res.setHeader(
             "Access-Control-Allow-Headers",
             opts.headersAllowed.join(","),
@@ -195,26 +243,18 @@ export const corsMiddleware = (options: CorsOptions = {}): Middleware => {
         }
       }
 
-      // Access-Control-Expose-Headers
-      if (opts.headersExposed !== undefined && opts.headersExposed.length) {
+      // Set Access-Control-Expose-Headers
+      if (opts.headersExposed === "*") {
+        res.setHeader("Access-Control-Expose-Headers", "*");
+      } else if (opts.headersExposed.length) {
         res.setHeader(
           "Access-Control-Expose-Headers",
           opts.headersExposed.join(","),
         );
       }
 
-      // Access-Control-Allow-Methods
-      if (opts.methodsAllowed !== undefined) {
-        res.setHeader(
-          "Access-Control-Allow-Methods",
-          opts.methodsAllowed.join(","),
-        );
-      }
-
       // Access-Control-Max-Age
-      if (opts.maxAge !== undefined) {
-        res.setHeader("Access-Control-Max-Age", opts.maxAge);
-      }
+      res.setHeader("Access-Control-Max-Age", opts.maxAge);
 
       // Access-Control-Allow-Credentials
       if (opts.credentialsAllowed) {
@@ -229,21 +269,19 @@ export const corsMiddleware = (options: CorsOptions = {}): Middleware => {
     }
 
     // If we are here this was not a preflight request
-    // The origin needs to be available or we can't set the CORS headers
+    // The origin needs to be available or we shouldn't set the CORS headers
     if (origin !== undefined) {
       if (opts.credentialsAllowed === true) {
         res.setHeader("Access-Control-Allow-Credentials", "true");
       }
 
-      if (
-        opts.originsAllowed === "*" ||
-        opts.originsAllowed?.includes(origin)
-      ) {
+      if (opts.originsAllowed === "*" || opts.originsAllowed.includes(origin)) {
+        // Best to set this to the origin for this req and NOT allowed origins
         res.setHeader("Access-Control-Allow-Origin", origin);
       }
     }
 
-    // If we are here we do want to continue down the middleware stack
+    // If we are here then continue down the middleware stack
     await next();
   };
 };
@@ -269,11 +307,10 @@ export const expressWrapper = (middleware: ExpressMiddleware): Middleware => {
 export const csrfChecksMiddleware = (
   options: CsrfChecksOptions = {},
 ): Middleware => {
-  let opts = {
-    checkType: "custom-req-header",
-    header: "x-csrf-header",
-
-    ...options,
+  let opts: Required<CsrfChecksOptions> = {
+    checkType: options.checkType ?? "custom-req-header",
+    header: options.header ?? "x-csrf-header",
+    cookie: options.cookie ?? "csrf-token",
   };
 
   // Need to make sure the header we check for is always lower case
@@ -326,10 +363,8 @@ export const csrfChecksMiddleware = (
 export const securityHeadersMiddleware = (
   options: SecurityHeadersOptions = {},
 ): Middleware => {
-  let opts = {
-    headers: [],
-
-    ...options,
+  let opts: Required<SecurityHeadersOptions> = {
+    headers: options.headers ?? [],
   };
 
   // These are the default headers to use
@@ -366,9 +401,11 @@ export const securityHeadersMiddleware = (
       (el) => el.name.toLowerCase() === header.name.toLowerCase(),
     );
 
-    if (found === undefined) {
-      securityHeaders.push({ name: header.name, value: header.value });
+    if (found !== undefined) {
+      continue;
     }
+
+    securityHeaders.push({ name: header.name, value: header.value });
   }
 
   // Because we need to pass in the options we will return the

@@ -25,8 +25,10 @@ async function init() {
     // defaultRouterBasePath: "/",
     staticFileServer: {
       path: "/home/parallels/dev/src/test/frontend/bootstrap3",
-      immutableRegex: /^.+\.min\.[a-zA-Z0-9-]+$/,
+      immutableRegExp: /^.+\.min\.[a-zA-Z0-9-]+$/,
     },
+    startInMaintenanceMode: false,
+    maintenanceRoute: "/api/main",
   });
 
   httpMan1.use(Router.body({}));
@@ -220,6 +222,36 @@ async function init() {
     await bs.sleep(3);
     return false;
   });
+
+  bs.httpServer().endpoint(
+    "GET",
+    "/main-on",
+    (req, res) => {
+      console.log(req.url);
+      res.body = "<p>On</p>";
+      bs.httpServer().maintenanceModeOn = true;
+    },
+    { etag: true },
+  );
+  bs.httpServer().endpoint(
+    "GET",
+    "/main-on",
+    (req, res) => {
+      console.log(req.url);
+      res.body = "<p>Off</p>";
+      bs.httpServer().maintenanceModeOn = false;
+    },
+    { etag: true },
+  );
+  bs.httpServer().endpoint(
+    "GET",
+    "/main",
+    (req, res) => {
+      console.log(req.url);
+      res.body = "<p>You been served</p>";
+    },
+    { etag: true },
+  );
 }
 
 bs.setStopHandler(async () => {

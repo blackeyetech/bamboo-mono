@@ -156,7 +156,8 @@ export class ServerRequest extends http.IncomingMessage {
   constructor(socket: net.Socket) {
     super(socket);
 
-    // Set this to the root as a default
+    // When this object is instantiated the body of the req has not yet been
+    // received so the details, such as the URL, will not be known until later
     this.urlObj = new URL("http://localhost/");
 
     this.params = {};

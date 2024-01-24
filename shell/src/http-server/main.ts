@@ -55,6 +55,9 @@ export type HttpConfig = {
   httpsKeyFile?: string;
   httpsCertFile?: string;
 
+  startInMaintenanceMode?: boolean;
+  maintenanceRoute?: string;
+
   staticFileServer?: {
     path: string;
     extraContentTypes?: Record<string, string>;
@@ -88,6 +91,9 @@ export class HttpServer {
   private _keyFile?: string;
   private _certFile?: string;
 
+  private _maintenanceModeOn: boolean;
+  private _maintenanceRoute?: string;
+
   private _apiRouterList: Router[];
   private _defaultApiRouter: Router;
   private _ssrRouter: Router;
@@ -111,6 +117,14 @@ export class HttpServer {
     this._healthCheckBadResCode = config.healthcheckBadRes ?? 503;
 
     this._enableHttps = config.enableHttps ?? false;
+
+    this._maintenanceRoute = config.maintenanceRoute;
+    this._maintenanceModeOn = config.startInMaintenanceMode ?? false;
+
+    this._logger.startupMsg(
+      "Maintenance mode is set to (%j)",
+      this._maintenanceModeOn,
+    );
 
     this._socketMap = new Map();
     this._socketId = 0;
@@ -174,6 +188,13 @@ export class HttpServer {
 
   get ssrRouter(): Router {
     return this._ssrRouter;
+  }
+
+  // Setter methods here
+  set maintenanceModeOn(on: boolean) {
+    this._maintenanceModeOn = on;
+
+    this._logger.info("Maintenance mode set to (%j)", this._maintenanceModeOn);
   }
 
   // Private methods here
@@ -256,9 +277,23 @@ export class HttpServer {
     req: ServerRequest,
     res: ServerResponse,
   ): Promise<void> {
-    // We have to do this hear for now since the url will not be set until
-    // after this object it created
+    // Check if we are in maintenance mode
+    if (this._maintenanceModeOn && this._maintenanceRoute !== undefined) {
+      this._logger.trace(
+        "Maintenance mode on. Redirecting (%s) to (%s)",
+        req.url,
+        this._maintenanceRoute,
+      );
 
+      // This isn't very sexy and seems a little heavy handed but works a treat
+      // we just point the req to the maintenance route and pray the user set
+      // it up!
+      req.method = "GET";
+      req.url = this._maintenanceRoute;
+    }
+
+    // We have to do this here because the url will not be set until
+    // after this object it created: See req-res.ts
     // To avoid attempted path traversals resolve the path with "/" as the base
     // This will sort out ".."s, "."s and "//"s and ensure you can not end up
     // wit a path like "../secret-dir/secrets.txt"

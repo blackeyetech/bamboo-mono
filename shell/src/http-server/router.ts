@@ -419,6 +419,8 @@ export class Router {
     // Check if the user wants the default middlewares
     if (options.useDefaultMiddlewares) {
       // ... stick the default middlewares in first
+      // NOTE: Any middleware added to the defaults after this endpoint is
+      // added will not be used by this endpoint
       middlewareList = [...this._defaultMiddlewareList];
     }
 

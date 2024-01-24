@@ -1,5 +1,12 @@
 # @bs-core/shell
 
+## 1.16.6
+
+### Patch Changes
+
+- Added maintenance mode to HttpServer
+- Updated CORS middleware
+
 ## 1.16.5
 
 ### Patch Changes
