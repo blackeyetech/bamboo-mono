@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.5.0
+
+### Minor Changes
+
+- Now setting HTTP response status code
+
 ## 1.4.10
 
 ### Patch Changes

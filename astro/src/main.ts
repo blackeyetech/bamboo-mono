@@ -90,10 +90,18 @@ async function ssrEndpoint(
   // Now render the page
   let webRes = await _app.render(webReq, { routeData: req.matchedInfo });
 
+  // First check to see if the response has already been redirected
+  if (res.redirected) {
+    return;
+  }
+
+  // Make sure to get the status code
+  res.statusCode = webRes.status;
+
   // This is the easiest way to get the Response body
   res.body = await webRes.text();
 
-  // Check if Astro set any headers that we shold pass on
+  // Check if Astro set any headers that we should pass on
   for (let header of webRes.headers.entries()) {
     res.setHeader(header[0], header[1]);
   }
