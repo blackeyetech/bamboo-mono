@@ -17,3 +17,12 @@ GET http://127.0.0.1:8080/api/main-on
 ####
 
 GET http://127.0.0.1:8080/api/main
+
+####
+
+GET http://127.0.0.1:8080/api/all
+
+####
+
+GET  http://127.0.0.1:8080/api/all
+

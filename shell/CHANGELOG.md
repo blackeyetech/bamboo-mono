@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.7
+
+### Patch Changes
+
+- Added catch all to HTTP Router endpoints with the new method all()
+
 ## 1.16.6
 
 ### Patch Changes

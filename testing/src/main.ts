@@ -252,6 +252,16 @@ async function init() {
     },
     { etag: true },
   );
+
+  bs.httpServer().endpoint(
+    "ALL",
+    "/all",
+    (req, res) => {
+      console.log(req.url);
+      res.body = "<p>All been served</p>";
+    },
+    { etag: true },
+  );
 }
 
 bs.setStopHandler(async () => {

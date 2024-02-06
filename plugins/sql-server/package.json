@@ -1,5 +1,5 @@
 {
-  "version": "1.2.7",
+  "version": "1.2.8",
   "name": "@bs-plugins/sql-server",
   "description": "Bamboo Shell plugin for SQL Server",
   "type": "module",
@@ -37,7 +37,7 @@
   "author": "Black Eye Technology",
   "license": "MIT",
   "dependencies": {
-    "mssql": "^10.0.1"
+    "mssql": "^10.0.2"
   },
   "devDependencies": {
     "@bs-core/shell": "workspace:^",

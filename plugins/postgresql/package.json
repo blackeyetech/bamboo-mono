@@ -1,5 +1,5 @@
 {
-  "version": "1.2.7",
+  "version": "1.2.8",
   "name": "@bs-plugins/postgresql",
   "description": "Bamboo Shell plugin for PostgreSQL",
   "type": "module",
@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@bs-core/shell": "workspace:^",
-    "@types/pg": "^8.10.9"
+    "@types/pg": "^8.11.0"
   },
   "peerDependencies": {
     "@bs-core/shell": "workspace:^"

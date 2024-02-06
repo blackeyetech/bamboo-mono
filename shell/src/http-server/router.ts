@@ -44,7 +44,14 @@ export type EndpointCallback = (
   res: ServerResponse,
 ) => Promise<void> | void;
 
-export type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
+export type Method =
+  | "ALL"
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "OPTIONS";
 
 export type Route = {
   get: (callback: EndpointCallback, endpointOptions?: EndpointOptions) => Route;
@@ -58,6 +65,7 @@ export type Route = {
   ) => Route;
   put: (callback: EndpointCallback, endpointOptions?: EndpointOptions) => Route;
   del: (callback: EndpointCallback, endpointOptions?: EndpointOptions) => Route;
+  all: (callback: EndpointCallback, endpointOptions?: EndpointOptions) => Route;
 };
 
 export type RouterNotFoundHandler = (
@@ -111,7 +119,9 @@ export class Router {
 
     this._logger = new Logger(`Router (${this._basePath})`);
 
+    // Initialise the method list manually
     this._methodListMap = {
+      ALL: [],
       GET: [],
       DELETE: [],
       PATCH: [],
@@ -129,27 +139,10 @@ export class Router {
   }
 
   // Private methods here
-  private findEndpoint(req: ServerRequest): MethodListElement | null {
-    let method = <Method>req.method;
-
-    // Check for a CORS Preflight request - yes there is middleware for this
-    // but this has to be checked here because we will not have a registered
-    // endpoint under OPTIONS
-    if (
-      req.method === "OPTIONS" &&
-      req.headers["access-control-request-method"] !== undefined
-    ) {
-      // Get the method this preflight request is checking for and use that
-      // to see there is an endpoint registered for it
-      method = <Method>req.headers["access-control-request-method"];
-    }
-
-    // First, make sure we have a list for the req method
-    let list = this._methodListMap[method];
-    if (list === undefined) {
-      return null;
-    }
-
+  private searchMethodElements(
+    req: ServerRequest,
+    list: MethodListElement[],
+  ): MethodListElement | null {
     let matchedEl: MethodListElement | null = null;
 
     // Next see if we have a registered callback for the HTTP req path
@@ -170,6 +163,33 @@ export class Router {
 
       // Stop looking
       break;
+    }
+
+    return matchedEl;
+  }
+
+  private findEndpoint(req: ServerRequest): MethodListElement | null {
+    let method = <Method>req.method;
+
+    // Check for a CORS Preflight request - yes there is middleware for this
+    // but this has to be checked here because we will not have a registered
+    // endpoint under OPTIONS
+    if (
+      req.method === "OPTIONS" &&
+      req.headers["access-control-request-method"] !== undefined
+    ) {
+      // Get the method this preflight request is checking for and use that
+      // to see there is an endpoint registered for it
+      method = <Method>req.headers["access-control-request-method"];
+    }
+
+    // First search for the routes in the req method list
+    let matchedEl = this.searchMethodElements(req, this._methodListMap[method]);
+
+    if (matchedEl === null) {
+      // If we are here that means we did not find a callback for the req path
+      // and we should check for a fallback callback
+      matchedEl = this.searchMethodElements(req, this._methodListMap["ALL"]);
     }
 
     return matchedEl;
@@ -495,6 +515,15 @@ export class Router {
     return this;
   }
 
+  all(
+    path: string,
+    callback: EndpointCallback,
+    endpointOptions: EndpointOptions = {},
+  ): Router {
+    this.endpoint("ALL", path, callback, endpointOptions);
+    return this;
+  }
+
   route(path: string): Route {
     let server = this;
 
@@ -536,6 +565,14 @@ export class Router {
         endpointOptions: EndpointOptions = {},
       ): Route {
         server.endpoint("DELETE", path, callback, endpointOptions);
+        return server.route(path);
+      },
+
+      all(
+        callback: EndpointCallback,
+        endpointOptions: EndpointOptions = {},
+      ): Route {
+        server.endpoint("ALL", path, callback, endpointOptions);
         return server.route(path);
       },
     };
