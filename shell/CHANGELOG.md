@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.9
+
+### Patch Changes
+
+- Added check to ensure "Content-Length" is not set if "Transfer-Encoding" is set to "chunked"
+
 ## 1.16.8
 
 ### Patch Changes

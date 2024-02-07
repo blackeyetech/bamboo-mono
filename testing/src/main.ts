@@ -266,7 +266,7 @@ async function init() {
   let newRouter = bs.httpServer().addRouter("/all");
   newRouter.endpoint(
     "ALL",
-    "/",
+    "",
     (req, res) => {
       console.log(req.url);
       res.body = "<p>Ya'll been served</p>";

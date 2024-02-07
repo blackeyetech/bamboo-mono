@@ -305,8 +305,18 @@ export class Router {
       }
     }
 
-    // Only set the length when we don't do a 304
-    res.setHeader("Content-Length", Buffer.byteLength(body));
+    // Only set the length when we don't do a 304, BUT
+    // We cant have a "Content-Length" and "Transfer-Encoding" of "chunked" at
+    // the same time so make sure "Transfer-Encoding" is set to "chunked"
+    const transEncoding = <string | undefined>(
+      res.getHeader("Transfer-Encoding")
+    );
+    if (
+      transEncoding === undefined ||
+      transEncoding.toLowerCase() !== "chunked"
+    ) {
+      res.setHeader("Content-Length", Buffer.byteLength(body));
+    }
 
     // Don't forget to set the server-timing header after we do everything else
     res.setServerTimingHeader();

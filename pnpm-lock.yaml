@@ -142,6 +142,12 @@ importers:
       "@bs-plugins/template":
         specifier: workspace:^
         version: link:../plugins/template
+      "@types/http-proxy":
+        specifier: ^1.17.14
+        version: 1.17.14
+      http-proxy:
+        specifier: ^1.18.1
+        version: 1.18.1
 
 packages:
   /@ampproject/remapping@2.2.1:
@@ -1856,6 +1862,15 @@ packages:
       "@types/unist": 3.0.2
     dev: true
 
+  /@types/http-proxy@1.17.14:
+    resolution:
+      {
+        integrity: sha512-SSrD0c1OQzlFX7pGu1eXxSEjemej64aaNPRhhVYUGqXh0BtldAAx37MG8btcumvpgKyZp1F5Gn3JkktdxiFv6w==,
+      }
+    dependencies:
+      "@types/node": 18.19.14
+    dev: false
+
   /@types/ldapjs@2.2.5:
     resolution:
       {
@@ -1922,7 +1937,6 @@ packages:
       }
     dependencies:
       undici-types: 5.26.5
-    dev: true
 
   /@types/node@20.11.16:
     resolution:
@@ -1971,7 +1985,7 @@ packages:
         integrity: sha512-KHPsfX/FoVbUGbyYvk1q9MMQHLPeRZhRJZdO45Q4YjvFkv4hMNghCWTvy7rdKessBsmtz4euWCWAB6/tVpI1Iw==,
       }
     dependencies:
-      "@types/node": 20.11.16
+      "@types/node": 18.19.14
     dev: true
 
   /@types/unist@2.0.10:
@@ -3506,6 +3520,13 @@ packages:
     engines: { node: ">=6" }
     dev: false
 
+  /eventemitter3@4.0.7:
+    resolution:
+      {
+        integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==,
+      }
+    dev: false
+
   /eventemitter3@5.0.1:
     resolution:
       {
@@ -3692,6 +3713,19 @@ packages:
       }
     engines: { node: ">=8" }
     dev: true
+
+  /follow-redirects@1.15.5:
+    resolution:
+      {
+        integrity: sha512-vSFWUON1B+yAw1VN4xMfxgn5fTUiaOzAJCKBwIIgT/+7CuGy9+r+5gITvP62j3RmaD5Ph65UaERdOSRGUzZtgw==,
+      }
+    engines: { node: ">=4.0" }
+    peerDependencies:
+      debug: "*"
+    peerDependenciesMeta:
+      debug:
+        optional: true
+    dev: false
 
   /for-each@0.3.3:
     resolution:
@@ -4173,6 +4207,20 @@ packages:
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /http-proxy@1.18.1:
+    resolution:
+      {
+        integrity: sha512-7mz/721AbnJwIVbnaSv1Cz3Am0ZLT/UBwkC92VlxhXv/k/BBQfM2fXElQNC27BVGr0uwUpplYPQM9LnaBMR5NQ==,
+      }
+    engines: { node: ">=8.0.0" }
+    dependencies:
+      eventemitter3: 4.0.7
+      follow-redirects: 1.15.5
+      requires-port: 1.0.0
+    transitivePeerDependencies:
+      - debug
     dev: false
 
   /https-proxy-agent@5.0.1:
@@ -6842,6 +6890,13 @@ packages:
       }
     dev: true
 
+  /requires-port@1.0.0:
+    resolution:
+      {
+        integrity: sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==,
+      }
+    dev: false
+
   /resolve-from@5.0.0:
     resolution:
       {
@@ -8020,7 +8075,6 @@ packages:
       {
         integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==,
       }
-    dev: true
 
   /unherit@3.0.1:
     resolution:

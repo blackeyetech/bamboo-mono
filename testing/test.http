@@ -24,5 +24,5 @@ GET http://127.0.0.1:8080/api/all
 
 ####
 
-GET  http://127.0.0.1:8080/all
+GET  http://127.0.0.1:9000/appman/
 
