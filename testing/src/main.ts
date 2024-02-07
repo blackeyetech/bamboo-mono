@@ -262,6 +262,24 @@ async function init() {
     },
     { etag: true },
   );
+
+  let newRouter = bs.httpServer().addRouter("/all");
+  newRouter.endpoint(
+    "ALL",
+    "/",
+    (req, res) => {
+      console.log(req.url);
+      res.body = "<p>Ya'll been served</p>";
+    },
+    {
+      etag: true,
+      generateMatcher: (_: string) => {
+        return (url: URL) => {
+          return { matchedInfo: url.pathname, params: {} };
+        };
+      },
+    },
+  );
 }
 
 bs.setStopHandler(async () => {

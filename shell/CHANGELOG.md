@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.8
+
+### Patch Changes
+
+- Minor change to how the HttpSever matches against a router
+
 ## 1.16.7
 
 ### Patch Changes

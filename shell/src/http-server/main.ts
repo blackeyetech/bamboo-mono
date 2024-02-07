@@ -304,8 +304,11 @@ export class HttpServer {
     this._logger.trace("Received (%s) req for (%s)", req.method, url);
 
     // Look for a router with a basePath that matches the start of the req path
-    let pathname = req.urlObj.pathname;
-    let router = this._apiRouterList.find((el) => el.inPath(pathname));
+    // NOTE: Make sure to delimit the pathname in case it is a match for
+    // the root of the basepath
+    let router = this._apiRouterList.find((el) =>
+      el.inPath(`${req.urlObj.pathname}/`),
+    );
 
     // Try and handle the request (if router exists)
     if ((await router?.handleReq(req, res)) === true) {
