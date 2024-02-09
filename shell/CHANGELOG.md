@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.10
+
+### Patch Changes
+
+- Fixed windows issue with routes and you can now specify an IP address for an interface
+
 ## 1.16.9
 
 ### Patch Changes

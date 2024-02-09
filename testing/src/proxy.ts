@@ -13,7 +13,7 @@ router.all(
     // We have to return a Promise because
     return new Promise((resolve, reject) => {
       const proxy = HttpProxy.default.createProxyServer({
-        target: "http://127.0.0.1:9001",
+        target: "http://127.0.0.1:8080",
         selfHandleResponse: true,
       });
 
@@ -46,6 +46,7 @@ router.all(
             }
 
             serverRes.body = body;
+            serverRes.statusCode = proxyRes.statusCode as number;
 
             resolve();
           });

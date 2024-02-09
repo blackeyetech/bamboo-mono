@@ -27,7 +27,6 @@ import * as https from "node:https";
 import * as os from "node:os";
 import * as fs from "node:fs";
 import * as net from "node:net";
-import * as path from "node:path";
 
 // Types here
 export type HealthcheckCallback = () => Promise<boolean>;
@@ -199,6 +198,14 @@ export class HttpServer {
 
   // Private methods here
   private findInterfaceIp(networkInterface: string): string | null {
+    const ipv4Regex =
+      /^(25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})(\.(25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})){3}$/;
+
+    if (ipv4Regex.test(networkInterface)) {
+      this._logger.startupMsg(`Using provided IP (${networkInterface})`);
+      return networkInterface;
+    }
+
     this._logger.startupMsg(`Finding IP for interface (${networkInterface})`);
 
     let ifaces = os.networkInterfaces();
@@ -294,14 +301,17 @@ export class HttpServer {
 
     // We have to do this here because the url will not be set until
     // after this object it created: See req-res.ts
-    // To avoid attempted path traversals resolve the path with "/" as the base
-    // This will sort out ".."s, "."s and "//"s and ensure you can not end up
-    // wit a path like "../secret-dir/secrets.txt"
-    let url = path.resolve("/", req.url as string);
     let protocol = this._enableHttps ? "https" : "http";
-    req.urlObj = new URL(url, `${protocol}://${req.headers.host}`);
+    req.urlObj = new URL(
+      req.url as string,
+      `${protocol}://${req.headers.host}`,
+    );
 
-    this._logger.trace("Received (%s) req for (%s)", req.method, url);
+    this._logger.trace(
+      "Received (%s) req for (%s)",
+      req.method,
+      req.urlObj.pathname,
+    );
 
     // Look for a router with a basePath that matches the start of the req path
     // NOTE: Make sure to delimit the pathname in case it is a match for

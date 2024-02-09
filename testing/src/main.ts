@@ -20,11 +20,11 @@ async function init() {
   bs.addPlugin("t3", Jira, jOptions);
   bs.addPlugin("t4", Template);
 
-  let httpMan1 = await bs.addHttpServer("lo", 8080, {
+  let httpMan1 = await bs.addHttpServer("127.0.0.1", 8080, {
     //healthcheckPath: "/",
     // defaultRouterBasePath: "/",
     staticFileServer: {
-      path: "/home/parallels/dev/src/test/frontend/bootstrap3",
+      path: "/home/parallels/dev/src/urlbase",
       immutableRegExp: /^.+\.min\.[a-zA-Z0-9-]+$/,
     },
     startInMaintenanceMode: false,
