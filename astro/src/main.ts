@@ -9,6 +9,7 @@ import {
 
 import type { AstroIntegration, SSRManifest } from "astro";
 import { App } from "astro/app";
+import { pathToFileURL } from "url";
 
 // Misc consts here
 const ADAPTER_NAME = "@bs-core/astro";
@@ -197,7 +198,7 @@ export const start = async (
   // middleware for the SSR endpoint
   if (options.setupEntryPoint !== undefined) {
     // NOTE: We expect an exported function named "setup"
-    let { setup } = await import(options.setupEntryPoint);
+    let { setup } = await import(pathToFileURL(options.setupEntryPoint).href);
     await setup();
   }
 

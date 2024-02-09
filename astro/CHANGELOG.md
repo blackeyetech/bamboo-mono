@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.5.4
+
+### Patch Changes
+
+- Can't dynamic imports to use pathToFileUrl()
+
 ## 1.5.3
 
 ### Patch Changes
