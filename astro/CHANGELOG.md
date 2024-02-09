@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.6.0
+
+### Minor Changes
+
+- Default interface is now 127.0.0.1 instead of "lo" to make it compatible with windows
+
 ## 1.5.5
 
 ### Patch Changes

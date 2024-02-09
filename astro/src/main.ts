@@ -182,7 +182,7 @@ export const start = async (
     httpConfig.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
   }
 
-  let networkIf = bs.getConfigStr(HTTP_IF, "lo");
+  let networkIf = bs.getConfigStr(HTTP_IF, "127.0.0.1");
   let networkPort = bs.getConfigNum(HTTP_PORT, 8080);
 
   // Create the HTTP server
