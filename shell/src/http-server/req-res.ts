@@ -24,6 +24,24 @@ export class HttpError {
   ) {}
 }
 
+export type HttpRedirectStatusCode =
+  | 301
+  | 302
+  | 303
+  | 304
+  | 305
+  | 306
+  | 307
+  | 308;
+
+export class HttpRedirect {
+  constructor(
+    public statusCode: HttpRedirectStatusCode = 302,
+    public location: string,
+    public message: string = "",
+  ) {}
+}
+
 export class ServerResponse extends http.ServerResponse {
   // Properties here
   private _receiveTime: number;
@@ -52,7 +70,8 @@ export class ServerResponse extends http.ServerResponse {
   // Public functions here
   redirect(
     location: string,
-    statusCode: 300 | 301 | 302 | 303 | 304 | 305 | 306 | 307 | 308 = 301,
+    statusCode: HttpRedirectStatusCode = 302,
+    message: string = "",
   ) {
     this._redirected = true;
 
@@ -61,12 +80,16 @@ export class ServerResponse extends http.ServerResponse {
 
     this.setServerTimingHeader();
 
+    let htmlMessage = `Redirected to <a href="${location}">here</a>`;
+    if (message.length) {
+      htmlMessage = message;
+    }
+
     // Write a little something something for good measure
     let body = `
     <html>
       <body>
-        <p>Redirected to <a href="${location}">here</a>
-        </p>
+        <p>${htmlMessage}</p>
       </body>
     </html>`;
     this.setHeader("Content-Type", "text/html; charset=utf-8");

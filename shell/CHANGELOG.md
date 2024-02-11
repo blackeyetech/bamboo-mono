@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.11
+
+### Patch Changes
+
+- Added HttpRedirect class
+
 ## 1.16.10
 
 ### Patch Changes

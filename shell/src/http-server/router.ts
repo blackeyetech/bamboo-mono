@@ -2,7 +2,12 @@
 import { Logger } from "../logger.js";
 
 import { SseServer, SseServerOptions } from "./sse-server.js";
-import { ServerRequest, ServerResponse, HttpError } from "./req-res.js";
+import {
+  ServerRequest,
+  ServerResponse,
+  HttpError,
+  HttpRedirect,
+} from "./req-res.js";
 import {
   Middleware,
   ExpressMiddleware,
@@ -352,6 +357,12 @@ export class Router {
       matchedEl.middlewareList,
     ).catch((e) => {
       let message: string;
+
+      // If a redirect call res.redirect() and get out of the error handler
+      if (e instanceof HttpRedirect) {
+        res.redirect(e.location, e.statusCode, e.message);
+        return;
+      }
 
       // If it is a HttpError assume the error message has already been logged
       if (e instanceof HttpError) {

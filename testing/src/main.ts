@@ -6,6 +6,7 @@ import {
   Middleware,
   EndpointCallback,
   HttpError,
+  HttpRedirect,
   Router,
 } from "@bs-core/shell";
 
@@ -179,9 +180,28 @@ async function init() {
   );
 
   bs.httpServer().get(
-    "/redirect",
+    "/redirect1",
     async (_, res) => {
-      res.redirect("/somewhere/over/the/rainbow");
+      res.redirect(
+        "/somewhere/over/the/rainbow",
+        302,
+        "Hey, you, get off of my cloud!",
+      );
+    },
+    { useDefaultMiddlewares: false },
+  );
+
+  bs.httpServer().get(
+    "/redirect2",
+    async (_, _2) => {
+      throw new HttpRedirect(302, "/somewhere/different");
+    },
+    { useDefaultMiddlewares: false },
+  );
+  bs.httpServer().get(
+    "/no-redirect",
+    async (_, _2) => {
+      throw new HttpError(404, "no redirect");
     },
     { useDefaultMiddlewares: false },
   );

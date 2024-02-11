@@ -22,7 +22,17 @@ GET http://127.0.0.1:8080/api/main
 
 GET http://127.0.0.1:8080/api/all
 
-####
 
-GET  http://127.0.0.1:9000/appman/
+####
+# @no-redirect
+GET  http://127.0.0.1:8080/api/redirect1
+
+####
+# @no-redirect
+GET  http://127.0.0.1:8080/api/redirect2
+
+
+####
+# @no-redirect
+GET  http://127.0.0.1:8080/api/no-redirect
 

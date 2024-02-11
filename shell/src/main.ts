@@ -13,6 +13,7 @@ export {
   ServerRequest,
   ServerResponse,
   HttpError,
+  HttpRedirect,
   Cookie,
 } from "./http-server/req-res.js";
 export {
