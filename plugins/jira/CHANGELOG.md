@@ -1,5 +1,13 @@
 # @bs-plugins/jira
 
+## 1.2.14
+
+### Patch Changes
+
+- Removed terser and sourceMaps from shell, astro and all plugins
+- Updated dependencies
+  - @bs-core/shell@1.16.12
+
 ## 1.2.13
 
 ### Patch Changes

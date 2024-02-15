@@ -3,8 +3,6 @@ import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import replace from "@rollup/plugin-replace";
 import dts from "rollup-plugin-dts";
-import sourcemaps from "rollup-plugin-sourcemaps";
-import terser from "@rollup/plugin-terser";
 
 import { createRequire } from "node:module";
 
@@ -26,7 +24,6 @@ let plugins = [
   commonjs(),
   resolve({ preferBuiltins: true }),
   json(),
-  sourcemaps(),
 ];
 
 export default [
@@ -37,7 +34,7 @@ export default [
       format: "es",
       sourcemap: true,
     },
-    plugins: NODE_ENV === "development" ? plugins : [...plugins, terser()],
+    plugins,
     external: ["pg-native", "@bs-core/shell"],
   },
   {

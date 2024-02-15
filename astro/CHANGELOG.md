@@ -1,5 +1,13 @@
 # @bs-core/astro
 
+## 1.6.2
+
+### Patch Changes
+
+- Removed terser and sourceMaps from shell, astro and all plugins
+- Updated dependencies
+  - @bs-core/shell@1.16.12
+
 ## 1.6.1
 
 ### Patch Changes
