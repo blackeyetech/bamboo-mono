@@ -37,7 +37,7 @@ export default [
       format: "es",
       sourcemap: true,
     },
-    plugins: NODE_ENV === "development" ? plugins : [...plugins, terser()],
+    plugins: plugins,
     external: ["@bs-core/shell"],
   },
   {

@@ -1,5 +1,12 @@
 # testing
 
+## 0.1.16
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-plugins/jira@1.2.13
+
 ## 0.1.15
 
 ### Patch Changes
