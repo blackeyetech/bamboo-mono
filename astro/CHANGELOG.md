@@ -1,5 +1,13 @@
 # @bs-core/astro
 
+## 1.6.3
+
+### Patch Changes
+
+- Added signed-double-submit-cookie CSRF check to csrf middleware
+- Updated dependencies
+  - @bs-core/shell@1.16.13
+
 ## 1.6.2
 
 ### Patch Changes

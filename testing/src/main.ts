@@ -171,12 +171,21 @@ async function init() {
   //     throw new HttpError(500, "del endpoint error help me!");
   //   });
 
-  bs.httpServer().get(
+  bs.httpServer().post(
     "/test",
     async (_, res) => {
-      res.body = "";
+      res.body = "Happy Days";
     },
-    { useDefaultMiddlewares: false },
+    {
+      useDefaultMiddlewares: false,
+      middlewareList: [
+        Router.csrf({
+          checkType: "signed-double-submit-cookie",
+          secret: "secret",
+          methods: ["GET", "POST", "PUT", "DELETE"],
+        }),
+      ],
+    },
   );
 
   bs.httpServer().get(

@@ -201,18 +201,18 @@ export class ServerRequest extends http.IncomingMessage {
     for (let cookie of cookies) {
       // Split the cookie up into a key value pair
       // NOTE: key/value is separated by an equals sign and has leading spaces
-      let parts = cookie.trim().split("=");
+      let [name, value] = cookie.trim().split("=");
 
       // Make sure it was a validly formatted cookie
-      if (parts.length !== 2) {
+      if (value === undefined) {
         // It is not a valid cookie so skip it
         continue;
       }
 
       // Check if we found the cookie
-      if (parts[0] === cookieName) {
+      if (name === cookieName) {
         // Return the cookie value
-        return parts[1];
+        return value;
       }
     }
 

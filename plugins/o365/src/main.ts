@@ -31,7 +31,7 @@ type MessageAttachment = {
 };
 
 // Misc consts here
-const EMAIL_REF_GUID = `String {a75e89ac-9033-49c0-a4fc-52d83c8468ac} Name app-sh-o365-ref-code`;
+const EMAIL_REF_GUID = `String {a75e89ac-9033-49c0-a4fc-52d83c8468ac} Name bamboo-sh-o365-ref-code`;
 
 // O365 class here
 export class O365 extends BSPlugin {

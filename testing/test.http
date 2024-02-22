@@ -36,3 +36,8 @@ GET  http://127.0.0.1:8080/api/redirect2
 # @no-redirect
 GET  http://127.0.0.1:8080/api/no-redirect
 
+####
+
+POST http://127.0.0.1:8080/api/test
+x-csrf-header: xxx.313dcf4df7c164e99e07e790d70adf2d3638796dd25945a8d3084d7c54834c53
+Cookie: x-csrf-cookie=xxx.313dcf4df7c164e99e07e790d70adf2d3638796dd25945a8d3084d7c54834c53

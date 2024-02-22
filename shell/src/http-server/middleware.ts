@@ -2,6 +2,7 @@
 import { HttpError, ServerRequest, ServerResponse } from "./req-res.js";
 
 import * as http from "node:http";
+import * as crypto from "node:crypto";
 
 export type Middleware = (
   req: ServerRequest,
@@ -19,13 +20,13 @@ export type ExpressMiddleware = (
   next: (e?: any) => void,
 ) => void;
 
-export type CorsMethods = "GET" | "PUT" | "POST" | "DELETE" | "PATCH";
+export type MiddlewareMethods = "GET" | "PUT" | "POST" | "DELETE" | "PATCH";
 
 export type CorsOptions = {
   // Origins allowed
   originsAllowed?: "*" | string[];
   // Methods allowed
-  methodsAllowed?: "*" | CorsMethods[];
+  methodsAllowed?: "*" | MiddlewareMethods[];
   // Headers allowed by the browser to be sent on the req
   headersAllowed?: "*" | string[];
   // Headers that the browser can expose on the res
@@ -37,9 +38,16 @@ export type CorsOptions = {
 };
 
 export type CsrfChecksOptions = {
-  checkType?: "custom-req-header" | "naive-double-submit-cookie";
+  methods?: MiddlewareMethods[];
+  checkType?:
+    | "custom-req-header"
+    | "naive-double-submit-cookie"
+    | "signed-double-submit-cookie";
   header?: string;
   cookie?: string;
+  secret?: string;
+  hashAlgo?: string;
+  signatureSeparator?: string;
 };
 
 export type SecurityHeadersOptions = {
@@ -211,7 +219,7 @@ export const corsMiddleware = (options: CorsOptions = {}): Middleware => {
       // We know this header exists otherwise we couldn't have gotten here
       let reqMethod = req.headers[
         "access-control-request-method"
-      ] as CorsMethods;
+      ] as MiddlewareMethods;
 
       if (opts.methodsAllowed === "*") {
         res.setHeader("Access-Control-Allow-Methods", "*");
@@ -308,22 +316,73 @@ export const csrfChecksMiddleware = (
   options: CsrfChecksOptions = {},
 ): Middleware => {
   let opts: Required<CsrfChecksOptions> = {
+    methods: options.methods ?? ["POST", "PUT", "PATCH", "DELETE"],
     checkType: options.checkType ?? "custom-req-header",
     header: options.header ?? "x-csrf-header",
-    cookie: options.cookie ?? "csrf-token",
+    cookie: options.cookie ?? "x-csrf-cookie",
+    secret: options.secret ?? "",
+    hashAlgo: options.hashAlgo ?? "sha256",
+    signatureSeparator: options.signatureSeparator ?? ".",
   };
 
   // Need to make sure the header we check for is always lower case
   opts.header = opts.header.toLowerCase();
 
   // If this is "naive-double-submit-cookie" check the cookie is supplied
-  if (opts.checkType === "naive-double-submit-cookie") {
-    if (opts.cookie === undefined) {
+  if (opts.checkType === "signed-double-submit-cookie") {
+    if (opts.secret.length === 0) {
       throw new Error(
-        "Must set cookie to use the 'naive-double-submit-cookie' csrf check",
+        "Must set secret to use the 'signed-double-submit-cookie' CSRF check middleware",
       );
     }
   }
+
+  let custReqHeader = (req: ServerRequest) => {
+    // The custom-req-header check just ensures that the specified
+    // header exists - the value is not important
+    if (req.headers[opts.header] === undefined) {
+      return false;
+    }
+
+    return true;
+  };
+
+  let naiveDoubleSubmitCookie = (req: ServerRequest) => {
+    // The naive-double-submit-cookie check ensures the value of the
+    // specified cookie matches the value of the specified header
+    let cookie = req.getCookie(opts.cookie as string);
+
+    // Note if cookie doesn't exist value is null and if headers doesn't exist
+    // it is undefined
+    if (req.headers[opts.header] !== cookie) {
+      return false;
+    }
+
+    return true;
+  };
+
+  let signedDoubleSubmitCookie = (req: ServerRequest) => {
+    // The signed-double-submit-cookie check ensures the value of the
+    // specified cookie matches the value of the specified header
+    let cookie = req.getCookie(opts.cookie as string);
+
+    // Note if cookie doesn't exist value is null and if headers doesn't exist
+    // it is undefined
+    if (req.headers[opts.header] !== cookie) {
+      return false;
+    }
+
+    let [token, hash] = cookie.split(opts.signatureSeparator);
+
+    if (
+      hash !==
+      crypto.createHmac(opts.hashAlgo, opts.secret).update(token).digest("hex")
+    ) {
+      return false;
+    }
+
+    return true;
+  };
 
   // Because we need to pass in the options we will return the
   // middleware, i.e. you need to call this function
@@ -332,28 +391,24 @@ export const csrfChecksMiddleware = (
     res: ServerResponse,
     next: () => Promise<void>,
   ): Promise<void> => {
-    let failed = false;
+    // Make sure the method is one of the ones we want to check
+    if (opts.methods.includes(req.method as MiddlewareMethods)) {
+      let passed = false;
 
-    if (opts.checkType === "custom-req-header") {
-      // The custom-req-header check just ensures that the specified
-      // header exists - the value is not important
-      if (req.headers[opts.header] === undefined) {
-        failed = true;
+      if (opts.checkType === "custom-req-header") {
+        passed = custReqHeader(req);
+      } else if (opts.checkType === "naive-double-submit-cookie") {
+        passed = naiveDoubleSubmitCookie(req);
+      } else {
+        passed = signedDoubleSubmitCookie(req);
       }
-    } else {
-      // The naive-double-submit-cookie check ensures the value of the
-      // specified cookie matches the value of the specified header
-      let value = req.getCookie(opts.cookie as string);
-      if (req.headers[opts.header] !== value) {
-        failed = true;
-      }
-    }
 
-    // If the CSRF check failed then DO NOT continue down the stack
-    if (failed) {
-      res.statusCode = 401;
-      res.write("The request failed the CSRF check");
-      return;
+      // If the CSRF check failed then DO NOT continue down the stack
+      if (passed === false) {
+        res.statusCode = 401;
+        res.write("The request failed the CSRF check");
+        return;
+      }
     }
 
     await next();

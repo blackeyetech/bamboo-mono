@@ -1,5 +1,15 @@
 # testing
 
+## 0.1.18
+
+### Patch Changes
+
+- Added signed-double-submit-cookie CSRF check to csrf middleware
+- Updated dependencies
+  - @bs-core/shell@1.16.13
+  - @bs-plugins/jira@1.2.15
+  - @bs-plugins/template@0.2.14
+
 ## 0.1.17
 
 ### Patch Changes
