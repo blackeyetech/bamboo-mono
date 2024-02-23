@@ -102,6 +102,15 @@ export class ServerResponse extends http.ServerResponse {
   setCookies = (cookies: Cookie[]): void => {
     let setCookiesValue: string[] = [];
 
+    // Check for exiting cookies and add them to the setCookiesValue array
+    let existing = this.getHeader("Set-Cookie");
+
+    if (typeof existing === "string") {
+      setCookiesValue.push(existing);
+    } else if (Array.isArray(existing)) {
+      setCookiesValue = existing;
+    }
+
     // Loop through each cookie and build the cookie values
     for (let cookie of cookies) {
       // Set the cookie value first

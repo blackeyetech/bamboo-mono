@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.14
+
+### Patch Changes
+
+- Fixed issue where you could not call setCookie() multiple times
+
 ## 1.16.13
 
 ### Patch Changes

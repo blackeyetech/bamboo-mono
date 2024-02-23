@@ -54,12 +54,16 @@ async function init() {
   bs.save("hs", httpMan1);
 
   bs.httpServer().endpoint(
-    "PUT",
+    "GET",
     "/test/:id",
     (req, res) => {
       bs.info(req.body);
       bs.info("%j", req.json);
       res.json = { hello: req.params["id"] };
+
+      res.setCookies([{ name: "test1", value: "test" }]);
+      res.setCookies([{ name: "test2", value: "test" }]);
+      res.setCookies([{ name: "test3", value: "test" }]);
     },
 
     {
