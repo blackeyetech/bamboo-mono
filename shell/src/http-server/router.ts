@@ -190,12 +190,19 @@ export class Router {
       method = <Method>req.headers["access-control-request-method"];
     }
 
+    // If the method is HEAD then check the GET method map
     if (req.method === "HEAD") {
       method = "GET";
     }
 
+    // Make sure we don't have some odd method we never heard about
+    let list = this._methodListMap[method];
+    if (list === undefined) {
+      return null;
+    }
+
     // First search for the routes in the req method list
-    let matchedEl = this.searchMethodElements(req, this._methodListMap[method]);
+    let matchedEl = this.searchMethodElements(req, list);
 
     if (matchedEl === null) {
       // If we are here that means we did not find a callback for the req path
