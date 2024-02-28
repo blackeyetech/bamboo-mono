@@ -56,7 +56,8 @@ export type Method =
   | "PUT"
   | "PATCH"
   | "DELETE"
-  | "OPTIONS";
+  | "OPTIONS"
+  | "HEAD";
 
 export type Route = {
   get: (callback: EndpointCallback, endpointOptions?: EndpointOptions) => Route;
@@ -133,6 +134,7 @@ export class Router {
       POST: [],
       PUT: [],
       OPTIONS: [],
+      HEAD: [],
     };
 
     this._defaultMiddlewareList = [];
@@ -186,6 +188,10 @@ export class Router {
       // Get the method this preflight request is checking for and use that
       // to see there is an endpoint registered for it
       method = <Method>req.headers["access-control-request-method"];
+    }
+
+    if (req.method === "HEAD") {
+      method = "GET";
     }
 
     // First search for the routes in the req method list
@@ -326,7 +332,11 @@ export class Router {
     // Don't forget to set the server-timing header after we do everything else
     res.setServerTimingHeader();
 
-    res.write(body);
+    // Check if this was a HEAD method - if so we don't want to write the body
+    if (req.method !== "HEAD") {
+      res.write(body);
+    }
+
     res.end();
   }
 

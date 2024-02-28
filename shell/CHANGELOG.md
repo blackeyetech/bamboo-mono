@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.15
+
+### Patch Changes
+
+- Now handling HEAD method
+
 ## 1.16.14
 
 ### Patch Changes
