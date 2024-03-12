@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.17
+
+### Patch Changes
+
+- Added memory cahcing and compress to static file server
+
 ## 1.16.16
 
 ### Patch Changes

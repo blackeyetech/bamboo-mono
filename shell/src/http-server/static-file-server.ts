@@ -8,6 +8,8 @@ import * as fsPromises from "node:fs/promises";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import * as streams from "node:stream/promises";
+import * as stream from "node:stream";
+import * as zlib from "node:zlib";
 
 // Types here
 type FileDetails = {
@@ -16,9 +18,11 @@ type FileDetails = {
   lastModifiedNoMs: number;
   lastModifiedMs: number;
   lastModifiedUtcStr: string;
-  etag: string;
+  eTag: string;
   fullPath: string;
   immutable: boolean;
+  fileBuffer: Buffer;
+  compressedBuffer: Buffer;
 };
 
 export type StaticNotFoundHandler = (
@@ -146,9 +150,12 @@ export class StaticFileServer {
     return `text/plain; ${this._defaultCharSet}`;
   }
 
-  private async calculateEtag(file: string): Promise<string | null> {
+  private async calculateEtag(
+    fileBuffer: Buffer,
+    fileName: string,
+  ): Promise<string | null> {
     // MD5 hash the file contents to calculate the etag
-    let contents = fs.createReadStream(file);
+    let contents = stream.Readable.from(fileBuffer);
     let hash = crypto.createHash("sha1");
 
     // Flag to check if we successfully pipe the file to the hash
@@ -157,7 +164,7 @@ export class StaticFileServer {
     await streams.pipeline(contents, hash).catch((e) => {
       this._logger.trace(
         "Error attempting to create etag for file (%s) (%s): ",
-        file,
+        fileName,
         e,
       );
 
@@ -200,8 +207,10 @@ export class StaticFileServer {
     // UTC string which means we get a mismatch checking "If-Modified-Since"
     const modTimeNoMs = Math.trunc(modTimeMs / 1000) * 1000;
 
-    let etag = await this.calculateEtag(fullPath);
-    if (etag === null) {
+    let fileBuffer = fs.readFileSync(fullPath);
+
+    let eTag = await this.calculateEtag(fileBuffer, fullPath);
+    if (eTag === null) {
       // Couldn't calculate the etag so do nothing
       return false;
     }
@@ -217,17 +226,24 @@ export class StaticFileServer {
       lastModifiedNoMs: modTimeNoMs,
       lastModifiedMs: modTimeMs,
       lastModifiedUtcStr: new Date(modTimeNoMs).toUTCString(),
-      etag,
-      fullPath: fullPath,
+      eTag,
+      fullPath,
       immutable,
+      fileBuffer,
+      compressedBuffer: zlib.gzipSync(fileBuffer),
     };
 
     this._staticFileMap.set(urlPath, fileDetails);
 
     this._logger.trace(
-      "Added (%s) to file map. Details (%j)",
+      "Added (%s) to file map. Details: contentType (%s), size (%s), lastModifiedMs(%s), eTag (%s), fullPath (%s), immutable (%j)",
       urlPath,
-      fileDetails,
+      fileDetails.contentType,
+      fileDetails.size,
+      fileDetails.lastModifiedMs,
+      fileDetails.eTag,
+      fileDetails.fullPath,
+      fileDetails.immutable,
     );
 
     return true;
@@ -237,6 +253,7 @@ export class StaticFileServer {
     // Check for the details first. If it exists we want to use the stored full
     // path just in case file is s dir. It will save and extra stat!
     let details = this._staticFileMap.get(file);
+
     let fullPath =
       details?.fullPath ?? `${this._filePath}${file.replace(/\/*$/, "")}`;
 
@@ -253,7 +270,7 @@ export class StaticFileServer {
       return undefined;
     }
 
-    // Check if the file is a directory (shoould only happen the 1st time)
+    // Check if the file is a directory (should only happen the 1st time)
     if (stats.isDirectory()) {
       // This is a dir so set the file to be the default file for a dir
       fullPath += `/${this._defaultDirFile}`;
@@ -308,7 +325,7 @@ export class StaticFileServer {
 
     // All headers need to be set, except content-length, for a 304
     res.setHeader("Cache-Control", cacheControl);
-    res.setHeader("Etag", details.etag);
+    res.setHeader("Etag", details.eTag);
     res.setHeader("Last-Modified", details.lastModifiedUtcStr);
     res.setHeader("Date", new Date().toUTCString());
     res.setHeader("Content-Type", details.contentType);
@@ -317,7 +334,7 @@ export class StaticFileServer {
     res.setServerTimingHeader();
 
     // Check if any cache validators exist on the request - check etag first
-    if (req.headers["if-none-match"] === details.etag) {
+    if (req.headers["if-none-match"] === details.eTag) {
       res.statusCode = 304;
       res.end();
       return;
@@ -334,8 +351,23 @@ export class StaticFileServer {
       }
     }
 
-    // Only set the length when we don't do a 304
-    res.setHeader("Content-Length", details.size);
+    let fileRead: stream.Readable;
+
+    // Check out if the req will accept a gzip res
+    if (req.headers["accept-encoding"]?.includes("gzip") === true) {
+      // It does ...
+      fileRead = stream.Readable.from(details.compressedBuffer);
+
+      // Dont set the content-length. Use transfer-encoding instead
+      res.setHeader("Transfer-Encoding", "chunked");
+      res.setHeader("Content-Encoding", "gzip");
+    } else {
+      // It does not ...
+      fileRead = stream.Readable.from(details.fileBuffer);
+
+      // Only set the length when we don't do a 304
+      res.setHeader("Content-Length", details.size);
+    }
 
     // If it's a HEAD then do not set the body
     if (req.method === "HEAD") {
@@ -343,7 +375,6 @@ export class StaticFileServer {
       return;
     }
 
-    let fileRead = fs.createReadStream(details.fullPath);
     // NOTE: pipeline will close the res when it is finished
     await streams.pipeline(fileRead, res).catch((e) => {
       this._logger.trace("Error attempting to read (%s): (%s)", fileRead, e);

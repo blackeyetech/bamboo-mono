@@ -25,7 +25,7 @@ async function init() {
     //healthcheckPath: "/",
     // defaultRouterBasePath: "/",
     staticFileServer: {
-      path: "/home/parallels/dev/src/urlbase",
+      path: "/home/parallels/dev/src/urlbase/appman",
       immutableRegExp: /^.+\.min\.[a-zA-Z0-9-]+$/,
     },
     startInMaintenanceMode: false,
