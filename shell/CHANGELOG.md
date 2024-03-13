@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.16.18
+
+### Patch Changes
+
+- Added compression to Routers
+
 ## 1.16.17
 
 ### Patch Changes

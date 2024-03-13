@@ -4,7 +4,7 @@ GET http://127.0.0.1:8080/api/json2
 
 ####
 
-GET http://127.0.0.1:8080/../../api/json
+GET http://127.0.0.1:8080/../../api2/json
 
 ####
 

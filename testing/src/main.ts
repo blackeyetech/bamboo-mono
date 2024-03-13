@@ -219,12 +219,19 @@ async function init() {
     { useDefaultMiddlewares: false },
   );
 
-  bs.httpServer().endpoint(
+  let router = bs.httpServer().addRouter("/api2", { minCompressionSize: 1000 });
+
+  let arr: any[] = [];
+  for (let i = 0; i < 100000; i++) {
+    arr.push({ url: "json", el: i });
+  }
+  router.endpoint(
     "GET",
     "/json",
     (req, res) => {
       console.log(req.url);
-      res.json = { url: "json" };
+
+      res.json = arr;
     },
     { etag: false },
   );

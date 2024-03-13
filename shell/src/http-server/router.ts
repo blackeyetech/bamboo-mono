@@ -24,6 +24,7 @@ import {
 import * as PathToRegEx from "path-to-regexp";
 
 import * as crypto from "node:crypto";
+import * as zlib from "node:zlib";
 
 // Types here
 export type HealthcheckCallback = () => Promise<boolean>;
@@ -82,6 +83,8 @@ export type RouterNotFoundHandler = (
 export type RouterConfig = {
   useNotFoundHandler?: boolean;
   notFoundHandler?: RouterNotFoundHandler;
+
+  minCompressionSize?: number;
 };
 
 type MethodListElement = {
@@ -109,6 +112,7 @@ export class Router {
   private _basePath: string;
   private _useNotFoundHandler: boolean;
   private _notFoundHandler: RouterNotFoundHandler;
+  private _minCompressionSize: number;
 
   private _logger: Logger;
   private _methodListMap: Record<Method, MethodListElement[]>;
@@ -122,6 +126,7 @@ export class Router {
 
     this._useNotFoundHandler = config.useNotFoundHandler ?? true;
     this._notFoundHandler = config.notFoundHandler ?? defaultNotFoundHandler;
+    this._minCompressionSize = config.minCompressionSize ?? 1024;
 
     this._logger = new Logger(`Router (${this._basePath})`);
 
@@ -323,16 +328,22 @@ export class Router {
       }
     }
 
-    // Only set the length when we don't do a 304, BUT
-    // We cant have a "Content-Length" and "Transfer-Encoding" of "chunked" at
-    // the same time so make sure "Transfer-Encoding" is set to "chunked"
-    const transEncoding = <string | undefined>(
-      res.getHeader("Transfer-Encoding")
-    );
+    // Check out if the req will accept a gzip res AND the body is large enough
     if (
-      transEncoding === undefined ||
-      transEncoding.toLowerCase() !== "chunked"
+      req.headers["accept-encoding"]?.includes("gzip") === true &&
+      Buffer.byteLength(body) >= this._minCompressionSize
     ) {
+      // It does ...
+      // Compress the body
+      body = zlib.gzipSync(body);
+
+      // Dont set the content-length. Use transfer-encoding instead
+      res.setHeader("Transfer-Encoding", "chunked");
+      res.setHeader("Content-Encoding", "gzip");
+    } else {
+      // It does not ...
+
+      // Only set the length when we don't do a 304
       res.setHeader("Content-Length", Buffer.byteLength(body));
     }
 
