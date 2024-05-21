@@ -184,6 +184,8 @@ export class ServerRequest extends http.IncomingMessage {
 
   public matchedInfo: any;
 
+  public dontCompressResponse: boolean;
+
   // Constructor here
   constructor(socket: net.Socket) {
     super(socket);
@@ -194,6 +196,7 @@ export class ServerRequest extends http.IncomingMessage {
 
     this.params = {};
     this.middlewareProps = {};
+    this.dontCompressResponse = false;
   }
 
   getCookie = (cookieName: string): string | null => {

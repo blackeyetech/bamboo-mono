@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.17.0
+
+### Minor Changes
+
+- Addded dontCompressResponse() middleware
+
 ## 1.16.18
 
 ### Patch Changes

@@ -20,6 +20,7 @@ import {
   expressWrapper,
   csrfChecksMiddleware,
   securityHeadersMiddleware,
+  dontCompressResponse,
 } from "./middleware.js";
 import * as PathToRegEx from "path-to-regexp";
 
@@ -329,9 +330,11 @@ export class Router {
     }
 
     // Check out if the req will accept a gzip res AND the body is large enough
+    // AND compression is not turned off for this request
     if (
       req.headers["accept-encoding"]?.includes("gzip") === true &&
-      Buffer.byteLength(body) >= this._minCompressionSize
+      Buffer.byteLength(body) >= this._minCompressionSize &&
+      req.dontCompressResponse === false
     ) {
       // It does ...
       // Compress the body
@@ -651,5 +654,9 @@ export class Router {
 
   static expressWrapper(middleware: ExpressMiddleware): Middleware {
     return expressWrapper(middleware);
+  }
+
+  static dontCompressResponse(): Middleware {
+    return dontCompressResponse();
   }
 }

@@ -478,3 +478,16 @@ export const securityHeadersMiddleware = (
     await next();
   };
 };
+
+export const dontCompressResponse = (): Middleware => {
+  return async (
+    req: ServerRequest,
+    _: ServerResponse,
+    next: () => Promise<void>,
+  ): Promise<void> => {
+    // Flag the response should not be compressed
+    req.dontCompressResponse = true;
+
+    await next();
+  };
+};
