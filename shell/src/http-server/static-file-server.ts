@@ -2,6 +2,7 @@
 import { Logger } from "../logger.js";
 import { ServerRequest, ServerResponse } from "./req-res.js";
 import { contentTypes } from "./content-types.js";
+import { Router } from "./router.js";
 
 import * as fs from "node:fs";
 import * as fsPromises from "node:fs/promises";
@@ -40,6 +41,8 @@ export type StaticFileServerConfig = {
 
   defaultCharSet?: string;
   extraContentTypes?: Record<string, string>;
+
+  securityHeaders?: { name: string; value: string }[];
 };
 
 // Misc here
@@ -64,6 +67,8 @@ export class StaticFileServer {
   private _staticFileMap: Map<string, FileDetails>;
   private _contentTypes: Map<string, string>;
 
+  private _securityHeaders: { name: string; value: string }[];
+
   constructor(config: StaticFileServerConfig) {
     // Make sure there is no trailing slash at the end of the path
     this._logger = new Logger(config.loggerName);
@@ -87,6 +92,11 @@ export class StaticFileServer {
 
     this._staticFileMap = new Map();
     this._contentTypes = new Map();
+
+    // Get the standard sec headers and add the users specified headers as well
+    this._securityHeaders = Router.getSecHeaders({
+      headers: config.securityHeaders,
+    });
 
     // Populate contentTypes using the predefined types
     for (let type in contentTypes) {
@@ -332,6 +342,11 @@ export class StaticFileServer {
 
     // Don't forget to set the server-timing header
     res.setServerTimingHeader();
+
+    // Set all of the sec headers
+    for (const header of this._securityHeaders) {
+      res.setHeader(header.name, header.value);
+    }
 
     // Check if any cache validators exist on the request - check etag first
     if (req.headers["if-none-match"] === details.eTag) {

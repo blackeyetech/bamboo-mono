@@ -43,6 +43,7 @@ async function init() {
   );
   httpMan1.use(
     Router.secHeaders({
+      useDefaultHeaders: true,
       headers: [
         { name: "x-test1", value: "kewl" },
         { name: "x-test2", value: "kewler" },

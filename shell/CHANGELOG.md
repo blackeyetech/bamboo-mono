@@ -1,5 +1,14 @@
 # @bs-core/shell
 
+## 1.17.1
+
+### Patch Changes
+
+- Refactored security header middleware so it can be used by the static file server
+- Added security headers to static file server
+- Now streaming gzipped HTTP responses
+- Cleaned up ServerResponse redirect() to be more in line with the rest of the code
+
 ## 1.17.0
 
 ### Minor Changes

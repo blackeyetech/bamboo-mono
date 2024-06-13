@@ -19,6 +19,7 @@ import {
   corsMiddleware,
   expressWrapper,
   csrfChecksMiddleware,
+  getSecurityHeaders,
   securityHeadersMiddleware,
   dontCompressResponse,
 } from "./middleware.js";
@@ -26,6 +27,8 @@ import * as PathToRegEx from "path-to-regexp";
 
 import * as crypto from "node:crypto";
 import * as zlib from "node:zlib";
+import * as streams from "node:stream/promises";
+import { PassThrough } from "node:stream";
 
 // Types here
 export type HealthcheckCallback = () => Promise<boolean>;
@@ -260,11 +263,11 @@ export class Router {
     }
   }
 
-  private addResponse(
+  private async addResponse(
     req: ServerRequest,
     res: ServerResponse,
     etag: boolean,
-  ): void {
+  ): Promise<void> {
     let body: string | Buffer | null = null;
 
     // Check if a json or a body response has been passed back
@@ -331,14 +334,15 @@ export class Router {
 
     // Check out if the req will accept a gzip res AND the body is large enough
     // AND compression is not turned off for this request
+    let gzipIt = false;
+
     if (
       req.headers["accept-encoding"]?.includes("gzip") === true &&
       Buffer.byteLength(body) >= this._minCompressionSize &&
       req.dontCompressResponse === false
     ) {
       // It does ...
-      // Compress the body
-      body = zlib.gzipSync(body);
+      gzipIt = true;
 
       // Dont set the content-length. Use transfer-encoding instead
       res.setHeader("Transfer-Encoding", "chunked");
@@ -355,7 +359,22 @@ export class Router {
 
     // Check if this was a HEAD method - if so we don't want to write the body
     if (req.method !== "HEAD") {
-      res.write(body);
+      if (gzipIt) {
+        const passThrough = new PassThrough();
+        passThrough.end(body);
+        // NOTE1: pipeline will close the res when it is finished
+        await streams
+          .pipeline(passThrough, zlib.createGzip(), res)
+          .catch((e) => {
+            this._logger.error(
+              "addResponse had this error during streaming: (%s)",
+              e,
+            );
+            throw new HttpError(500, "Internal Server Error");
+          });
+      } else {
+        res.write(body);
+      }
     }
 
     res.end();
@@ -417,12 +436,6 @@ export class Router {
       res.end();
     });
 
-    // Check if the endpoint has been redirected
-    if (res.redirected) {
-      // No need to do any more
-      return true;
-    }
-
     // If there is an SSE server dont call addResponse or res.end()
     if (req.sseServer !== undefined) {
       return true;
@@ -431,7 +444,7 @@ export class Router {
     // Check if res.write() has NOT been called yet
     if (!res.headersSent) {
       // Check if the callback wants us to add the body, headers etc
-      this.addResponse(req, res, matchedEl.etag);
+      await this.addResponse(req, res, matchedEl.etag);
     }
 
     // Check if the res.end() has NOT been called yet
@@ -644,16 +657,22 @@ export class Router {
     return corsMiddleware(options);
   }
 
-  static csrf(middleware: CsrfChecksOptions = {}): Middleware {
-    return csrfChecksMiddleware(middleware);
+  static csrf(options: CsrfChecksOptions = {}): Middleware {
+    return csrfChecksMiddleware(options);
   }
 
-  static secHeaders(middleware: SecurityHeadersOptions): Middleware {
-    return securityHeadersMiddleware(middleware);
+  static getSecHeaders(
+    options: SecurityHeadersOptions,
+  ): { name: string; value: string }[] {
+    return getSecurityHeaders(options);
   }
 
-  static expressWrapper(middleware: ExpressMiddleware): Middleware {
-    return expressWrapper(middleware);
+  static secHeaders(options: SecurityHeadersOptions): Middleware {
+    return securityHeadersMiddleware(options);
+  }
+
+  static expressWrapper(options: ExpressMiddleware): Middleware {
+    return expressWrapper(options);
   }
 
   static dontCompressResponse(): Middleware {

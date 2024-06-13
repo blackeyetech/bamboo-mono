@@ -61,6 +61,7 @@ export type HttpConfig = {
     path: string;
     extraContentTypes?: Record<string, string>;
     immutableRegExp?: RegExp | string;
+    securityHeaders?: { name: string; value: string }[];
   };
 };
 
@@ -160,6 +161,7 @@ export class HttpServer {
         filePath: config.staticFileServer.path,
         extraContentTypes: config.staticFileServer.extraContentTypes,
         immutableRegExp: config.staticFileServer.immutableRegExp,
+        securityHeaders: config.staticFileServer.securityHeaders,
       });
     }
   }

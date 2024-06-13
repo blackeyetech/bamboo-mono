@@ -38,6 +38,7 @@ export type Options = {
   staticFilesPath?: string;
   extraContentTypes?: Record<string, string>;
   immutableRegexSrc?: string;
+  securityHeaders?: { name: string; value: string }[];
 
   keepAliveTimeout?: number;
   // NOTE: There is a potential race condition and the recommended
@@ -225,6 +226,7 @@ export const start = async (
       path: options.staticFilesPath,
       extraContentTypes: options.extraContentTypes,
       immutableRegExp: options.immutableRegexSrc,
+      securityHeaders: options.securityHeaders,
     };
   }
 

@@ -1,5 +1,13 @@
 # @bs-core/astro
 
+## 1.7.1
+
+### Patch Changes
+
+- Added security headers to static file server
+- Updated dependencies
+  - @bs-core/shell@1.17.1
+
 ## 1.7.0
 
 ### Minor Changes

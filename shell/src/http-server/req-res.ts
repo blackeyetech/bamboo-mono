@@ -75,28 +75,23 @@ export class ServerResponse extends http.ServerResponse {
   ) {
     this._redirected = true;
 
-    this.statusCode = statusCode;
-    this.setHeader("Location", location);
-
-    this.setServerTimingHeader();
-
-    let htmlMessage = `Redirected to <a href="${location}">here</a>`;
-    if (message.length) {
-      htmlMessage = message;
-    }
+    let htmlMessage =
+      message.length > 0
+        ? message
+        : `Redirected to <a href="${location}">here</a>`;
 
     // Write a little something something for good measure
-    let body = `
+    this.body = `
     <html>
       <body>
         <p>${htmlMessage}</p>
       </body>
     </html>`;
-    this.setHeader("Content-Type", "text/html; charset=utf-8");
-    this.setHeader("Content-Length", Buffer.byteLength(body));
-    this.write(body);
 
-    this.end();
+    this.setHeader("Content-Type", "text/html; charset=utf-8");
+    this.setHeader("Location", location);
+
+    this.statusCode = statusCode;
   }
 
   setCookies = (cookies: Cookie[]): void => {

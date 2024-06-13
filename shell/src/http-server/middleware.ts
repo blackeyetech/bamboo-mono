@@ -52,6 +52,7 @@ export type CsrfChecksOptions = {
 
 export type SecurityHeadersOptions = {
   headers?: { name: string; value: string }[];
+  useDefaultHeaders?: boolean;
 };
 
 // Middleware functions here
@@ -415,11 +416,12 @@ export const csrfChecksMiddleware = (
   };
 };
 
-export const securityHeadersMiddleware = (
+export const getSecurityHeaders = (
   options: SecurityHeadersOptions = {},
-): Middleware => {
+): { name: string; value: string }[] => {
   let opts: Required<SecurityHeadersOptions> = {
     headers: options.headers ?? [],
+    useDefaultHeaders: options.useDefaultHeaders ?? true,
   };
 
   // These are the default headers to use
@@ -448,20 +450,32 @@ export const securityHeadersMiddleware = (
     securityHeaders.push({ name: header.name, value: header.value });
   }
 
-  // Now step through all of the default headers
-  for (let header of defaultHeaders) {
-    // Check if the user has already supplied the header (use lower case
-    // to be safe)
-    let found = opts.headers.find(
-      (el) => el.name.toLowerCase() === header.name.toLowerCase(),
-    );
+  // Check if we should use the default headers
+  if (opts.useDefaultHeaders) {
+    // Looks like it - so add the default headers
+    for (let header of defaultHeaders) {
+      // Check if the user has already supplied the header (use lower case
+      // to be safe)
+      let found = opts.headers.find(
+        (el) => el.name.toLowerCase() === header.name.toLowerCase(),
+      );
 
-    if (found !== undefined) {
-      continue;
+      if (found !== undefined) {
+        continue;
+      }
+
+      securityHeaders.push({ name: header.name, value: header.value });
     }
-
-    securityHeaders.push({ name: header.name, value: header.value });
   }
+
+  return securityHeaders;
+};
+
+export const securityHeadersMiddleware = (
+  options: SecurityHeadersOptions = {},
+): Middleware => {
+  // Get the security headers
+  let securityHeaders = getSecurityHeaders(options);
 
   // Because we need to pass in the options we will return the
   // middleware, i.e. you need to call this function
@@ -470,7 +484,7 @@ export const securityHeadersMiddleware = (
     res: ServerResponse,
     next: () => Promise<void>,
   ): Promise<void> => {
-    // Set all of the user supplied headers first
+    // Set all of the sec headers
     for (let header of securityHeaders) {
       res.setHeader(header.name, header.value);
     }
