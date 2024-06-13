@@ -1,5 +1,14 @@
 # @bs-core/astro
 
+## 1.7.0
+
+### Minor Changes
+
+- Added HTTP streaming to the adapter
+- Removed the maintenance configs
+- Now passing headers to Astro request
+- Now passing headers from Astro response
+
 ## 1.6.9
 
 ### Patch Changes
