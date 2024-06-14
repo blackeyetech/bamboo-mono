@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.17.2
+
+### Patch Changes
+
+- Fixed issue where browser closes the conection and causes an exception
+
 ## 1.17.1
 
 ### Patch Changes

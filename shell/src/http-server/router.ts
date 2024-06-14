@@ -366,11 +366,14 @@ export class Router {
         await streams
           .pipeline(passThrough, zlib.createGzip(), res)
           .catch((e) => {
+            // We can't do anything else here because either:
+            // - the stream is closed which means we can't send back an error
+            // - we have an internal error, but we have already started streaming
+            //   so we can't do anything
             this._logger.error(
               "addResponse had this error during streaming: (%s)",
               e,
             );
-            throw new HttpError(500, "Internal Server Error");
           });
       } else {
         res.write(body);
@@ -430,10 +433,18 @@ export class Router {
         message = "Unknown error happened";
       }
 
-      res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      res.setHeader("Content-Length", Buffer.byteLength(message));
-      res.write(message);
-      res.end();
+      // Check if res.write() has NOT been called yet
+      if (!res.headersSent) {
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.setHeader("Content-Length", Buffer.byteLength(message));
+        res.write(message);
+      }
+
+      // Check if the res.end() has NOT been called yet
+      if (!res.writableEnded) {
+        // End the response now
+        res.end();
+      }
     });
 
     // If there is an SSE server dont call addResponse or res.end()

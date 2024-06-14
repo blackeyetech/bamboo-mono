@@ -392,6 +392,10 @@ export class StaticFileServer {
 
     // NOTE: pipeline will close the res when it is finished
     await streams.pipeline(fileRead, res).catch((e) => {
+      // We can't do anything else here because either:
+      // - the stream is closed which means we can't send back an error
+      // - we have an internal error, but we have already started streaming
+      //   so we can't do anything
       this._logger.trace("Error attempting to read (%s): (%s)", fileRead, e);
     });
   }
