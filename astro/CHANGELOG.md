@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.7.3
+
+### Patch Changes
+
+- Removed unused class
+
 ## 1.7.2
 
 ### Patch Changes

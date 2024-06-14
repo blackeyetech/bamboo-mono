@@ -2,7 +2,6 @@
 import {
   bs,
   HttpConfig,
-  HttpError,
   ServerRequest,
   ServerResponse,
   RouterMatchFunc,
