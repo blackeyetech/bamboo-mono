@@ -159,8 +159,11 @@ async function ssrEndpoint(
     await streams
       .pipeline(webRes.body as ReadableStream<Uint8Array>, res)
       .catch((e) => {
-        bs.error("ssrEndpoint had this error during rendering: (%s)", e);
-        throw new HttpError(500, "Internal Server Error");
+        // We can't do anything else here because either:
+        // - the stream is closed which means we can't send back an error
+        // - we have an internal error, but we have already started streaming
+        //   so we can't do anything
+        bs.warn("ssrEndpoint had this error during rendering: (%s)", e);
       });
   }
 }

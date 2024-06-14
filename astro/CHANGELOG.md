@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.7.2
+
+### Patch Changes
+
+- Fixed issue when browser closes connection
+
 ## 1.7.1
 
 ### Patch Changes
