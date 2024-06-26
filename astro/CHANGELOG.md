@@ -1,5 +1,12 @@
 # @bs-core/astro
 
+## 1.7.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.17.3
+
 ## 1.7.4
 
 ### Patch Changes

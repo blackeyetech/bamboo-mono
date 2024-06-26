@@ -1,5 +1,13 @@
 # @bs-core/shell
 
+## 1.17.3
+
+### Patch Changes
+
+- Added proxied flag to ServerResponse to indicate a response
+  came frorm a proxy and the transfer-encoding/content-encoding
+  header and the content-length headers should not be set
+
 ## 1.17.2
 
 ### Patch Changes

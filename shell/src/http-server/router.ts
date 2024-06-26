@@ -336,22 +336,27 @@ export class Router {
     // AND compression is not turned off for this request
     let gzipIt = false;
 
-    if (
-      req.headers["accept-encoding"]?.includes("gzip") === true &&
-      Buffer.byteLength(body) >= this._minCompressionSize &&
-      req.dontCompressResponse === false
-    ) {
-      // It does ...
-      gzipIt = true;
+    // Check if the res was proxied. If it was then DO NOT set the
+    // transfer-encoding/content-encoding header nor the content-length.
+    // Assume that has already been done
+    if (res.proxied === false) {
+      if (
+        req.headers["accept-encoding"]?.includes("gzip") === true &&
+        Buffer.byteLength(body) >= this._minCompressionSize &&
+        req.dontCompressResponse === false
+      ) {
+        // It does ...
+        gzipIt = true;
 
-      // Dont set the content-length. Use transfer-encoding instead
-      res.setHeader("Transfer-Encoding", "chunked");
-      res.setHeader("Content-Encoding", "gzip");
-    } else {
-      // It does not ...
+        // Dont set the content-length. Use transfer-encoding instead
+        res.setHeader("Transfer-Encoding", "chunked");
+        res.setHeader("Content-Encoding", "gzip");
+      } else {
+        // It does not ...
 
-      // Only set the length when we don't do a 304
-      res.setHeader("Content-Length", Buffer.byteLength(body));
+        // Only set the length when we don't do a 304
+        res.setHeader("Content-Length", Buffer.byteLength(body));
+      }
     }
 
     // Don't forget to set the server-timing header after we do everything else

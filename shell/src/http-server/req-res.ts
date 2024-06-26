@@ -52,6 +52,8 @@ export class ServerResponse extends http.ServerResponse {
   public json?: object | [] | string | number | boolean;
   public body?: string | Buffer;
 
+  public proxied: boolean;
+
   // constructor here
   constructor(req: http.IncomingMessage) {
     super(req);
@@ -60,6 +62,7 @@ export class ServerResponse extends http.ServerResponse {
     this._receiveTime = performance.now();
     this._redirected = false;
     this.serverTimingsMetrics = [];
+    this.proxied = false;
   }
 
   // Getter methods here

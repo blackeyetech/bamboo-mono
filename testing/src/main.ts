@@ -82,6 +82,24 @@ async function init() {
     },
   );
 
+  bs.httpServer().endpoint("GET", "/set-cookie", (req, res) => {
+    bs.info(req.body);
+    bs.info("%j", req.json);
+    res.json = { hello: req.params["id"] };
+
+    res.setCookies([{ name: "test1", value: "test" }]);
+    res.setCookies([{ name: "test2", value: "test" }]);
+    res.setCookies([{ name: "test3", value: "test" }]);
+  });
+
+  bs.httpServer().endpoint("GET", "/clear-cookies", (req, res) => {
+    bs.info(req.body);
+    bs.info("%j", req.json);
+    res.json = { hello: req.params["id"] };
+
+    res.clearCookies(["test1", "test2"]);
+  });
+
   let pong: EndpointCallback = (req, res) => {
     bs.info("pinged");
     for (let header in req.headers) {
