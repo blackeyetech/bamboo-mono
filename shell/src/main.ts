@@ -148,6 +148,48 @@ export const bs = Object.freeze({
     return value;
   },
 
+  /**
+   * Gets an object config value.
+   *
+   * @param config - The config key to get.
+   * @param defaultVal - The default value if config not found.
+   * @param options - Options for getting the config.
+   * @returns The object config value.
+   */
+  getConfigObj: (
+    config: string,
+    defaultVal?: Record<string, any>,
+    options?: ConfigOptions,
+  ): Record<string, any> => {
+    let value = <Record<string, any>>(
+      configMan.getObject(config, defaultVal, options)
+    );
+
+    logConfigManMsgs();
+
+    return value;
+  },
+
+  /**
+   * Gets an array config value.
+   *
+   * @param config - The config key to get.
+   * @param defaultVal - The default value if config not found.
+   * @param options - Options for getting the config.
+   * @returns The object config value.
+   */
+  getConfigArray: (
+    config: string,
+    defaultVal?: any[],
+    options?: ConfigOptions,
+  ): any[] => {
+    let value = <any[]>configMan.getObject(config, defaultVal, options);
+
+    logConfigManMsgs();
+
+    return value;
+  },
+
   // Log convience methods here
   fatal: (...args: any): void => {
     _logger.fatal(...args);

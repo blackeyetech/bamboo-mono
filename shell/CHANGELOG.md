@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.18.0
+
+### Minor Changes
+
+- Can now use a cfg file to provide structure JSON data
+
 ## 1.17.3
 
 ### Patch Changes
