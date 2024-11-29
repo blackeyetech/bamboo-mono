@@ -1,5 +1,5 @@
 {
-  "version": "1.2.24",
+  "version": "1.2.25",
   "name": "@bs-plugins/sql-server",
   "description": "Bamboo Shell plugin for SQL Server",
   "type": "module",

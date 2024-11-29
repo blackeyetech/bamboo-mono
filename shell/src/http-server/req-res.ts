@@ -14,6 +14,7 @@ export type Cookie = {
   secure?: boolean;
   httpOnly?: boolean;
   sameSite?: "Strict" | "Lax" | "None";
+  domain?: string;
 };
 
 // Classes here
@@ -135,6 +136,11 @@ export class ServerResponse extends http.ServerResponse {
       // If sameSite has been provided then add it - NOTE: put ";" first
       if (cookie.sameSite !== undefined) {
         value += `; SameSite=${cookie.sameSite}`;
+      }
+
+      // If domain has been provided then add it - NOTE: put ";" first
+      if (cookie.domain !== undefined) {
+        value += `; Domain=${cookie.domain}`;
       }
 
       // Save the cookie

@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.18.1
+
+### Patch Changes
+
+- You can now set the domain on a cookie
+
 ## 1.18.0
 
 ### Minor Changes
