@@ -36,7 +36,7 @@ export type Options = {
 
   staticFilesPath?: string;
   extraContentTypes?: Record<string, string>;
-  immutableRegexSrc?: string;
+  immutableRegexSrc?: string | string[];
   securityHeaders?: { name: string; value: string }[];
 
   keepAliveTimeout?: number;
