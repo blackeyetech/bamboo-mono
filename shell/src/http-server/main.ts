@@ -60,7 +60,7 @@ export type HttpConfig = {
   staticFileServer?: {
     path: string;
     extraContentTypes?: Record<string, string>;
-    immutableRegExp?: RegExp | string;
+    immutableRegExp?: RegExp | string | RegExp[] | string[];
     securityHeaders?: { name: string; value: string }[];
   };
 };

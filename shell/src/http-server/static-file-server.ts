@@ -35,7 +35,7 @@ export type StaticFileServerConfig = {
   loggerName: string;
   filePath: string;
 
-  immutableRegExp?: RegExp | string;
+  immutableRegExp?: RegExp | string | RegExp[] | string[];
   defaultDirFile?: string;
   notFoundHandler?: StaticNotFoundHandler;
 
@@ -59,7 +59,7 @@ export class StaticFileServer {
   private _logger: Logger;
 
   private _filePath: string;
-  private _immutableRegExp?: RegExp;
+  private _immutableRegExp: RegExp[];
   private _defaultDirFile: string;
   private _defaultCharSet: string;
   private _notFoundHandler: StaticNotFoundHandler;
@@ -76,13 +76,25 @@ export class StaticFileServer {
 
     this._filePath = config.filePath.replace(/\/*$/, "");
 
+    // Initialise the immutable regexs array
+    this._immutableRegExp = [];
+
     // Check if user has provided an immutable config value
     if (config.immutableRegExp !== undefined) {
-      // Check if user has provided a regexp or string
+      // Check if user has provided a regexp or string or array
       if (config.immutableRegExp instanceof RegExp) {
-        this._immutableRegExp = config.immutableRegExp;
-      } else {
-        this._immutableRegExp = new RegExp(config.immutableRegExp);
+        this._immutableRegExp.push(config.immutableRegExp);
+      } else if (typeof config.immutableRegExp === "string") {
+        this._immutableRegExp.push(new RegExp(config.immutableRegExp));
+      } else if (Array.isArray(config.immutableRegExp)) {
+        for (const exp of config.immutableRegExp) {
+          // This is an array so iterate through each element and add it to the list
+          if (exp instanceof RegExp) {
+            this._immutableRegExp.push(exp);
+          } else if (typeof exp === "string") {
+            this._immutableRegExp.push(new RegExp(exp));
+          }
+        }
       }
     }
 
@@ -99,14 +111,14 @@ export class StaticFileServer {
     });
 
     // Populate contentTypes using the predefined types
-    for (let type in contentTypes) {
+    for (const type in contentTypes) {
       this._contentTypes.set(type, contentTypes[type]);
     }
 
     // Then add any extra content types. NOTE: This allows you to overwrite
     // the predefined types
     if (config.extraContentTypes !== undefined) {
-      for (let type in config.extraContentTypes) {
+      for (const type in config.extraContentTypes) {
         this._contentTypes.set(type, config.extraContentTypes[type]);
       }
     }
@@ -121,7 +133,7 @@ export class StaticFileServer {
   // Private methods here
   private async getFilesRecursively(urlPath: string = "/"): Promise<void> {
     // Note: urlPath should always start and end in "/"
-    let dir = `${this._filePath}${urlPath}`;
+    const dir = `${this._filePath}${urlPath}`;
     let dirFiles: string[] = [];
 
     // Get a list of files in the dir and check for errors
@@ -132,10 +144,10 @@ export class StaticFileServer {
     }
 
     // Iterate through each file and check if it is a dir or not
-    for (let file of dirFiles) {
-      let fullPath = `${dir}${file}`;
-      let stats = fs.statSync(fullPath);
-      let url = `${urlPath}${file}`;
+    for (const file of dirFiles) {
+      const fullPath = `${dir}${file}`;
+      const stats = fs.statSync(fullPath);
+      const url = `${urlPath}${file}`;
 
       if (stats.isDirectory()) {
         // Get the files in this dir
@@ -149,8 +161,8 @@ export class StaticFileServer {
 
   private lookupType(file: string): string {
     // Look up the file extension to get content type - drop the leading '.'
-    let ext = path.extname(file).slice(1);
-    let type = this._contentTypes.get(ext);
+    const ext = path.extname(file).slice(1);
+    const type = this._contentTypes.get(ext);
 
     if (type !== undefined) {
       return `${type}; ${this._defaultCharSet}`;
@@ -165,8 +177,8 @@ export class StaticFileServer {
     fileName: string,
   ): Promise<string | null> {
     // MD5 hash the file contents to calculate the etag
-    let contents = stream.Readable.from(fileBuffer);
-    let hash = crypto.createHash("sha1");
+    const contents = stream.Readable.from(fileBuffer);
+    const hash = crypto.createHash("sha1");
 
     // Flag to check if we successfully pipe the file to the hash
     let failed = false;
@@ -217,18 +229,24 @@ export class StaticFileServer {
     // UTC string which means we get a mismatch checking "If-Modified-Since"
     const modTimeNoMs = Math.trunc(modTimeMs / 1000) * 1000;
 
-    let fileBuffer = fs.readFileSync(fullPath);
+    const fileBuffer = fs.readFileSync(fullPath);
 
-    let eTag = await this.calculateEtag(fileBuffer, fullPath);
+    const eTag = await this.calculateEtag(fileBuffer, fullPath);
     if (eTag === null) {
       // Couldn't calculate the etag so do nothing
       return false;
     }
 
-    let immutable =
-      this._immutableRegExp === undefined
-        ? false
-        : this._immutableRegExp.test(fullPath);
+    // Default immutable to false until we can prove it is
+    let immutable = false;
+
+    // Now check if the path matches one of the RegExps
+    for (const regexp of this._immutableRegExp) {
+      if (regexp.test(fullPath) === true) {
+        immutable = true;
+        break;
+      }
+    }
 
     const fileDetails: FileDetails = {
       contentType: this.lookupType(fullPath), // In case urlPath is a dir
@@ -323,13 +341,13 @@ export class StaticFileServer {
     }
 
     // Get the file details and if it doesn't exist return a not found
-    let details = await this.getFileDetails(req.urlObj.pathname);
+    const details = await this.getFileDetails(req.urlObj.pathname);
     if (details === undefined) {
       this._notFoundHandler(req, res);
       return;
     }
 
-    let cacheControl = details.immutable
+    const cacheControl = details.immutable
       ? "max-age=31536000, immutable"
       : "no-cache";
 

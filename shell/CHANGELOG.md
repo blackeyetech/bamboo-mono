@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.19.0
+
+### Minor Changes
+
+- You can not spwecify an array of Regexp or string patterns for static immutable files
+
 ## 1.18.1
 
 ### Patch Changes
