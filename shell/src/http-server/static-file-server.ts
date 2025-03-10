@@ -371,13 +371,16 @@ export class StaticFileServer {
       res.statusCode = 304;
       res.end();
       return;
-    } else if (req.headers["if-modified-since"] !== undefined) {
-      // Check for last-modifed second. NOTE: The if-modified-since header will
-      // have no ms in the time so compare with lastModifiedNoMs
-      if (
-        new Date(req.headers["if-modified-since"]).getTime() ===
-        details.lastModifiedNoMs
-      ) {
+    }
+
+    if (req.headers["if-modified-since"] !== undefined) {
+      const modifiedDate = new Date(req.headers["if-modified-since"]).getTime();
+
+      // NOTE: Check the times are the same, if they are different, even if
+      // details.lastModifiedNoMs is LESS than modifiedDate, it will still
+      // because that implies there is a potential issue and it is best to
+      // be safe
+      if (modifiedDate === details.lastModifiedNoMs) {
         res.statusCode = 304;
         res.end();
         return;

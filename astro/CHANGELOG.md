@@ -1,5 +1,13 @@
 # @bs-core/astro
 
+## 1.8.0
+
+### Minor Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.20.0
+- Updated the Server-Timing Metrics call to use the new method signature
+
 ## 1.7.9
 
 ### Patch Changes

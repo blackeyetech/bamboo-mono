@@ -452,7 +452,7 @@ export class Router {
       }
     });
 
-    // If there is an SSE server dont call addResponse or res.end()
+    // If this is an SSE server dont call addResponse or res.end()
     if (req.sseServer !== undefined) {
       return true;
     }
@@ -473,8 +473,8 @@ export class Router {
     return true;
   }
 
-  pathToRegexMatch(path: string): RouterMatchFunc {
-    // Then create the matching function
+  pathToRegexMatcher(path: string): RouterMatchFunc {
+    // Create the matching function
     let match = PathToRegEx.match(path, {
       decode: decodeURIComponent,
       strict: true,
@@ -494,6 +494,16 @@ export class Router {
     };
   }
 
+  matchAllMatcher(_: string): RouterMatchFunc {
+    // This will match everything
+    return (url: URL): RouterMatch => {
+      return {
+        matchedInfo: url.pathname,
+        params: {}, // We dont know that the params are so just ignore them
+      };
+    };
+  }
+
   use(middleware: Middleware): Router {
     this._defaultMiddlewareList.push(middleware);
 
@@ -509,7 +519,7 @@ export class Router {
     let options = {
       useDefaultMiddlewares: true,
       etag: false,
-      generateMatcher: this.pathToRegexMatch,
+      generateMatcher: this.pathToRegexMatcher,
 
       ...endpointOptions,
     };

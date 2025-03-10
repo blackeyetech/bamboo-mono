@@ -4,6 +4,8 @@
 // imports here
 import { Logger } from "./logger.js";
 
+import { performance } from "node:perf_hooks";
+
 // Misc consts here
 const LOG_TAG = "request";
 
@@ -15,6 +17,7 @@ export type ReqRes = {
   statusCode: number;
   headers: Headers;
   body: any;
+  responseTime: number;
   response?: Response;
 };
 
@@ -125,6 +128,7 @@ async function callFetch(
     clearTimeout(timeoutTimer);
   }
 
+  // We will throw an error if the response is not 2XX
   if (!results.ok) {
     let message = await results.text();
 
@@ -138,38 +142,20 @@ async function callFetch(
 }
 
 async function handleResponseData(results: Response): Promise<object | string> {
-  let resData: object | string;
+  // No point worrying if the body is JSON at first, because we know its text
+  const body = await results.text();
 
-  // Safest way to check for a body is the content-length header exists
-  // and is not "0" (no need to convert to a number)
-  let contentExists = false;
-  if (
-    results.headers.has("content-length") &&
-    results.headers.get("content-length") !== "0"
-  ) {
-    contentExists = true;
-  }
-
-  // Only convert to json if there is content otherwise .json() will throw
-  if (
-    contentExists &&
-    results.headers.get("content-type")?.startsWith("application/json") === true
-  ) {
-    resData = await results.json();
-  } else {
-    resData = await results.text();
-    // If the string has length then let's check the content-type again for
-    // json data - sometimes the server isn't setting the content-length ...
-    if (
-      resData.length &&
-      results.headers.get("content-type")?.startsWith("application/json") ===
-        true
-    ) {
-      resData = JSON.parse(resData);
+  // If the body exists then check if it is JSON
+  if (body.length > 0) {
+    // Check if the content type is JSON
+    const contentType = results.headers.get("content-type");
+    if (contentType?.startsWith("application/json")) {
+      return JSON.parse(body);
     }
   }
 
-  return resData;
+  // If we are here, the body wasnt JSON so just return the text
+  return body;
 }
 
 // Public methods here
@@ -178,6 +164,9 @@ export let request = async (
   path: string,
   reqOptions?: ReqOptions,
 ): Promise<ReqRes> => {
+  // We need to remember the start time
+  const startTime = performance.now();
+
   _logger.trace("Request for origin (%s) path (%s)", origin, path);
 
   // Set the default values
@@ -243,16 +232,23 @@ export let request = async (
     statusCode: response.status,
     headers: response.headers,
     body: undefined, // set to undefined for now
+    responseTime: 0,
   };
 
   // Check if we should handle the response for the user
   if (options.handleResponse) {
     // Yes, so handle and set the body
-    res.body = await handleResponseData(response);
+    res.body = await handleResponseData(response).catch((e) => {
+      const msg = `Error handling response data for (${origin}) (${path}) - (${e}))`;
+      throw new Error(msg);
+    });
   } else {
     // No, so set the response
     res.response = response;
   }
+
+  // Don't forget to set the response time
+  res.responseTime = Math.round(performance.now() - startTime);
 
   return res;
 };

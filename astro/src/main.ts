@@ -121,8 +121,8 @@ async function ssrEndpoint(
   });
 
   // Now figure out how long it took to render and store it in the metrics
-  const latency = Math.round((performance.now() - startedAt) * 1000) / 1000;
-  res.serverTimingsMetrics.push({ name: "ssr", duration: latency });
+  const latency = Math.round(performance.now() - startedAt);
+  res.addServerTimingMetric("ssr", latency);
 
   // The default status code is always 200. If webRes.status is NOT 200
   // then it was set by the user so we need to use that status code

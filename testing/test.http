@@ -51,3 +51,6 @@ GET  http://127.0.0.1:8080/api/set-cookie
 
 ###
 GET  http://127.0.0.1:8080/api/clear-cookies
+
+### 
+GET  http://127.0.0.1:8080/api/json

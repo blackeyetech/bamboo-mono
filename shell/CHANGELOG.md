@@ -1,5 +1,17 @@
 # @bs-core/shell
 
+## 1.20.0
+
+### Minor Changes
+
+- You can now add a description to Server Timing Metrics
+- You can now add the Server-Timing header from a HTTP response to the
+  Server Timing Metrics
+- You can now add Server Timing Metrics to a request. If a request has a
+  Server-Timing header then if will be prepended to the Server-Timing header
+  for the response
+- The request() method now sets the responseTime of the ReqRes object
+
 ## 1.19.0
 
 ### Minor Changes

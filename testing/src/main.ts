@@ -139,19 +139,24 @@ async function init() {
       res.body = "<html><p>Hello from 1</p></html>";
       res.setHeader("Content-Type", "text/html; charset=utf-8");
 
-      res.serverTimingsMetrics.push({ name: "html", duration: 3.33 });
+      res.addServerTimingMetric("html", 3.33);
     },
     {
       middlewareList: [middleware2, middleware2],
     },
   );
 
-  hs.post(
+  hs.get(
     "/json",
     async (req, res) => {
       bs.info("received %j", req.body?.toString());
       bs.info("%j", req.headers);
-      res.serverTimingsMetrics.push({ name: "json", duration: 3.33 });
+      res.addServerTimingHeader("1-hestia;hit, 1-hs-js;dur=2, 1-hs-ht;dur=3");
+      res.addServerTimingMetric("2-json", 1);
+      res.addServerTimingMetric("2-json", 1, "second one");
+      res.addServerTimingHeader("3-lat;dur=5, lat-js;dur=2, lat-ht;dur=3");
+      res.addServerTimingMetric("2-json", 2);
+      res.addServerTimingMetric("2-killed");
     },
     {
       middlewareList: [Router.body()],
@@ -378,7 +383,19 @@ let res = await bs
     }
   });
 
-bs.info("%j", res);
+res = await bs
+  .request("https://httpbin.org", "/status/200", {
+    method: "GET",
+    timeout: 3,
+  })
+  .catch((e) => {
+    if (e instanceof ReqAborted) {
+      bs.info(e.message);
+    } else if (e instanceof ReqError) {
+      bs.error("%s: %s", e.status, e.message);
+    }
+  });
+bs.info("Check time: %j", res);
 
 // for (let header of res.headers.entries()) {
 //   sh.info("Header: %s: %s", header[0], header[1]);

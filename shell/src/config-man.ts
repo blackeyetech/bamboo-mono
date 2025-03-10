@@ -76,6 +76,9 @@ export class ConfigError {
 /**
  * Converts a string value to the specified configuration type.
  *
+ * NOTE: This is not used for the config files so we dont check
+ * for Object or Array types.
+ *
  * @param value - The string value to convert.
  * @param type - The expected configuration type.
  * @returns The converted value as a number, string, or boolean.
@@ -473,7 +476,7 @@ function readCfgFile(cfgFile: string): void {
  * application to ensure that the configuration manager is properly set up and
  * ready to use.
  */
-function init() {
+function init(): void {
   // Initialise the stores
   _envFileStore = new Map();
   _cfgFileStore = new Map();
@@ -484,6 +487,8 @@ function init() {
 
   if (envFile.length > 0) {
     parseEnvFile(envFile);
+  } else {
+    _messageStore.add("No .env file specified");
   }
 
   // Check if the user has specified a cfg file
@@ -493,6 +498,8 @@ function init() {
 
   if (cfgFile.length > 0) {
     readCfgFile(cfgFile);
+  } else {
+    _messageStore.add("No cfg file specified");
   }
 }
 
