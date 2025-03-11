@@ -149,6 +149,7 @@ async function ssrEndpoint(
   }
 
   // This is our last chance to set headers so set the server timings header
+  res.latencyMetricName = "astro";
   res.setServerTimingHeader();
 
   // Now check if there is a body in the webRes

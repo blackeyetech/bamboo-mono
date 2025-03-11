@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.8.2
+
+### Patch Changes
+
+- Server Timing Header main metric is now labelled "astro"
+
 ## 1.8.1
 
 ### Patch Changes
