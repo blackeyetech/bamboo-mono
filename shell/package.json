@@ -1,5 +1,5 @@
 {
-  "version": "1.20.0",
+  "version": "1.20.1",
   "name": "@bs-core/shell",
   "description": "The Bamboo Shell",
   "type": "module",

@@ -1,5 +1,12 @@
 # @bs-core/astro
 
+## 1.8.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.20.1
+
 ## 1.8.0
 
 ### Minor Changes

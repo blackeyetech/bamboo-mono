@@ -107,12 +107,17 @@ export class ServerRequest extends http.IncomingMessage {
 
     return null;
   };
+
+  setServerTimingHeader = (value: string): void => {
+    this.headers["Server-Timing"] = value;
+  };
 }
 
 export class ServerResponse extends http.ServerResponse {
   // Properties here
   private _receiveTime: number;
   private _redirected: boolean;
+  private _latencyMetricName: string;
 
   private _serverTimingsMetrics: (ServerTimingMetric | string)[];
 
@@ -128,6 +133,7 @@ export class ServerResponse extends http.ServerResponse {
     // NOTE: This will be created at the same time as ServerRequest
     this._receiveTime = performance.now();
     this._redirected = false;
+    this._latencyMetricName = "latency";
     this._serverTimingsMetrics = [];
     this.proxied = false;
   }
@@ -135,6 +141,11 @@ export class ServerResponse extends http.ServerResponse {
   // Getter methods here
   get redirected(): boolean {
     return this._redirected;
+  }
+
+  // Setter methods here
+  set latencyMetricName(name: string) {
+    this._latencyMetricName = name;
   }
 
   // Public functions here
@@ -229,45 +240,58 @@ export class ServerResponse extends http.ServerResponse {
   };
 
   setServerTimingHeader = () => {
-    let timing = "";
+    let serverTimingHeaders: string[] = [];
 
-    // Check if the req has a Server-Timing header
-    // This is not normal but I want to add this functionlity
+    // Check if the req has a Server-Timing header. This is not normal but I
+    // want to something like a forwardAuth server to be able to add it's
+    // metrics to the response header
     if (this?.req?.headers["server-timing"] !== undefined) {
-      // It exists so add it to the timing string as the 1st entry
-      timing = `${this.req.headers["server-timing"]}, `;
+      const reqTimings = this.req.headers["server-timing"];
+
+      // Check if there are multiple headers
+      if (Array.isArray(reqTimings)) {
+        // If so then since this is the first just use it as the headers array
+        serverTimingHeaders = reqTimings;
+      } else {
+        // If not then just add it to the array
+        serverTimingHeaders.push(reqTimings);
+      }
     }
+
+    let serverTimingValue = "";
 
     // Add each additional metric added to the res next so they are in
     // the order they were added
     for (let metric of this._serverTimingsMetrics) {
       // Check if we have a string or a metric object
       if (typeof metric === "string") {
-        // The string version is already formatted so just add it as is
-        timing += `${metric}, `;
+        // The string version is already formatted so just add to the array
+        serverTimingHeaders.push(metric);
         continue;
       }
 
       // If we are here then we have a metric object so add the name
-      timing += metric.name;
+      serverTimingValue += metric.name;
 
       // Check if there is an optional duration
       if (metric.duration !== undefined) {
-        timing += `;dur=${metric.duration}`;
+        serverTimingValue += `;dur=${metric.duration}`;
       }
       // Check if there is an optional description
       if (metric.description !== undefined) {
-        timing += `;desc="${metric.description}"`;
+        serverTimingValue += `;desc="${metric.description}"`;
       }
 
-      timing += ", ";
+      serverTimingValue += ", ";
     }
 
-    // Finally set the total latency for the endpoint last
-    timing += `latency;dur=${Math.round(performance.now() - this._receiveTime)}`;
+    // Finally add the total latency for the endpoint to the array
+    const latency = Math.round(performance.now() - this._receiveTime);
+    serverTimingValue += `${this._latencyMetricName};dur=${latency}`;
+    serverTimingHeaders.push(serverTimingValue);
 
     // Of course don't forget to set the header!!
-    this.setHeader("Server-Timing", timing);
+    this.setHeader("Server-Timing", serverTimingHeaders);
   };
 
   addServerTimingMetric = (
@@ -275,13 +299,12 @@ export class ServerResponse extends http.ServerResponse {
     duration?: number,
     description?: string,
   ) => {
-    // This adds a metric to the Server-Timing header
+    // This adds a metric to the Server-Timing header for this response
     this._serverTimingsMetrics.push({ name, duration, description });
   };
 
   addServerTimingHeader = (header: string) => {
-    // This adds a Server-Timing header from another response to the
-    // Server-Timing header for this response
+    // This adds a complete Server-Timing header to this response
     this._serverTimingsMetrics.push(header);
   };
 }

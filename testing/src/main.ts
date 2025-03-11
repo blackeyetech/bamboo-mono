@@ -151,6 +151,7 @@ async function init() {
     async (req, res) => {
       bs.info("received %j", req.body?.toString());
       bs.info("%j", req.headers);
+      res.latencyMetricName = "json-latency";
       res.addServerTimingHeader("1-hestia;hit, 1-hs-js;dur=2, 1-hs-ht;dur=3");
       res.addServerTimingMetric("2-json", 1);
       res.addServerTimingMetric("2-json", 1, "second one");

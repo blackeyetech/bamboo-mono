@@ -1,5 +1,12 @@
 # @bs-core/shell
 
+## 1.20.1
+
+### Patch Changes
+
+- Can now set main Server Timing Metric name
+- Now sending multiple Server Timing Metrics
+
 ## 1.20.0
 
 ### Minor Changes
