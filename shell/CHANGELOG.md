@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.20.3
+
+### Patch Changes
+
+- Added the correct middleware for setLatencyMetricName
+
 ## 1.20.2
 
 ### Patch Changes

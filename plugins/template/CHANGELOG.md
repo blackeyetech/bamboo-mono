@@ -1,5 +1,12 @@
 # @bs-plugins/template
 
+## 0.2.30
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.20.3
+
 ## 0.2.29
 
 ### Patch Changes

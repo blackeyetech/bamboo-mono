@@ -505,3 +505,16 @@ export const dontCompressResponse = (): Middleware => {
     await next();
   };
 };
+
+export const setLatencyMetricName = (name: string): Middleware => {
+  return async (
+    _: ServerRequest,
+    res: ServerResponse,
+    next: () => Promise<void>,
+  ): Promise<void> => {
+    // Set the latency metric name
+    res.latencyMetricName = name;
+
+    await next();
+  };
+};
