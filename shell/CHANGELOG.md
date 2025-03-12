@@ -1,5 +1,12 @@
 # @bs-core/shell
 
+## 1.20.2
+
+### Patch Changes
+
+- Added middleware to set the Server-Timing header
+- Now setting static file server main metric name
+
 ## 1.20.1
 
 ### Patch Changes

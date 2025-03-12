@@ -358,13 +358,14 @@ export class StaticFileServer {
     res.setHeader("Date", new Date().toUTCString());
     res.setHeader("Content-Type", details.contentType);
 
-    // Don't forget to set the server-timing header
-    res.setServerTimingHeader();
-
     // Set all of the sec headers
     for (const header of this._securityHeaders) {
       res.setHeader(header.name, header.value);
     }
+
+    // Don't forget to set the server-timing header
+    res.latencyMetricName = "sf-srv";
+    res.setServerTimingHeader();
 
     // Check if any cache validators exist on the request - check etag first
     if (req.headers["if-none-match"] === details.eTag) {
