@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.20.4
+
+### Patch Changes
+
+- Added setLatencyMetric static method to Router
+
 ## 1.20.3
 
 ### Patch Changes

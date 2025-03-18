@@ -22,6 +22,7 @@ import {
   getSecurityHeaders,
   securityHeadersMiddleware,
   dontCompressResponse,
+  setLatencyMetricName,
 } from "./middleware.js";
 import * as PathToRegEx from "path-to-regexp";
 
@@ -703,5 +704,9 @@ export class Router {
 
   static dontCompressResponse(): Middleware {
     return dontCompressResponse();
+  }
+
+  static setLatencyMetricName(name: string): Middleware {
+    return setLatencyMetricName(name);
   }
 }
