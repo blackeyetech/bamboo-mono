@@ -1,6 +1,7 @@
 // imports here
 import {
   bs,
+  Router,
   HttpConfig,
   ServerRequest,
   ServerResponse,
@@ -121,8 +122,8 @@ async function ssrEndpoint(
   });
 
   // Now figure out how long it took to render and store it in the metrics
-  const latency = Math.round(performance.now() - startedAt);
-  res.addServerTimingMetric("ssr", latency);
+  const ssrLatency = Math.round(performance.now() - startedAt);
+  res.addServerTimingMetric("ssr", ssrLatency);
 
   // The default status code is always 200. If webRes.status is NOT 200
   // then it was set by the user so we need to use that status code
@@ -149,7 +150,6 @@ async function ssrEndpoint(
   }
 
   // This is our last chance to set headers so set the server timings header
-  res.latencyMetricName = "astro";
   res.setServerTimingHeader();
 
   // Now check if there is a body in the webRes
@@ -265,6 +265,7 @@ export const start = async (
   httpServer.ssrRouter.all("/", ssrEndpoint, {
     generateMatcher: matcher,
     etag: true,
+    middlewareList: [Router.setLatencyMetricName("astro")],
   });
 
   // Start the http server now!

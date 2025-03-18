@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.8.6
+
+### Patch Changes
+
+- Added middleware to set the default latency metric name
+
 ## 1.8.5
 
 ### Patch Changes
