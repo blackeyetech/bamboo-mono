@@ -37,7 +37,7 @@ export type Options = {
 
   staticFilesPath?: string;
   extraContentTypes?: Record<string, string>;
-  immutableRegexSrc?: string | string[];
+  immutableRegexSrc?: string[];
   securityHeaders?: { name: string; value: string }[];
 
   keepAliveTimeout?: number;
@@ -110,11 +110,11 @@ async function ssrEndpoint(
   req: ServerRequest,
   res: ServerResponse,
 ): Promise<void> {
-  // Create a webRequest object to pass to the render
-  const webReq = new WebRequest(req, res);
-
   // Measure the time it took to render the page so capture when we started
   const startedAt = performance.now();
+
+  // Create a webRequest object to pass to the render
+  const webReq = new WebRequest(req, res);
 
   // Now render the page
   const webRes = await _app.render(webReq, {

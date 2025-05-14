@@ -61,7 +61,14 @@ export class ServerRequest extends http.IncomingMessage {
 
   public matchedInfo: any;
 
-  public dontCompressResponse: boolean;
+  public handled: boolean;
+  public compressResponse: boolean;
+
+  public checkApiRoutes: boolean;
+  public checkSsrRoutes: boolean;
+  public checkStaticFiles: boolean;
+
+  public handle404: boolean;
 
   // Constructor here
   constructor(socket: net.Socket) {
@@ -73,7 +80,18 @@ export class ServerRequest extends http.IncomingMessage {
 
     this.params = {};
     this.middlewareProps = {};
-    this.dontCompressResponse = false;
+    this.handled = false;
+
+    // By default we will compress the response
+    this.compressResponse = true;
+
+    // By default we shld check all the different types of routes
+    this.checkApiRoutes = true;
+    this.checkSsrRoutes = true;
+    this.checkStaticFiles = true;
+
+    // By default the req handler is expected to handle the 404
+    this.handle404 = true;
   }
 
   getCookie = (cookieName: string): string | null => {

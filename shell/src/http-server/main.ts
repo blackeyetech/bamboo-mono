@@ -54,13 +54,10 @@ export type HttpConfig = {
   httpsKeyFile?: string;
   httpsCertFile?: string;
 
-  startInMaintenanceMode?: boolean;
-  maintenanceRoute?: string;
-
   staticFileServer?: {
     path: string;
     extraContentTypes?: Record<string, string>;
-    immutableRegExp?: RegExp | string | RegExp[] | string[];
+    immutableRegExp?: string[];
     securityHeaders?: { name: string; value: string }[];
   };
 };
@@ -91,9 +88,6 @@ export class HttpServer {
   private _keyFile?: string;
   private _certFile?: string;
 
-  private _maintenanceModeOn: boolean;
-  private _maintenanceRoute?: string;
-
   private _apiRouterList: Router[];
   private _defaultApiRouter: Router;
   private _ssrRouter: Router;
@@ -118,14 +112,6 @@ export class HttpServer {
 
     this._enableHttps = config.enableHttps ?? false;
 
-    this._maintenanceRoute = config.maintenanceRoute;
-    this._maintenanceModeOn = config.startInMaintenanceMode ?? false;
-
-    this._logger.startupMsg(
-      "Maintenance mode is set to (%j)",
-      this._maintenanceModeOn,
-    );
-
     this._socketMap = new Map();
     this._socketId = 0;
 
@@ -149,10 +135,9 @@ export class HttpServer {
       this._certFile = config.httpsCertFile;
     }
 
-    // Make sure the SSR Router DOES NOT use the not found handler - we need it
-    // to pass control to the static file server and do not add it to the
+    // Make sure to not add the SSR Router to the
     // _apiRouterList since it doesnt have a fixed base path
-    this._ssrRouter = new Router("/", { useNotFoundHandler: false });
+    this._ssrRouter = new Router("/");
     this._logger.startupMsg("SSR router created");
 
     if (config.staticFileServer !== undefined) {
@@ -191,11 +176,12 @@ export class HttpServer {
     return this._ssrRouter;
   }
 
-  // Setter methods here
-  set maintenanceModeOn(on: boolean) {
-    this._maintenanceModeOn = on;
+  get server(): http.Server | null {
+    return this._server === undefined ? null : this._server;
+  }
 
-    this._logger.info("Maintenance mode set to (%j)", this._maintenanceModeOn);
+  get reqHandler(): (req: ServerRequest, res: ServerResponse) => Promise<void> {
+    return this.handleReq;
   }
 
   // Private methods here
@@ -286,21 +272,6 @@ export class HttpServer {
     req: ServerRequest,
     res: ServerResponse,
   ): Promise<void> {
-    // Check if we are in maintenance mode
-    if (this._maintenanceModeOn && this._maintenanceRoute !== undefined) {
-      this._logger.trace(
-        "Maintenance mode on. Redirecting (%s) to (%s)",
-        req.url,
-        this._maintenanceRoute,
-      );
-
-      // This isn't very sexy and seems a little heavy handed but works a treat
-      // we just point the req to the maintenance route and pray the user set
-      // it up!
-      req.method = "GET";
-      req.url = this._maintenanceRoute;
-    }
-
     // We have to do this here because the url will not be set until
     // after this object it created: See req-res.ts
     let protocol = this._enableHttps ? "https" : "http";
@@ -315,34 +286,54 @@ export class HttpServer {
       req.urlObj.pathname,
     );
 
-    // Look for a router with a basePath that matches the start of the req path
-    // NOTE: Make sure to delimit the pathname in case it is a match for
-    // the root of the basepath
-    let router = this._apiRouterList.find((el) =>
-      el.inPath(`${req.urlObj.pathname}/`),
-    );
+    // Check if we should test for API route matches
+    if (req.checkApiRoutes) {
+      // Look for a router with a basePath that matches the start of the req path
+      // NOTE: Make sure to delimit the pathname in case it is a match for
+      // the root of the basepath
+      let router = this._apiRouterList.find((el) =>
+        el.inPath(`${req.urlObj.pathname}/`),
+      );
 
-    // Try and handle the request (if router exists)
-    if ((await router?.handleReq(req, res)) === true) {
-      return;
+      // Check if router exists
+      if (router !== undefined) {
+        // Try and handle the request
+        await router.handleReq(req, res);
+        if (req.handled) {
+          return;
+        }
+      }
     }
 
-    // If we're here this wasn't an API req so check if it was SSR req
-    if (await this._ssrRouter.handleReq(req, res)) {
-      return;
-    }
-
-    // If we're here this wasn't a SSR req so check if we're serving
-    // static files
-    if (this._staticFileServer !== undefined) {
+    // Check if we should test for static files matches AND if we are serving
+    // static files - do this first to avoid the SSR router applying the
+    // middleware to static files we are serving
+    if (req.checkStaticFiles && this._staticFileServer !== undefined) {
       await this._staticFileServer.handleReq(req, res);
-      return;
+      if (req.handled) {
+        return;
+      }
     }
 
-    // If we are here then we dont know this URL so return a 404
-    res.statusCode = 404;
-    res.write("Not found");
-    res.end();
+    // Check if we should test for SSR routes matches
+    if (req.checkSsrRoutes) {
+      await this._ssrRouter.handleReq(req, res);
+      if (req.handled) {
+        return;
+      }
+    }
+
+    // If we are here then we dont know this URL at all so check if we should
+    // return a 404
+    if (req.handle404) {
+      req.handled = true;
+
+      res.statusCode = 404;
+      res.write("Not found");
+      res.end();
+    }
+
+    return;
   }
 
   private async healthcheckCallback(
@@ -496,11 +487,13 @@ export class HttpServer {
   }
 
   router(basePath?: string): Router | undefined {
+    // If no basePath has been defined then return the default router
     if (basePath === undefined) {
       return this._defaultApiRouter;
     }
 
-    // Make sure to remove any trailing slashes and then delimit properly
+    // Make sure to remove any trailing slashes and then delimit properly,
+    // this makes sure to remove any double slashes
     let basePathSanitised = basePath.replace(/\/*$/, "/");
 
     return this._apiRouterList.find((el) => el.basePath === basePathSanitised);

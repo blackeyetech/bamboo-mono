@@ -26,10 +26,8 @@ async function init() {
     // defaultRouterBasePath: "/",
     staticFileServer: {
       path: "/home/parallels/dev/src/urlbase/appman",
-      immutableRegExp: /^.+\.min\.[a-zA-Z0-9-]+$/,
+      immutableRegExp: ["^.+\.min\.[a-zA-Z0-9-]+$"],
     },
-    startInMaintenanceMode: false,
-    maintenanceRoute: "/api/main",
   });
 
   httpMan1.use(Router.body({}));
@@ -288,26 +286,6 @@ async function init() {
     return false;
   });
 
-  bs.httpServer().endpoint(
-    "GET",
-    "/main-on",
-    (req, res) => {
-      console.log(req.url);
-      res.body = "<p>On</p>";
-      bs.httpServer().maintenanceModeOn = true;
-    },
-    { etag: true },
-  );
-  bs.httpServer().endpoint(
-    "GET",
-    "/main-on",
-    (req, res) => {
-      console.log(req.url);
-      res.body = "<p>Off</p>";
-      bs.httpServer().maintenanceModeOn = false;
-    },
-    { etag: true },
-  );
   bs.httpServer().endpoint(
     "GET",
     "/main",

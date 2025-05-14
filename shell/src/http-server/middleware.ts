@@ -280,7 +280,7 @@ export const corsMiddleware = (options: CorsOptions = {}): Middleware => {
     // If we are here this was not a preflight request
     // The origin needs to be available or we shouldn't set the CORS headers
     if (origin !== undefined) {
-      if (opts.credentialsAllowed === true) {
+      if (opts.credentialsAllowed) {
         res.setHeader("Access-Control-Allow-Credentials", "true");
       }
 
@@ -500,7 +500,7 @@ export const dontCompressResponse = (): Middleware => {
     next: () => Promise<void>,
   ): Promise<void> => {
     // Flag the response should not be compressed
-    req.dontCompressResponse = true;
+    req.compressResponse = false;
 
     await next();
   };

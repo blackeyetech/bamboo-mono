@@ -1,5 +1,14 @@
 # @bs-core/shell
 
+## 1.21.0
+
+### Minor Changes
+
+- Fixed some code smells
+- Removed maintence mode code
+- Added new properties to ServerRequest: handled, checkApiRoues, checkSsrRoutes, checkStaticFiles, handle404
+- Removed NoFoundHandlers and references to them from the Router and StaticFileServer classes
+
 ## 1.20.4
 
 ### Patch Changes

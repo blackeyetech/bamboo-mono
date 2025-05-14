@@ -26,18 +26,12 @@ type FileDetails = {
   compressedBuffer: Buffer;
 };
 
-export type StaticNotFoundHandler = (
-  req: ServerRequest,
-  res: ServerResponse,
-) => Promise<void>;
-
 export type StaticFileServerConfig = {
   loggerName: string;
   filePath: string;
 
-  immutableRegExp?: RegExp | string | RegExp[] | string[];
+  immutableRegExp?: string[];
   defaultDirFile?: string;
-  notFoundHandler?: StaticNotFoundHandler;
 
   defaultCharSet?: string;
   extraContentTypes?: Record<string, string>;
@@ -45,15 +39,6 @@ export type StaticFileServerConfig = {
   securityHeaders?: { name: string; value: string }[];
 };
 
-// Misc here
-const defaultNotFoundHandler: StaticNotFoundHandler = async (
-  _: ServerRequest,
-  res: ServerResponse,
-) => {
-  res.statusCode = 404;
-  res.write("File not found");
-  res.end();
-};
 // StaticFileServer class here
 export class StaticFileServer {
   private _logger: Logger;
@@ -62,7 +47,6 @@ export class StaticFileServer {
   private _immutableRegExp: RegExp[];
   private _defaultDirFile: string;
   private _defaultCharSet: string;
-  private _notFoundHandler: StaticNotFoundHandler;
 
   private _staticFileMap: Map<string, FileDetails>;
   private _contentTypes: Map<string, string>;
@@ -81,26 +65,14 @@ export class StaticFileServer {
 
     // Check if user has provided an immutable config value
     if (config.immutableRegExp !== undefined) {
-      // Check if user has provided a regexp or string or array
-      if (config.immutableRegExp instanceof RegExp) {
-        this._immutableRegExp.push(config.immutableRegExp);
-      } else if (typeof config.immutableRegExp === "string") {
-        this._immutableRegExp.push(new RegExp(config.immutableRegExp));
-      } else if (Array.isArray(config.immutableRegExp)) {
-        for (const exp of config.immutableRegExp) {
-          // This is an array so iterate through each element and add it to the list
-          if (exp instanceof RegExp) {
-            this._immutableRegExp.push(exp);
-          } else if (typeof exp === "string") {
-            this._immutableRegExp.push(new RegExp(exp));
-          }
-        }
+      for (const exp of config.immutableRegExp) {
+        // This is an array so iterate through each element and add it to the list
+        this._immutableRegExp.push(new RegExp(exp));
       }
     }
 
     this._defaultDirFile = config.defaultDirFile ?? "index.html";
     this._defaultCharSet = config.defaultCharSet ?? "charset=utf-8";
-    this._notFoundHandler = config.notFoundHandler ?? defaultNotFoundHandler;
 
     this._staticFileMap = new Map();
     this._contentTypes = new Map();
@@ -242,7 +214,7 @@ export class StaticFileServer {
 
     // Now check if the path matches one of the RegExps
     for (const regexp of this._immutableRegExp) {
-      if (regexp.test(fullPath) === true) {
+      if (regexp.test(fullPath)) {
         immutable = true;
         break;
       }
@@ -334,18 +306,21 @@ export class StaticFileServer {
 
   // Public methods here
   async handleReq(req: ServerRequest, res: ServerResponse): Promise<void> {
-    // We only handle GET and HEAD for static files. Return a not found
+    // We only handle GET and HEAD for static files
     if (req.method !== "GET" && req.method !== "HEAD") {
-      this._notFoundHandler(req, res);
+      // Go no further, return with the req not handled
       return;
     }
 
-    // Get the file details and if it doesn't exist return a not found
+    // Get the file details
     const details = await this.getFileDetails(req.urlObj.pathname);
     if (details === undefined) {
-      this._notFoundHandler(req, res);
+      // File doesnt exist so return with the req not handled
       return;
     }
+
+    // Mark req as handled before we do anything else
+    req.handled = true;
 
     const cacheControl = details.immutable
       ? "max-age=31536000, immutable"

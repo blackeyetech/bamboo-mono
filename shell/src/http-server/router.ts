@@ -80,15 +80,7 @@ export type Route = {
   all: (callback: EndpointCallback, endpointOptions?: EndpointOptions) => Route;
 };
 
-export type RouterNotFoundHandler = (
-  req: ServerRequest,
-  res: ServerResponse,
-) => Promise<void>;
-
 export type RouterConfig = {
-  useNotFoundHandler?: boolean;
-  notFoundHandler?: RouterNotFoundHandler;
-
   minCompressionSize?: number;
 };
 
@@ -101,22 +93,10 @@ type MethodListElement = {
   etag: boolean;
 };
 
-// Misc here
-const defaultNotFoundHandler: RouterNotFoundHandler = async (
-  _: ServerRequest,
-  res: ServerResponse,
-) => {
-  res.statusCode = 404;
-  res.write("API route not found");
-  res.end();
-};
-
 // Router class here
 export class Router {
   private _basePathDelimited: string;
   private _basePath: string;
-  private _useNotFoundHandler: boolean;
-  private _notFoundHandler: RouterNotFoundHandler;
   private _minCompressionSize: number;
 
   private _logger: Logger;
@@ -129,8 +109,6 @@ export class Router {
     // Make sure to strip off the trailing slashes
     this._basePath = basePath.replace(/\/*$/, "");
 
-    this._useNotFoundHandler = config.useNotFoundHandler ?? true;
-    this._notFoundHandler = config.notFoundHandler ?? defaultNotFoundHandler;
     this._minCompressionSize = config.minCompressionSize ?? 1024;
 
     this._logger = new Logger(`Router (${this._basePath})`);
@@ -344,7 +322,7 @@ export class Router {
       if (
         req.headers["accept-encoding"]?.includes("gzip") === true &&
         Buffer.byteLength(body) >= this._minCompressionSize &&
-        req.dontCompressResponse === false
+        req.compressResponse
       ) {
         // It does ...
         gzipIt = true;
@@ -395,19 +373,16 @@ export class Router {
     return pathname.startsWith(this._basePathDelimited);
   }
 
-  async handleReq(req: ServerRequest, res: ServerResponse): Promise<boolean> {
+  async handleReq(req: ServerRequest, res: ServerResponse): Promise<void> {
     // See if this request matches a registered endpoint
     let matchedEl = this.findEndpoint(req);
     if (matchedEl === null) {
-      // Check if we should use the supplied Not Found handler or not
-      if (this._useNotFoundHandler) {
-        await this._notFoundHandler(req, res);
-        return true;
-      }
-
-      // Couldn't find a match so flag that the req has not been handled
-      return false;
+      // Couldn't find a match so return with the req not been handled
+      return;
     }
+
+    // We found it so mark this as handled before we do anything else
+    req.handled = true;
 
     await this.callMiddleware(
       req,
@@ -455,7 +430,7 @@ export class Router {
 
     // If this is an SSE server dont call addResponse or res.end()
     if (req.sseServer !== undefined) {
-      return true;
+      return;
     }
 
     // Check if res.write() has NOT been called yet
@@ -469,9 +444,6 @@ export class Router {
       // End the response now
       res.end();
     }
-
-    // Flag this req has been handled
-    return true;
   }
 
   pathToRegexMatcher(path: string): RouterMatchFunc {
