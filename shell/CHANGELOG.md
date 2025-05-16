@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.1
+
+### Patch Changes
+
+- Chanegd ServerRequest and SeverResponse to types so that the Astro adapter can work in dev mode
+
 ## 1.21.0
 
 ### Minor Changes

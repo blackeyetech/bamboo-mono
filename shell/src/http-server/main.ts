@@ -1,7 +1,12 @@
 // imports here
 import { Logger } from "../logger.js";
 
-import { ServerRequest, ServerResponse } from "./req-res.js";
+import {
+  enhanceIncomingMessage,
+  enhanceServerResponse,
+  ServerRequest,
+  ServerResponse,
+} from "./req-res.js";
 import { Middleware } from "./middleware.js";
 import { StaticFileServer } from "./static-file-server.js";
 import {
@@ -269,16 +274,11 @@ export class HttpServer {
   }
 
   private async handleReq(
-    req: ServerRequest,
-    res: ServerResponse,
+    origReq: http.IncomingMessage,
+    origRes: http.ServerResponse,
   ): Promise<void> {
-    // We have to do this here because the url will not be set until
-    // after this object it created: See req-res.ts
-    let protocol = this._enableHttps ? "https" : "http";
-    req.urlObj = new URL(
-      req.url as string,
-      `${protocol}://${req.headers.host}`,
-    );
+    const req = enhanceIncomingMessage(origReq);
+    const res = enhanceServerResponse(origRes);
 
     this._logger.trace(
       "Received (%s) req for (%s)",
@@ -328,8 +328,12 @@ export class HttpServer {
     if (req.handle404) {
       req.handled = true;
 
+      const message = "Route not found";
+
       res.statusCode = 404;
-      res.write("Not found");
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Length", Buffer.byteLength(message));
+      res.write(message);
       res.end();
     }
 
@@ -393,26 +397,21 @@ export class HttpServer {
       this._logger.startupMsg(`Attempting to listen on (${this._baseUrl})`);
 
       const options: https.ServerOptions = {
-        IncomingMessage: ServerRequest,
-        ServerResponse: <any>ServerResponse, // Something wrong with typedefs
         key: fs.readFileSync(this._keyFile),
         cert: fs.readFileSync(this._certFile),
       };
 
       this._server = https.createServer(options, (req, res) => {
-        this.handleReq(req as ServerRequest, res as ServerResponse);
+        this.handleReq(req, res);
       });
     } else {
       this._baseUrl = `http://${this._networkIp}:${this._networkPort}`;
 
       this._logger.startupMsg(`Attempting to listen on (${this._baseUrl})`);
 
-      const options: https.ServerOptions = {
-        IncomingMessage: ServerRequest,
-        ServerResponse: <any>ServerResponse, // Something wrong with typedefs
-      };
+      const options: https.ServerOptions = {};
       this._server = http.createServer(options, (req, res) => {
-        this.handleReq(req as ServerRequest, res as ServerResponse);
+        this.handleReq(req, res);
       });
     }
 

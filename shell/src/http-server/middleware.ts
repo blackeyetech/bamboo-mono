@@ -75,7 +75,6 @@ export const jsonMiddleware = (): Middleware => {
       return;
     }
 
-    let jsonBody: any;
     let parseOk = true;
     let errMessage = "";
 
@@ -88,7 +87,7 @@ export const jsonMiddleware = (): Middleware => {
       switch (contentType) {
         case "application/json":
           try {
-            jsonBody = JSON.parse(body.toString());
+            req.json = JSON.parse(body.toString());
           } catch (_) {
             // Set the error message you want to return
             errMessage = "Can not parse JSON body!";
@@ -98,11 +97,13 @@ export const jsonMiddleware = (): Middleware => {
           break;
         case "application/x-www-form-urlencoded":
           let qry = new URLSearchParams(body.toString());
-          jsonBody = {};
+          let jsonBody: Record<string, any> = {};
 
           for (let [key, value] of qry.entries()) {
             jsonBody[key] = value;
           }
+
+          req.json = jsonBody;
           break;
         default:
           break;
@@ -114,7 +115,6 @@ export const jsonMiddleware = (): Middleware => {
       throw new HttpError(400, errMessage);
     }
 
-    req.json = jsonBody;
     await next();
   };
 };

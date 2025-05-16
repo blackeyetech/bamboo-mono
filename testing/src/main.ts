@@ -30,8 +30,8 @@ async function init() {
     },
   });
 
-  httpMan1.use(Router.body({}));
-  httpMan1.use(Router.json());
+  // httpMan1.use(Router.body({}));
+  // httpMan1.use(Router.json());
   httpMan1.use(
     Router.cors({
       headersAllowed: "*",
@@ -223,6 +223,8 @@ async function init() {
         302,
         "Hey, you, get off of my cloud!",
       );
+      res.latencyMetricName = "kieran";
+      console.log(res.redirected);
     },
     { useDefaultMiddlewares: false },
   );
@@ -285,6 +287,30 @@ async function init() {
     await bs.sleep(3);
     return false;
   });
+
+  bs.httpServer().endpoint(
+    "POST",
+    "/post1",
+    (req, res) => {
+      res.json = req.json;
+      console.log(req.getCookie("hello"));
+    },
+    {
+      middlewareList: [Router.body()],
+    },
+  );
+
+  bs.httpServer().endpoint(
+    "POST",
+    "/post2",
+    (req, res) => {
+      res.json = req.json;
+      console.log(req.json);
+    },
+    {
+      middlewareList: [Router.body(), Router.json()],
+    },
+  );
 
   bs.httpServer().endpoint(
     "GET",

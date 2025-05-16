@@ -1,7 +1,6 @@
 // imports here
 import { SseServer } from "./sse-server.js";
 
-import * as net from "node:net";
 import * as http from "node:http";
 import { performance } from "node:perf_hooks";
 
@@ -49,55 +48,71 @@ export type ServerTimingMetric = {
   description?: string;
 };
 
-export class ServerRequest extends http.IncomingMessage {
-  // Properties here
-  public urlObj: URL;
-  public params: Record<string, any>;
-  public middlewareProps: Record<string, any>;
+// NOTE: ServerRequest needs to be a type. It was orignially a class and this
+// worked great when it was passed to createServer(), but it will not work
+// in other scenarios like Astro in dev mode where the vite dev server creates
+// the requests
+export type ServerRequest = http.IncomingMessage & {
+  // New properties here
+  urlObj: URL;
+  params: Record<string, any>;
 
-  public sseServer?: SseServer;
-  public json?: any;
-  public body?: Buffer;
+  sseServer?: SseServer;
+  json?: any;
+  body?: Buffer;
 
-  public matchedInfo: any;
+  matchedInfo: any; // Is any because its use depends on the matcher
 
-  public handled: boolean;
-  public compressResponse: boolean;
+  handled: boolean;
+  compressResponse: boolean;
 
-  public checkApiRoutes: boolean;
-  public checkSsrRoutes: boolean;
-  public checkStaticFiles: boolean;
+  checkApiRoutes: boolean;
+  checkSsrRoutes: boolean;
+  checkStaticFiles: boolean;
 
-  public handle404: boolean;
+  handle404: boolean;
 
-  // Constructor here
-  constructor(socket: net.Socket) {
-    super(socket);
+  // New methods here
+  getCookie(cookieName: string): string | null;
 
-    // When this object is instantiated the body of the req has not yet been
-    // received so the details, such as the URL, will not be known until later
-    this.urlObj = new URL("http://localhost/");
+  setServerTimingHeader(value: string): void;
+};
 
-    this.params = {};
-    this.middlewareProps = {};
-    this.handled = false;
+// This method enhances an existing IncomingMessage to be a ServerRequest
+export const enhanceIncomingMessage = (
+  req: http.IncomingMessage,
+): ServerRequest => {
+  // Treat req like a ServerRequest (which it is minus the props and methods)
+  let enhancedReq = req as ServerRequest;
 
-    // By default we will compress the response
-    this.compressResponse = true;
+  // Now set all of the props that make it a ServerRequest
 
-    // By default we shld check all the different types of routes
-    this.checkApiRoutes = true;
-    this.checkSsrRoutes = true;
-    this.checkStaticFiles = true;
+  // NOTE: I can not figure out a good way to tell if the req is HTTP or HTTPS
+  // but I dont think it matters here unless someone needs the protocol prop
+  enhancedReq.urlObj = new URL(
+    req.url as string,
+    `https://${req.headers.host}`,
+  );
 
-    // By default the req handler is expected to handle the 404
-    this.handle404 = true;
-  }
+  enhancedReq.params = {};
+  enhancedReq.handled = false;
 
-  getCookie = (cookieName: string): string | null => {
+  // By default we will compress the response
+  enhancedReq.compressResponse = true;
+
+  // By default we shld check all the different types of routes
+  enhancedReq.checkApiRoutes = true;
+  enhancedReq.checkSsrRoutes = true;
+  enhancedReq.checkStaticFiles = true;
+
+  // By default the req handler is expected to handle the 404
+  enhancedReq.handle404 = true;
+
+  // Now set all of the public methods that make it a ServerRequest
+  enhancedReq.getCookie = (cookieName: string): string | null => {
     // Get the cookie header and spilt it up by cookies -
     // NOTE: cookies are separated by semi colons
-    let cookies = this.headers.cookie?.split(";");
+    let cookies = enhancedReq.headers.cookie?.split(";");
 
     if (cookies === undefined) {
       // Nothing to do so just return
@@ -126,78 +141,94 @@ export class ServerRequest extends http.IncomingMessage {
     return null;
   };
 
-  setServerTimingHeader = (value: string): void => {
-    this.headers["Server-Timing"] = value;
+  enhancedReq.setServerTimingHeader = (value: string): void => {
+    enhancedReq.headers["Server-Timing"] = value;
   };
-}
 
-export class ServerResponse extends http.ServerResponse {
-  // Properties here
-  private _receiveTime: number;
-  private _redirected: boolean;
-  private _latencyMetricName: string;
+  return enhancedReq;
+};
 
-  private _serverTimingsMetrics: (ServerTimingMetric | string)[];
+// NOTE: ServerResponse needs to be a type. It was orignially a class and this
+// worked great when it was passed to createServer(), but it will not work
+// in other scenarios like Astro in dev mode where the vite dev server creates
+// the response
+export type ServerResponse = http.ServerResponse & {
+  // New properties here
+  _receiveTime: number;
+  _redirected: boolean;
+  _latencyMetricName: string;
 
-  public json?: object | [] | string | number | boolean;
-  public body?: string | Buffer;
+  _serverTimingsMetrics: (ServerTimingMetric | string)[];
 
-  public proxied: boolean;
+  json?: object | [] | string | number | boolean;
+  body?: string | Buffer;
 
-  // constructor here
-  constructor(req: ServerRequest) {
-    super(req);
+  proxied: boolean;
 
-    // NOTE: This will be created at the same time as ServerRequest
-    this._receiveTime = performance.now();
-    this._redirected = false;
-    this._latencyMetricName = "latency";
-    this._serverTimingsMetrics = [];
-    this.proxied = false;
-  }
+  // New getter methods here
+  redirected: boolean;
 
-  // Getter methods here
-  get redirected(): boolean {
-    return this._redirected;
-  }
+  // New setter methods here
+  latencyMetricName: string;
 
-  // Setter methods here
-  set latencyMetricName(name: string) {
-    this._latencyMetricName = name;
-  }
-
-  // Public functions here
+  // New methods here
+  setCookies(cookies: Cookie[]): void;
+  clearCookies(cookies: string[]): void;
+  setServerTimingHeader(): void;
   redirect(
     location: string,
-    statusCode: HttpRedirectStatusCode = 302,
-    message: string = "",
-  ) {
-    this._redirected = true;
+    statusCode: HttpRedirectStatusCode,
+    message: string,
+  ): void;
+  addServerTimingMetric(
+    name: string,
+    duration?: number,
+    description?: string,
+  ): void;
+  addServerTimingHeader(header: string): void;
+};
 
-    let htmlMessage =
-      message.length > 0
-        ? message
-        : `Redirected to <a href="${location}">here</a>`;
+// This method enhances an existing ServerResponse to be a ServerResponse
+export const enhanceServerResponse = (
+  res: http.ServerResponse,
+): ServerResponse => {
+  // Treat res like a ServerResponse (which it is minus the props and methods)
+  let enhancedRes = res as ServerResponse;
 
-    // Write a little something something for good measure
-    this.body = `
-    <html>
-      <body>
-        <p>${htmlMessage}</p>
-      </body>
-    </html>`;
+  // Now set all of the props that make it a ServerRequest
+  // NOTE: enhancedRes will be created at the same time as ServerRequest
+  enhancedRes._receiveTime = performance.now();
+  enhancedRes._redirected = false;
+  enhancedRes._latencyMetricName = "latency";
+  enhancedRes._serverTimingsMetrics = [];
+  enhancedRes.proxied = false;
 
-    this.setHeader("Content-Type", "text/html; charset=utf-8");
-    this.setHeader("Location", location);
+  // Now set all of the getters that make it a ServerResponse
+  Object.defineProperty(enhancedRes, "redirected", {
+    get() {
+      return enhancedRes._redirected;
+    },
+    enumerable: true,
+  });
 
-    this.statusCode = statusCode;
-  }
+  // Now set all of the setters that make it a ServerResponse
+  Object.defineProperty(enhancedRes, "latencyMetricName", {
+    get() {
+      return enhancedRes._latencyMetricName;
+    },
+    set(name: string) {
+      enhancedRes._latencyMetricName = name;
+    },
+    enumerable: true,
+    configurable: true,
+  });
 
-  setCookies = (cookies: Cookie[]): void => {
+  // Now set all of the public methods that make it a ServerResponse
+  enhancedRes.setCookies = (cookies: Cookie[]): void => {
     let setCookiesValue: string[] = [];
 
     // Check for exiting cookies and add them to the setCookiesValue array
-    let existing = this.getHeader("Set-Cookie");
+    let existing = enhancedRes.getHeader("Set-Cookie");
 
     if (typeof existing === "string") {
       setCookiesValue.push(existing);
@@ -243,10 +274,10 @@ export class ServerResponse extends http.ServerResponse {
     }
 
     // Finally set the cookie/s in the response header
-    this.setHeader("Set-Cookie", setCookiesValue);
+    enhancedRes.setHeader("Set-Cookie", setCookiesValue);
   };
 
-  clearCookies = (cookies: string[]): void => {
+  enhancedRes.clearCookies = (cookies: string[]): void => {
     let httpCookies: Cookie[] = [];
 
     for (let cookie of cookies) {
@@ -254,17 +285,17 @@ export class ServerResponse extends http.ServerResponse {
       httpCookies.push({ name: cookie, value: "", maxAge: -1 });
     }
 
-    this.setCookies(httpCookies);
+    enhancedRes.setCookies(httpCookies);
   };
 
-  setServerTimingHeader = () => {
+  enhancedRes.setServerTimingHeader = () => {
     let serverTimingHeaders: string[] = [];
 
     // Check if the req has a Server-Timing header. This is not normal but I
     // want to something like a forwardAuth server to be able to add it's
     // metrics to the response header
-    if (this?.req?.headers["server-timing"] !== undefined) {
-      const reqTimings = this.req.headers["server-timing"];
+    if (enhancedRes?.req?.headers["server-timing"] !== undefined) {
+      const reqTimings = enhancedRes.req.headers["server-timing"];
 
       // Check if there are multiple headers
       if (Array.isArray(reqTimings)) {
@@ -280,7 +311,7 @@ export class ServerResponse extends http.ServerResponse {
 
     // Add each additional metric added to the res next so they are in
     // the order they were added
-    for (let metric of this._serverTimingsMetrics) {
+    for (let metric of enhancedRes._serverTimingsMetrics) {
       // Check if we have a string or a metric object
       if (typeof metric === "string") {
         // The string version is already formatted so just add to the array
@@ -304,25 +335,53 @@ export class ServerResponse extends http.ServerResponse {
     }
 
     // Finally add the total latency for the endpoint to the array
-    const latency = Math.round(performance.now() - this._receiveTime);
-    serverTimingValue += `${this._latencyMetricName};dur=${latency}`;
+    const latency = Math.round(performance.now() - enhancedRes._receiveTime);
+    serverTimingValue += `${enhancedRes._latencyMetricName};dur=${latency}`;
     serverTimingHeaders.push(serverTimingValue);
 
     // Of course don't forget to set the header!!
-    this.setHeader("Server-Timing", serverTimingHeaders);
+    enhancedRes.setHeader("Server-Timing", serverTimingHeaders);
   };
 
-  addServerTimingMetric = (
+  enhancedRes.redirect = (
+    location: string,
+    statusCode: HttpRedirectStatusCode = 302,
+    message: string = "",
+  ) => {
+    enhancedRes._redirected = true;
+
+    let htmlMessage =
+      message.length > 0
+        ? message
+        : `Redirected to <a href="${location}">here</a>`;
+
+    // Write a little something something for good measure
+    enhancedRes.body = `
+    <html>
+      <body>
+        <p>${htmlMessage}</p>
+      </body>
+    </html>`;
+
+    enhancedRes.setHeader("Content-Type", "text/html; charset=utf-8");
+    enhancedRes.setHeader("Location", location);
+
+    enhancedRes.statusCode = statusCode;
+  };
+
+  enhancedRes.addServerTimingMetric = (
     name: string,
     duration?: number,
     description?: string,
   ) => {
     // This adds a metric to the Server-Timing header for this response
-    this._serverTimingsMetrics.push({ name, duration, description });
+    enhancedRes._serverTimingsMetrics.push({ name, duration, description });
   };
 
-  addServerTimingHeader = (header: string) => {
+  enhancedRes.addServerTimingHeader = (header: string) => {
     // This adds a complete Server-Timing header to this response
-    this._serverTimingsMetrics.push(header);
+    enhancedRes._serverTimingsMetrics.push(header);
   };
-}
+
+  return enhancedRes;
+};

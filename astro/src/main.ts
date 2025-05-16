@@ -6,6 +6,7 @@ import {
   ServerRequest,
   ServerResponse,
   RouterMatchFunc,
+  HttpServer,
 } from "@bs-core/shell";
 
 import type { AstroIntegration, SSRManifest } from "astro";
@@ -168,6 +169,63 @@ async function ssrEndpoint(
   }
 }
 
+async function createHttpServer(
+  options: Options,
+  production: boolean,
+): Promise<HttpServer> {
+  // Setup the config for the HTTP server
+  let httpConfig: HttpConfig = {
+    keepAliveTimeout: options.keepAliveTimeout,
+    headerTimeout: options.headerTimeout,
+    defaultRouterBasePath: options.defaultRouterBasePath,
+    healthcheckPath: options.healthcheckPath,
+    healthcheckGoodRes: options.healthcheckGoodRes,
+    healthcheckBadRes: options.healthcheckBadRes,
+  };
+
+  // Only add the static file server configs if we are in production mode AND
+  // there is a staticFilesPath
+  if (production && options.staticFilesPath !== undefined) {
+    httpConfig.staticFileServer = {
+      path: options.staticFilesPath,
+      extraContentTypes: options.extraContentTypes,
+      immutableRegExp: options.immutableRegexSrc,
+      securityHeaders: options.securityHeaders,
+    };
+  }
+
+  const enableHttps = bs.getConfigBool(HTTP_ENABLE_HTTPS, false);
+
+  if (enableHttps) {
+    httpConfig.enableHttps = true;
+    httpConfig.httpsCertFile = bs.getConfigStr(HTTP_CERT_FILE);
+    httpConfig.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
+  }
+
+  const networkIf = bs.getConfigStr(HTTP_IF, "127.0.0.1");
+  const networkPort = bs.getConfigNum(HTTP_PORT, 8080);
+
+  // Create the HTTP server
+  const httpServer = await bs.addHttpServer(
+    networkIf,
+    networkPort,
+    httpConfig,
+    false, // NOTE: Don't start the server
+  );
+
+  // Call setupEntryPoint here in case you want to setup any default
+  // middleware for the SSR endpoint or add API endpoints
+  if (options.setupEntryPoint !== undefined) {
+    // NOTE: We expect an exported function named "setup"
+    const { setup } = await import(pathToFileURL(options.setupEntryPoint).href);
+    await setup();
+  }
+
+  bs.startupMsg("HTTP server has been created");
+
+  return httpServer;
+}
+
 // Exported functions here
 
 // The default function is called when the bundle script is being built
@@ -194,8 +252,39 @@ export default (args: Options): AstroIntegration => {
           },
         });
       },
+
       "astro:build:done": async () => {
         // We could update the bundle file here if needed
+      },
+
+      "astro:server:setup": async ({ server }) => {
+        // We need the req handler from the HttpServer so lets create it now
+        const httpServer = await createHttpServer(args, false);
+
+        // Add the req handler to the dev servesr middleware
+        server.middlewares.use(async (req, res, next) => {
+          // We need to convert the req to a ServerRequest and set some parms
+          const bsReq = req as ServerRequest;
+          // Make sure to set the handled flag to false
+          bsReq.handled = false;
+          // We only want the reeq handler to handle API reqs
+          bsReq.checkApiRoutes = true;
+          bsReq.checkSsrRoutes = false;
+          bsReq.checkStaticFiles = false;
+          // Make sure we do not genertae a 404 if the rroute is not found
+          bsReq.handle404 = false;
+
+          // Call the req handler
+          await httpServer.reqHandler(bsReq, res as ServerResponse);
+
+          // If the req was handled by the req handler then we are done
+          if (bsReq.handled) {
+            return;
+          }
+
+          // If we are here the req was not handled, so call next
+          next();
+        });
       },
     },
   };
@@ -214,51 +303,7 @@ export const start = async (
   // Create the app first before doing anything else
   _app = new App(manifest);
 
-  // Setup the config for the HTTP server
-  let httpConfig: HttpConfig = {
-    keepAliveTimeout: options.keepAliveTimeout,
-    headerTimeout: options.headerTimeout,
-    defaultRouterBasePath: options.defaultRouterBasePath,
-    healthcheckPath: options.healthcheckPath,
-    healthcheckGoodRes: options.healthcheckGoodRes,
-    healthcheckBadRes: options.healthcheckBadRes,
-  };
-
-  if (options.staticFilesPath !== undefined) {
-    httpConfig.staticFileServer = {
-      path: options.staticFilesPath,
-      extraContentTypes: options.extraContentTypes,
-      immutableRegExp: options.immutableRegexSrc,
-      securityHeaders: options.securityHeaders,
-    };
-  }
-
-  const enableHttps = bs.getConfigBool(HTTP_ENABLE_HTTPS, false);
-
-  if (enableHttps) {
-    httpConfig.enableHttps = true;
-    httpConfig.httpsCertFile = bs.getConfigStr(HTTP_CERT_FILE);
-    httpConfig.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
-  }
-
-  const networkIf = bs.getConfigStr(HTTP_IF, "127.0.0.1");
-  const networkPort = bs.getConfigNum(HTTP_PORT, 8080);
-
-  // Create the HTTP server
-  const httpServer = await bs.addHttpServer(
-    networkIf,
-    networkPort,
-    httpConfig,
-    false, // NOTE: Don't start until we are finished setting everything up
-  );
-
-  // Call setupEntryPoint here in case you want to setup any default
-  // middleware for the SSR endpoint
-  if (options.setupEntryPoint !== undefined) {
-    // NOTE: We expect an exported function named "setup"
-    const { setup } = await import(pathToFileURL(options.setupEntryPoint).href);
-    await setup();
-  }
+  const httpServer = await createHttpServer(options, true);
 
   // Add the main SSR route - NOTE: the path is not important since the
   // matcher will decide if there is a matching page
