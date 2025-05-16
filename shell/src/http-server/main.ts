@@ -274,12 +274,9 @@ export class HttpServer {
   }
 
   private async handleReq(
-    origReq: http.IncomingMessage,
-    origRes: http.ServerResponse,
+    req: ServerRequest,
+    res: ServerResponse,
   ): Promise<void> {
-    const req = enhanceIncomingMessage(origReq);
-    const res = enhanceServerResponse(origRes);
-
     this._logger.trace(
       "Received (%s) req for (%s)",
       req.method,
@@ -401,7 +398,10 @@ export class HttpServer {
         cert: fs.readFileSync(this._certFile),
       };
 
-      this._server = https.createServer(options, (req, res) => {
+      this._server = https.createServer(options, (origReq, origRes) => {
+        const req = enhanceIncomingMessage(origReq);
+        const res = enhanceServerResponse(origRes);
+
         this.handleReq(req, res);
       });
     } else {
@@ -410,7 +410,10 @@ export class HttpServer {
       this._logger.startupMsg(`Attempting to listen on (${this._baseUrl})`);
 
       const options: https.ServerOptions = {};
-      this._server = http.createServer(options, (req, res) => {
+      this._server = http.createServer(options, (origReq, origRes) => {
+        const req = enhanceIncomingMessage(origReq);
+        const res = enhanceServerResponse(origRes);
+
         this.handleReq(req, res);
       });
     }

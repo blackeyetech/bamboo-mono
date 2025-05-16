@@ -5,6 +5,8 @@ import {
   HttpConfig,
   ServerRequest,
   ServerResponse,
+  enhanceIncomingMessage,
+  enhanceServerResponse,
   RouterMatchFunc,
   HttpServer,
 } from "@bs-core/shell";
@@ -258,27 +260,28 @@ export default (args: Options): AstroIntegration => {
       },
 
       "astro:server:setup": async ({ server }) => {
-        // We need the req handler from the HttpServer so lets create it now
+        // We need the req handler from the HttpServer so lets create one
+        // even though we will not actually use it directly
         const httpServer = await createHttpServer(args, false);
 
-        // Add the req handler to the dev servesr middleware
+        // Add the req handler to the dev server middleware
         server.middlewares.use(async (req, res, next) => {
-          // We need to convert the req to a ServerRequest and set some parms
-          const bsReq = req as ServerRequest;
-          // Make sure to set the handled flag to false
-          bsReq.handled = false;
-          // We only want the reeq handler to handle API reqs
-          bsReq.checkApiRoutes = true;
-          bsReq.checkSsrRoutes = false;
-          bsReq.checkStaticFiles = false;
-          // Make sure we do not genertae a 404 if the rroute is not found
-          bsReq.handle404 = false;
+          // Enhance req/res so that the endpoint code with work correctly
+          let enhancedReq = enhanceIncomingMessage(req);
+          let enhancedRes = enhanceServerResponse(res);
 
-          // Call the req handler
-          await httpServer.reqHandler(bsReq, res as ServerResponse);
+          // We only want the reeq handler to handle API reqs
+          enhancedReq.checkSsrRoutes = false;
+          enhancedReq.checkStaticFiles = false;
+
+          // Make sure we do not genertae a 404 if the rroute is not found
+          enhancedReq.handle404 = false;
+
+          // Call our req handler
+          await httpServer.reqHandler(enhancedReq, enhancedRes);
 
           // If the req was handled by the req handler then we are done
-          if (bsReq.handled) {
+          if (enhancedReq.handled) {
             return;
           }
 

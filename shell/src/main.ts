@@ -12,6 +12,8 @@ export { SseServerOptions, SseServer } from "./http-server/sse-server.js";
 export {
   ServerRequest,
   ServerResponse,
+  enhanceIncomingMessage,
+  enhanceServerResponse,
   HttpError,
   HttpRedirect,
   Cookie,

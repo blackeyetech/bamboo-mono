@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.2
+
+### Patch Changes
+
+- Changed the reqHandler to accept enhanced req and res objects
+
 ## 1.21.1
 
 ### Patch Changes
