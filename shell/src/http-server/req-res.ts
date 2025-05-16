@@ -177,8 +177,8 @@ export type ServerResponse = http.ServerResponse & {
   setServerTimingHeader(): void;
   redirect(
     location: string,
-    statusCode: HttpRedirectStatusCode,
-    message: string,
+    statusCode?: HttpRedirectStatusCode,
+    message?: string,
   ): void;
   addServerTimingMetric(
     name: string,

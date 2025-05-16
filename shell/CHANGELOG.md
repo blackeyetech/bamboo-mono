@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.3
+
+### Patch Changes
+
+- Fixed issue with default values in ServerResponse.redirect()
+
 ## 1.21.2
 
 ### Patch Changes
