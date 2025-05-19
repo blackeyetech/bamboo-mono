@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.4
+
+### Patch Changes
+
+- - HttpServer is now checking the SSR routes before the static file routes
+
 ## 1.21.3
 
 ### Patch Changes

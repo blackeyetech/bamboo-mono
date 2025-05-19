@@ -302,19 +302,18 @@ export class HttpServer {
       }
     }
 
-    // Check if we should test for static files matches AND if we are serving
-    // static files - do this first to avoid the SSR router applying the
-    // middleware to static files we are serving
-    if (req.checkStaticFiles && this._staticFileServer !== undefined) {
-      await this._staticFileServer.handleReq(req, res);
+    // Check if we should test for SSR routes matches
+    if (req.checkSsrRoutes) {
+      await this._ssrRouter.handleReq(req, res);
       if (req.handled) {
         return;
       }
     }
 
-    // Check if we should test for SSR routes matches
-    if (req.checkSsrRoutes) {
-      await this._ssrRouter.handleReq(req, res);
+    // Check if we should test for static files matches AND if we are serving
+    // static files
+    if (req.checkStaticFiles && this._staticFileServer !== undefined) {
+      await this._staticFileServer.handleReq(req, res);
       if (req.handled) {
         return;
       }
