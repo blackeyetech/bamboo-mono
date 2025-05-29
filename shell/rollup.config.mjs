@@ -44,7 +44,7 @@ export default [
       file: "dist/shell.d.ts",
       format: "es",
     },
-    external: ["node:http", "node:net"], // This is because we use the http/net types
+    external: ["node:http", "node:net", "node:stream"], // This is because we use the http/net/stream types
     plugins: [dts()],
   },
 ];

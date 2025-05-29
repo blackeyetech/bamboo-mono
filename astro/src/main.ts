@@ -39,7 +39,6 @@ export type Options = {
   setupEntryPoint?: string;
 
   staticFilesPath?: string;
-  extraContentTypes?: Record<string, string>;
   immutableRegexSrc?: string[];
   securityHeaders?: { name: string; value: string }[];
 
@@ -190,7 +189,6 @@ async function createHttpServer(
   if (production && options.staticFilesPath !== undefined) {
     httpConfig.staticFileServer = {
       path: options.staticFilesPath,
-      extraContentTypes: options.extraContentTypes,
       immutableRegExp: options.immutableRegexSrc,
       securityHeaders: options.securityHeaders,
     };

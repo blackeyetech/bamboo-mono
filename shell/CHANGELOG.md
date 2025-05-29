@@ -1,5 +1,15 @@
 # @bs-core/shell
 
+## 1.21.5
+
+### Patch Changes
+
+- - Removed ContentType from StaticFileServer
+  - Refactored ServerRequest and ServerResponse
+  - Refactored Router
+  - Can now stream a response
+  - Updated scripts in all package,json files to use pnpm instead of npm
+
 ## 1.21.4
 
 ### Patch Changes

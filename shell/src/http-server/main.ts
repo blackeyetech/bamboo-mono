@@ -61,7 +61,6 @@ export type HttpConfig = {
 
   staticFileServer?: {
     path: string;
-    extraContentTypes?: Record<string, string>;
     immutableRegExp?: string[];
     securityHeaders?: { name: string; value: string }[];
   };
@@ -149,7 +148,6 @@ export class HttpServer {
       this._staticFileServer = new StaticFileServer({
         loggerName: `HttpServer-${this._name}/StaticFile`,
         filePath: config.staticFileServer.path,
-        extraContentTypes: config.staticFileServer.extraContentTypes,
         immutableRegExp: config.staticFileServer.immutableRegExp,
         securityHeaders: config.staticFileServer.securityHeaders,
       });

@@ -3,6 +3,7 @@ import { SseServer } from "./sse-server.js";
 
 import * as http from "node:http";
 import { performance } from "node:perf_hooks";
+import { Readable } from "node:stream";
 
 // Types here
 export type Cookie = {
@@ -154,22 +155,19 @@ export const enhanceIncomingMessage = (
 // the response
 export type ServerResponse = http.ServerResponse & {
   // New properties here
-  _receiveTime: number;
-  _redirected: boolean;
-  _latencyMetricName: string;
-
-  _serverTimingsMetrics: (ServerTimingMetric | string)[];
-
-  json?: object | [] | string | number | boolean;
-  body?: string | Buffer;
-
-  proxied: boolean;
-
-  // New getter methods here
+  receiveTime: number;
   redirected: boolean;
-
-  // New setter methods here
   latencyMetricName: string;
+  serverTimingsMetrics: (ServerTimingMetric | string)[];
+
+  body?: string | Buffer;
+  json?: object | [] | string | number | boolean;
+  streamRes?: {
+    body: Readable;
+    fileName?: string;
+  };
+
+  enhancedReq: ServerRequest;
 
   // New methods here
   setCookies(cookies: Cookie[]): void;
@@ -197,31 +195,12 @@ export const enhanceServerResponse = (
 
   // Now set all of the props that make it a ServerRequest
   // NOTE: enhancedRes will be created at the same time as ServerRequest
-  enhancedRes._receiveTime = performance.now();
-  enhancedRes._redirected = false;
-  enhancedRes._latencyMetricName = "latency";
-  enhancedRes._serverTimingsMetrics = [];
-  enhancedRes.proxied = false;
+  enhancedRes.receiveTime = performance.now();
+  enhancedRes.redirected = false;
+  enhancedRes.latencyMetricName = "latency";
+  enhancedRes.serverTimingsMetrics = [];
 
-  // Now set all of the getters that make it a ServerResponse
-  Object.defineProperty(enhancedRes, "redirected", {
-    get() {
-      return enhancedRes._redirected;
-    },
-    enumerable: true,
-  });
-
-  // Now set all of the setters that make it a ServerResponse
-  Object.defineProperty(enhancedRes, "latencyMetricName", {
-    get() {
-      return enhancedRes._latencyMetricName;
-    },
-    set(name: string) {
-      enhancedRes._latencyMetricName = name;
-    },
-    enumerable: true,
-    configurable: true,
-  });
+  enhancedRes.enhancedReq = enhancedRes.req as ServerRequest;
 
   // Now set all of the public methods that make it a ServerResponse
   enhancedRes.setCookies = (cookies: Cookie[]): void => {
@@ -311,7 +290,7 @@ export const enhanceServerResponse = (
 
     // Add each additional metric added to the res next so they are in
     // the order they were added
-    for (let metric of enhancedRes._serverTimingsMetrics) {
+    for (let metric of enhancedRes.serverTimingsMetrics) {
       // Check if we have a string or a metric object
       if (typeof metric === "string") {
         // The string version is already formatted so just add to the array
@@ -335,8 +314,8 @@ export const enhanceServerResponse = (
     }
 
     // Finally add the total latency for the endpoint to the array
-    const latency = Math.round(performance.now() - enhancedRes._receiveTime);
-    serverTimingValue += `${enhancedRes._latencyMetricName};dur=${latency}`;
+    const latency = Math.round(performance.now() - enhancedRes.receiveTime);
+    serverTimingValue += `${enhancedRes.latencyMetricName};dur=${latency}`;
     serverTimingHeaders.push(serverTimingValue);
 
     // Of course don't forget to set the header!!
@@ -348,7 +327,7 @@ export const enhanceServerResponse = (
     statusCode: HttpRedirectStatusCode = 302,
     message: string = "",
   ) => {
-    enhancedRes._redirected = true;
+    enhancedRes.redirected = true;
 
     let htmlMessage =
       message.length > 0
@@ -375,12 +354,12 @@ export const enhanceServerResponse = (
     description?: string,
   ) => {
     // This adds a metric to the Server-Timing header for this response
-    enhancedRes._serverTimingsMetrics.push({ name, duration, description });
+    enhancedRes.serverTimingsMetrics.push({ name, duration, description });
   };
 
   enhancedRes.addServerTimingHeader = (header: string) => {
     // This adds a complete Server-Timing header to this response
-    enhancedRes._serverTimingsMetrics.push(header);
+    enhancedRes.serverTimingsMetrics.push(header);
   };
 
   return enhancedRes;

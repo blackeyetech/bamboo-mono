@@ -24,12 +24,16 @@ import {
   dontCompressResponse,
   setLatencyMetricName,
 } from "./middleware.js";
+
+import { contentTypes } from "./content-types.js";
+
 import * as PathToRegEx from "path-to-regexp";
 
+import * as path from "node:path";
 import * as crypto from "node:crypto";
 import * as zlib from "node:zlib";
-import * as streams from "node:stream/promises";
-import { PassThrough } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import * as stream from "node:stream";
 
 // Types here
 export type HealthcheckCallback = () => Promise<boolean>;
@@ -82,6 +86,7 @@ export type Route = {
 
 export type RouterConfig = {
   minCompressionSize?: number;
+  defaultCharSet?: string;
 };
 
 type MethodListElement = {
@@ -98,6 +103,7 @@ export class Router {
   private _basePathDelimited: string;
   private _basePath: string;
   private _minCompressionSize: number;
+  private _defaultCharSet: string;
 
   private _logger: Logger;
   private _methodListMap: Record<Method, MethodListElement[]>;
@@ -110,6 +116,7 @@ export class Router {
     this._basePath = basePath.replace(/\/*$/, "");
 
     this._minCompressionSize = config.minCompressionSize ?? 1024;
+    this._defaultCharSet = config.defaultCharSet ?? "charset=utf-8";
 
     this._logger = new Logger(`Router (${this._basePath})`);
 
@@ -242,129 +249,208 @@ export class Router {
     }
   }
 
-  private async addResponse(
+  private hasNoBody(res: ServerResponse): boolean {
+    // Check if the json prop has been set
+    // NOTE: If the user sets the json AND body prop the json prop will be used
+    if (res.json !== undefined) {
+      // Convert the json to a string and assign it as the body
+      res.body = JSON.stringify(res.json);
+      // Set correct content-type for a json payload
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+
+      return false;
+    }
+
+    // Check if the body has NOT been set
+    if (res.body === undefined) {
+      // There is no body which means we should set the statusCode to 204.
+      // However, the user may have set it and if they have then leave it alone
+      // We can tell if the user has NOT changed it because the statusCode will
+      // be the default value 200
+      if (res.statusCode === 200) {
+        // Statuscode has not been changed so set it to the correct value of 204
+        res.statusCode = 204;
+      } else {
+        // Explcitily set the content-length to be 0, because there is no body
+        res.setHeader("Content-Length", 0);
+      }
+
+      // Don't forget to set the server-timing header
+      res.setServerTimingHeader();
+
+      return true;
+    }
+
+    // We know there is a body so make sure the body is a string or a Buffer
+    if (Buffer.isBuffer(res.body) || typeof res.body === "string") {
+      // Check if the content-type has NOT been set
+      if (!res.hasHeader("Content-Type")) {
+        // It hasnt so set the default type
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      }
+
+      return false;
+    }
+
+    // If we are here the body has been set but it is not valid
+    this._logger.error(
+      "(%s) response body for (%s) is not of type string or Buffer",
+      res.enhancedReq.method,
+      res.enhancedReq.urlObj.pathname,
+    );
+
+    res.statusCode = 500;
+    return true;
+  }
+
+  private bodyNotModified(res: ServerResponse): boolean {
+    // If we are here the body exists, so to keep the compiler happy do this
+    const body = res.body as string | Buffer<ArrayBufferLike>;
+
+    // Calcuate the etag
+    const etag = crypto.createHash("sha1").update(body).digest("hex");
+
+    // Do not set content-length header for a 304
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Etag", etag);
+
+    // Check for cache validators on the request and see if the etag changed
+    if (res.enhancedReq.headers["if-none-match"] === etag) {
+      // Don't forget to set the server-timing header
+      res.setServerTimingHeader();
+
+      res.statusCode = 304;
+      return true;
+    }
+
+    // If we are here the body was modified
+    return false;
+  }
+
+  private lookupType(file: string): string {
+    // Look up the file extension to get content type - drop the leading '.'
+    const ext = path.extname(file).slice(1);
+    const type = contentTypes[ext];
+
+    if (type !== undefined) {
+      return `${type}; ${this._defaultCharSet}`;
+    }
+
+    // This is the default content type
+    return `text/plain; ${this._defaultCharSet}`;
+  }
+
+  private async streamRes(res: ServerResponse): Promise<void> {
+    const streamRes = res.streamRes as {
+      body: stream.Readable;
+      fileName?: string;
+    };
+
+    // Check if this is a file
+    if (streamRes.fileName !== undefined) {
+      // Set headers that will allow the fiel to be downloaded by the browser
+      res.setHeader("Content-Type", this.lookupType(streamRes.fileName));
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${streamRes.fileName}"`,
+      );
+    }
+
+    // Do not worry about the content-length, always use chunked encoding
+    res.setHeader("Transfer-Encoding", "chunked");
+
+    // Check if the req will accept a gzip res AND
+    // compression is turned on for this request
+    if (
+      res.enhancedReq.headers["accept-encoding"]?.includes("gzip") === true &&
+      res.enhancedReq.compressResponse
+    ) {
+      // Set the correct headers for a gzipped body
+      res.setHeader("Content-Encoding", "gzip");
+
+      // Only send the body if this is NOT a HEAD request
+      if (res.enhancedReq.method !== "HEAD") {
+        await pipeline(streamRes.body, zlib.createGzip(), res).catch((e) => {
+          this._logger.error("Error during streaming: (%s)", e);
+        });
+      }
+    } else {
+      // Only send the body if this is NOT a HEAD request
+      if (res.enhancedReq.method !== "HEAD") {
+        await pipeline(streamRes.body, res).catch((e) => {
+          this._logger.error("Error during streaming: (%s)", e);
+        });
+      }
+    }
+  }
+
+  private async addResponseBody(
     req: ServerRequest,
     res: ServerResponse,
     etag: boolean,
   ): Promise<void> {
-    let body: string | Buffer | null = null;
-
-    // Check if a json or a body response has been passed back
-    if (res.json !== undefined) {
-      res.setHeader("Content-Type", "application/json; charset=utf-8");
-      body = JSON.stringify(res.json);
-    } else if (res.body !== undefined) {
-      // Check if the content-type has not been set
-      if (!res.hasHeader("Content-Type")) {
-        // It hasn't so set it to the default type
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      }
-      body = res.body;
-    }
-
-    // Check if the user didnt pass any data to send back (body is null)
-    if (body === null) {
-      // This means there will be an empty body so check if the StatusCode has
-      // been change from the default 200 - if it has leave it alone beacuse
-      // the user must have set it
-      if (res.statusCode === 200) {
-        // Otherwise set the status code to indicate an empty body
-        res.statusCode = 204;
-      }
-
-      // Don't forget to set the server-timing header before we leave
-      res.setServerTimingHeader();
-
-      // Nothing else to do including calculating and etag so get out of here
+    // Check if the response should be streamed
+    if (res.streamRes !== undefined) {
+      await this.streamRes(res);
       return;
     }
 
-    // We need to ensure body is a string or a Buffer or we will have problems
-    if (Buffer.isBuffer(body) === false && typeof body !== "string") {
-      this._logger.error(
-        "(%s) response body for (%s) is not of type string or Buffer",
-        req.method,
-        req.urlObj.pathname,
-      );
-
-      res.statusCode = 500;
-      res.end();
+    // Check if there is no body to send
+    if (this.hasNoBody(res)) {
+      // There is no body so no more to do here
       return;
     }
 
-    // Check if the user wants an etag added to the response
-    if (etag) {
-      let etag = crypto.createHash("sha1").update(body).digest("hex");
+    // If we are here the body exists, so to keep the compiler happy do this
+    const body = res.body as string | Buffer<ArrayBufferLike>;
 
-      // All headers need to be set, except content-length, for a 304
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Etag", etag);
-
-      // Check if any cache validators exist on the request
-      if (req.headers["if-none-match"] === etag) {
-        // Don't forget to set the server-timing header after we do everything else
-        res.setServerTimingHeader();
-
-        res.statusCode = 304;
-        res.end();
-        return;
-      }
+    // Check if we are using etags res AND if the body has NOT changed
+    if (etag && this.bodyNotModified(res)) {
+      // Body is the same so no more to do here
+      return;
     }
 
-    // Check out if the req will accept a gzip res AND the body is large enough
-    // AND compression is not turned off for this request
-    let gzipIt = false;
-
-    // Check if the res was proxied. If it was then DO NOT set the
-    // transfer-encoding/content-encoding header nor the content-length.
-    // Assume that has already been done
-    if (res.proxied === false) {
-      if (
-        req.headers["accept-encoding"]?.includes("gzip") === true &&
-        Buffer.byteLength(body) >= this._minCompressionSize &&
-        req.compressResponse
-      ) {
-        // It does ...
-        gzipIt = true;
-
-        // Dont set the content-length. Use transfer-encoding instead
-        res.setHeader("Transfer-Encoding", "chunked");
-        res.setHeader("Content-Encoding", "gzip");
-      } else {
-        // It does not ...
-
-        // Only set the length when we don't do a 304
-        res.setHeader("Content-Length", Buffer.byteLength(body));
-      }
-    }
-
-    // Don't forget to set the server-timing header after we do everything else
+    // Don't forget to set the server-timing header
     res.setServerTimingHeader();
 
-    // Check if this was a HEAD method - if so we don't want to write the body
-    if (req.method !== "HEAD") {
-      if (gzipIt) {
-        const passThrough = new PassThrough();
+    // Check if the req will accept a gzip res AND
+    // the body is large enough AND
+    // compression is turned on for this request
+    if (
+      req.headers["accept-encoding"]?.includes("gzip") === true &&
+      Buffer.byteLength(body) >= this._minCompressionSize &&
+      req.compressResponse
+    ) {
+      // Set the correct headers for a gzipped body
+      res.setHeader("Transfer-Encoding", "chunked");
+      res.setHeader("Content-Encoding", "gzip");
+
+      // Only send the body if this is NOT a HEAD request
+      if (req.method !== "HEAD") {
+        const passThrough = new stream.PassThrough();
         passThrough.end(body);
+
         // NOTE1: pipeline will close the res when it is finished
-        await streams
-          .pipeline(passThrough, zlib.createGzip(), res)
-          .catch((e) => {
-            // We can't do anything else here because either:
-            // - the stream is closed which means we can't send back an error
-            // - we have an internal error, but we have already started streaming
-            //   so we can't do anything
-            this._logger.error(
-              "addResponse had this error during streaming: (%s)",
-              e,
-            );
-          });
-      } else {
+        await pipeline(passThrough, zlib.createGzip(), res).catch((e) => {
+          // We can't do anything else here because either:
+          // - the stream is closed which means we can't send back an error
+          // - we have an internal error, but we have already started streaming
+          //   so we can't do anything
+          this._logger.error(
+            "addResponse had this error during streaming: (%s)",
+            e,
+          );
+        });
+      }
+    } else {
+      // Set the corect content-length
+      res.setHeader("Content-Length", Buffer.byteLength(body));
+
+      // Only send the body if this is NOT a HEAD request
+      if (req.method !== "HEAD") {
         res.write(body);
       }
     }
-
-    res.end();
   }
 
   // Public methods here
@@ -435,8 +521,8 @@ export class Router {
 
     // Check if res.write() has NOT been called yet
     if (!res.headersSent) {
-      // Check if the callback wants us to add the body, headers etc
-      await this.addResponse(req, res, matchedEl.etag);
+      // Check if there is a body to add
+      await this.addResponseBody(req, res, matchedEl.etag);
     }
 
     // Check if the res.end() has NOT been called yet

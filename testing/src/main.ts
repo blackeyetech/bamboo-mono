@@ -13,6 +13,10 @@ import {
 import { Jira, JiraConfig } from "@bs-plugins/jira";
 import { Template } from "@bs-plugins/template";
 
+import { PassThrough } from "node:stream";
+
+// import * as zlib from "node:zlib";
+
 // import * as http from "node:http";
 async function init() {
   let jOptions: JiraConfig = { password: "", server: "", user: "" };
@@ -215,6 +219,15 @@ async function init() {
     },
   );
 
+  bs.httpServer().get("/download", async (_, res) => {
+    const file =
+      "Greetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\nGreetings people of Earth!\n";
+    const passThrough = new PassThrough();
+    passThrough.end(file);
+
+    res.streamRes = { fileName: "file.txt", body: passThrough };
+  });
+
   bs.httpServer().get(
     "/redirect1",
     async (_, res) => {
@@ -260,16 +273,6 @@ async function init() {
     },
     { etag: false },
   );
-  bs.httpServer().endpoint(
-    "GET",
-    "/api/json2",
-    async (req, res) => {
-      console.log(req.url);
-      await bs.sleep(3);
-      res.json = { url: "json2" };
-    },
-    { etag: false },
-  );
 
   bs.httpServer().endpoint(
     "GET",
@@ -291,12 +294,23 @@ async function init() {
   bs.httpServer().endpoint(
     "POST",
     "/post1",
-    (req, res) => {
-      res.json = req.json;
-      console.log(req.getCookie("hello"));
+    async (req, _) => {
+      // Store each data "chunk" we receive this array
+      let chunks: Buffer[] = [];
+      let bodySize = 0;
+
+      // Iterate of the req's AsyncIterator
+      for await (let chunk of req) {
+        bodySize += chunk.byteLength;
+
+        chunks.push(chunk);
+      }
+
+      console.log(chunks.toString());
     },
     {
-      middlewareList: [Router.body()],
+      useDefaultMiddlewares: false,
+      // middlewareList: [Router.body()],
     },
   );
 
@@ -347,6 +361,52 @@ async function init() {
           return { matchedInfo: url.pathname, params: {} };
         };
       },
+    },
+  );
+
+  bs.httpServer().endpoint(
+    "GET",
+    "/api/body1",
+    async (_, res) => {
+      res.json = { url: "json2" };
+    },
+    { etag: false },
+  );
+  bs.httpServer().endpoint(
+    "GET",
+    "/api/body2",
+    async (_, res) => {
+      res.body = "hello";
+    },
+    { etag: false },
+  );
+  bs.httpServer().endpoint(
+    "GET",
+    "/api/body3",
+    async (_, res) => {
+      res.json = { url: "json2" };
+    },
+    { etag: true },
+  );
+  bs.httpServer().endpoint(
+    "GET",
+    "/api/body4",
+    async (_, res) => {
+      res.body = "hello";
+    },
+    { etag: true },
+  );
+  bs.httpServer().endpoint("GET", "/api/body5", async (_, _2) => {}, {
+    etag: false,
+  });
+  bs.httpServer().endpoint(
+    "GET",
+    "/api/body6",
+    async (_, res) => {
+      res.statusCode = 404;
+    },
+    {
+      etag: false,
     },
   );
 }

@@ -1,5 +1,5 @@
 {
-  "version": "1.2.37",
+  "version": "1.2.38",
   "name": "@bs-plugins/jira",
   "description": "Bamboo Shell plugin for JIRA",
   "type": "module",
@@ -14,16 +14,16 @@
   "types": "./dist/plugin.d.ts",
   "scripts": {
     "rollup": "rollup -c rollup.config.mjs",
-    "build-dev": "tsc && npm run rollup",
-    "build-prod": "npm run clean && tsc && NODE_ENV=production npm run rollup",
+    "build-dev": "tsc && pnpm run rollup",
+    "build-prod": "pnpm run clean && tsc && NODE_ENV=production pnpm run rollup",
     "format-ts": "prettier --write 'src/**/*.ts'",
     "format-js": "prettier --write 'dist/**/*.{js,ts}'",
     "format-misc": "prettier --write '**/*.{json,md,yaml}'",
-    "install-bin": "npm install -g $(npm pack . | tail -1)",
+    "install-bin": "pnpm install -g $(pnpm pack . | tail -1)",
     "test": "echo \"No tests\" && exit 0",
     "clean": "rm -rf ./dist ./out",
-    "prepare": "npm run clean && npm run build-prod",
-    "prepublishOnly": "npm test"
+    "prepare": "pnpm run clean && pnpm run build-prod",
+    "prepublishOnly": "pnpm test"
   },
   "engines": {
     "node": ">=18.0.0"

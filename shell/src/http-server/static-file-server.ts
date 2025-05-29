@@ -8,7 +8,7 @@ import * as fs from "node:fs";
 import * as fsPromises from "node:fs/promises";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
-import * as streams from "node:stream/promises";
+import { pipeline } from "node:stream/promises";
 import * as stream from "node:stream";
 import * as zlib from "node:zlib";
 
@@ -34,7 +34,6 @@ export type StaticFileServerConfig = {
   defaultDirFile?: string;
 
   defaultCharSet?: string;
-  extraContentTypes?: Record<string, string>;
 
   securityHeaders?: { name: string; value: string }[];
 };
@@ -49,7 +48,6 @@ export class StaticFileServer {
   private _defaultCharSet: string;
 
   private _staticFileMap: Map<string, FileDetails>;
-  private _contentTypes: Map<string, string>;
 
   private _securityHeaders: { name: string; value: string }[];
 
@@ -75,25 +73,11 @@ export class StaticFileServer {
     this._defaultCharSet = config.defaultCharSet ?? "charset=utf-8";
 
     this._staticFileMap = new Map();
-    this._contentTypes = new Map();
 
     // Get the standard sec headers and add the users specified headers as well
     this._securityHeaders = Router.getSecHeaders({
       headers: config.securityHeaders,
     });
-
-    // Populate contentTypes using the predefined types
-    for (const type in contentTypes) {
-      this._contentTypes.set(type, contentTypes[type]);
-    }
-
-    // Then add any extra content types. NOTE: This allows you to overwrite
-    // the predefined types
-    if (config.extraContentTypes !== undefined) {
-      for (const type in config.extraContentTypes) {
-        this._contentTypes.set(type, config.extraContentTypes[type]);
-      }
-    }
 
     // Get all of the files at start up - but a constructor cant be async so
     // run getFilesRecursively() at the earliest possibile time
@@ -134,7 +118,7 @@ export class StaticFileServer {
   private lookupType(file: string): string {
     // Look up the file extension to get content type - drop the leading '.'
     const ext = path.extname(file).slice(1);
-    const type = this._contentTypes.get(ext);
+    const type = contentTypes[ext];
 
     if (type !== undefined) {
       return `${type}; ${this._defaultCharSet}`;
@@ -155,7 +139,7 @@ export class StaticFileServer {
     // Flag to check if we successfully pipe the file to the hash
     let failed = false;
 
-    await streams.pipeline(contents, hash).catch((e) => {
+    await pipeline(contents, hash).catch((e) => {
       this._logger.trace(
         "Error attempting to create etag for file (%s) (%s): ",
         fileName,
@@ -388,7 +372,7 @@ export class StaticFileServer {
     }
 
     // NOTE: pipeline will close the res when it is finished
-    await streams.pipeline(fileRead, res).catch((e) => {
+    await pipeline(fileRead, res).catch((e) => {
       // We can't do anything else here because either:
       // - the stream is closed which means we can't send back an error
       // - we have an internal error, but we have already started streaming
