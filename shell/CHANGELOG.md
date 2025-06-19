@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.6
+
+### Patch Changes
+
+- Fixed issue where an invalid URL was not handled
+
 ## 1.21.5
 
 ### Patch Changes

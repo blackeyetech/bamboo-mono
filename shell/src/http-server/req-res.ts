@@ -55,6 +55,7 @@ export type ServerTimingMetric = {
 // the requests
 export type ServerRequest = http.IncomingMessage & {
   // New properties here
+  validUrl: boolean;
   urlObj: URL;
   params: Record<string, any>;
 
@@ -87,13 +88,25 @@ export const enhanceIncomingMessage = (
   let enhancedReq = req as ServerRequest;
 
   // Now set all of the props that make it a ServerRequest
+  enhancedReq.validUrl = true;
 
-  // NOTE: I can not figure out a good way to tell if the req is HTTP or HTTPS
-  // but I dont think it matters here unless someone needs the protocol prop
-  enhancedReq.urlObj = new URL(
-    req.url as string,
-    `https://${req.headers.host}`,
-  );
+  // Best to put this in a try/catch because if the req.url = // this will
+  // throw an error as will a handful of other cases
+  try {
+    // NOTE: I can not figure out a good way to tell if the req is HTTP or HTTPS
+    // but I dont think it matters here unless someone needs the protocol prop
+    enhancedReq.urlObj = new URL(
+      req.url as string,
+      `https://${req.headers.host}`,
+    );
+  } catch (e) {
+    // Mark this as an invalid URL
+    enhancedReq.validUrl = false;
+  }
+
+  if (!enhancedReq.validUrl) {
+    return enhancedReq;
+  }
 
   enhancedReq.params = {};
   enhancedReq.handled = false;

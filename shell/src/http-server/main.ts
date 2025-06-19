@@ -397,6 +397,18 @@ export class HttpServer {
 
       this._server = https.createServer(options, (origReq, origRes) => {
         const req = enhanceIncomingMessage(origReq);
+
+        if (!req.validUrl) {
+          const message = "Invalid URL";
+
+          origRes.setHeader("Content-Type", "text/plain; charset=utf-8");
+          origRes.setHeader("Content-Length", Buffer.byteLength(message));
+          origRes.statusCode = 400;
+          origRes.write(message);
+          origRes.end();
+          return;
+        }
+
         const res = enhanceServerResponse(origRes);
 
         this.handleReq(req, res);
@@ -409,6 +421,18 @@ export class HttpServer {
       const options: https.ServerOptions = {};
       this._server = http.createServer(options, (origReq, origRes) => {
         const req = enhanceIncomingMessage(origReq);
+
+        if (!req.validUrl) {
+          const message = "Invalid URL";
+
+          origRes.setHeader("Content-Type", "text/plain; charset=utf-8");
+          origRes.setHeader("Content-Length", Buffer.byteLength(message));
+          origRes.statusCode = 400;
+          origRes.write(message);
+          origRes.end();
+          return;
+        }
+
         const res = enhanceServerResponse(origRes);
 
         this.handleReq(req, res);

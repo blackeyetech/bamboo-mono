@@ -73,10 +73,42 @@ Content-Type: application/json
     "name": "kieran"
 }
 
+### 
+GET  http://127.0.0.1:8080//
+
 ###
 POST  http://127.0.0.1:8080/api/test
 x-csrf-header: xxx.313dcf4df7c164e99e07e790d70adf2d3638796dd25945a8d3084d7c54834c53
 Cookie: x-csrf-cookie=xxx.313dcf4df7c164e99e07e790d70adf2d3638796dd25945a8d3084d7c54834c53
 
 ###
-DELETE http://127.0.0.1:8080/api/all
+GET http://127.0.0.1:8080/api/download
+
+https://accounts.google.com/o/oauth2/v2/auth?
+    client_id=869596432956-65a7cs16fppee5jv1koehje703i1h3nn.apps.googleusercontent.com
+    &redirect_uri=https://idp.options-it.com/auth/attempt/google
+    &response_type=token id_token 
+    &scope=openid email profile
+    &nonce=random
+    &state=https://mdrp
+    &login_hint=kieran@blackeyetech.com
+    &prompt=select_account 
+
+https://accounts.google.com/o/oauth2/v2/auth?client_id=869596432956-fojtv5lcgsgan7ra49khfj4l8bhpthtn.apps.googleusercontent.com&redirect_uri=https://idp.options-it.com/auth/attempt/google&response_type=id_token&scope=openid email profile&nonce=random&state=https://mdrp&login_hint=kieran@blackeyetech.com&response_mode=form_post
+
+
+<script>
+  window.onload = function () {
+    google.accounts.id.initialize({
+      client_id: "869596432956-65a7cs16fppee5jv1koehje703i1h3nn.apps.googleusercontent.com",
+      origin_uri: "ps://idp.options-it.com/auth/attempt/google"
+      nonce: "xxx",
+      ux_mode: "redirect", // "popup"
+      login_hint: "kieran@blackeyetech.com",
+      hd: "blackeyetech.com",
+    });
+    google.accounts.id.prompt();
+  };
+</script>
+
+https://idp.options-it.com/auth/attempt/google?state=https%3A%2F%2Fmdrp&code=4%2F0AUJR-x6Jp0Gm-oug4vaFKmEbS0p-53L53rbwHFyzr01TwBL_l9st-GRGg0e1fz2erru9WA&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&authuser=0&prompt=none
