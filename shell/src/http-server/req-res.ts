@@ -184,7 +184,7 @@ export type ServerResponse = http.ServerResponse & {
 
   // New methods here
   setCookies(cookies: Cookie[]): void;
-  clearCookies(cookies: string[]): void;
+  clearCookies(cookies: string[], domain?: string): void;
   setServerTimingHeader(): void;
   redirect(
     location: string,
@@ -269,12 +269,12 @@ export const enhanceServerResponse = (
     enhancedRes.setHeader("Set-Cookie", setCookiesValue);
   };
 
-  enhancedRes.clearCookies = (cookies: string[]): void => {
+  enhancedRes.clearCookies = (cookies: string[], domain?: string): void => {
     let httpCookies: Cookie[] = [];
 
     for (let cookie of cookies) {
       // To clear a cookie - set value to empty string and max age to -1
-      httpCookies.push({ name: cookie, value: "", maxAge: -1 });
+      httpCookies.push({ name: cookie, value: "", maxAge: -1, domain });
     }
 
     enhancedRes.setCookies(httpCookies);

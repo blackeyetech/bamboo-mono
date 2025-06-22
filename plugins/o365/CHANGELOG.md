@@ -1,5 +1,12 @@
 # @bs-plugins/o365
 
+## 21.2.38
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.21.7
+
 ## 21.2.37
 
 ### Patch Changes

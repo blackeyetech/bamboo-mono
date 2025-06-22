@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.7
+
+### Patch Changes
+
+- You can now specify the domain when clearing a cookie
+
 ## 1.21.6
 
 ### Patch Changes
