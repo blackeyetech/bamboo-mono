@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.8
+
+### Patch Changes
+
+- Added responseTime to the trace logging for a HTTP request
+
 ## 1.21.7
 
 ### Patch Changes

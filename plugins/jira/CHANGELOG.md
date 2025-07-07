@@ -1,5 +1,12 @@
 # @bs-plugins/jira
 
+## 1.2.41
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.21.8
+
 ## 1.2.40
 
 ### Patch Changes

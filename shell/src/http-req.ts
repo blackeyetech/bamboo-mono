@@ -250,5 +250,12 @@ export let request = async (
   // Don't forget to set the response time
   res.responseTime = Math.round(performance.now() - startTime);
 
+  _logger.trace(
+    "Request for origin (%s) path (%s) took (%i) ms",
+    origin,
+    path,
+    res.responseTime,
+  );
+
   return res;
 };

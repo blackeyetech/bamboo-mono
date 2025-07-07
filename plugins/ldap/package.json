@@ -1,5 +1,5 @@
 {
-  "version": "1.2.39",
+  "version": "1.2.40",
   "name": "@bs-plugins/ldap",
   "description": "Bamboo Shell plugin for LDAP",
   "type": "module",
