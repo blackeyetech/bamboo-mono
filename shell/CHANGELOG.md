@@ -1,5 +1,14 @@
 # @bs-core/shell
 
+## 1.21.9
+
+### Patch Changes
+
+- Added retries to request()
+- Default timeout is now 60 seconds
+- Default retries is 3
+- Default baseDelay is 500 ms
+
 ## 1.21.8
 
 ### Patch Changes

@@ -34,3 +34,34 @@ httpServer.get(
     middlewareList: [Router.cors({ originsAllowed: "*" })],
   },
 );
+
+httpServer.get(
+  "/get",
+  async (_, res) => {
+    res.json = "Hello";
+  },
+  {
+    // middlewareList: [Router.cors({ originsAllowed: "*" })],
+  },
+);
+
+httpServer.get(
+  "/get-sleep",
+  async (_, res) => {
+    await bs.sleep(30);
+    res.json = { g: "Hello" };
+  },
+  {
+    // middlewareList: [Router.cors({ originsAllowed: "*" })],
+  },
+);
+
+httpServer.get(
+  "/get-error",
+  async (_, res) => {
+    res.statusCode = 503;
+  },
+  {
+    // middlewareList: [Router.cors({ originsAllowed: "*" })],
+  },
+);

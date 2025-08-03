@@ -1,5 +1,12 @@
 # @bs-plugins/sql-server
 
+## 1.2.41
+
+### Patch Changes
+
+- Updated dependencies
+  - @bs-core/shell@1.21.9
+
 ## 1.2.40
 
 ### Patch Changes

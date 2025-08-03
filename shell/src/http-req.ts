@@ -2,8 +2,8 @@
 // NODE_TLS_REJECT_UNAUTHORIZED=0
 
 // imports here
+import { sleep } from "./utils.js";
 import { Logger } from "./logger.js";
-
 import { performance } from "node:perf_hooks";
 
 // Misc consts here
@@ -31,8 +31,10 @@ export type ReqOptions = {
     password: string;
   };
   bearerToken?: string;
-  timeout?: number;
+  timeoutS?: number;
   handleResponse?: boolean;
+  retries?: number;
+  baseDelayMs?: number;
 
   // These are additional options for fetch
   keepalive?: boolean;
@@ -74,70 +76,111 @@ async function callFetch(
     url += `?${new URLSearchParams(options.searchParams)}`;
   }
 
+  let results: Response;
   let timeoutTimer: NodeJS.Timeout | undefined;
 
-  // Create an AbortController if a timeout has been provided
-  if (options.timeout) {
-    const controller = new AbortController();
+  let attempt = 0;
 
-    // NOTE: this will overwrite a signal if one has been provided
-    options.signal = controller.signal;
+  do {
+    // Increment attempt
+    attempt += 1;
 
-    timeoutTimer = setTimeout(() => {
-      controller.abort();
-    }, options.timeout * 1000);
-  }
+    // Create an AbortController and use a timer if no signal has been provided
+    if (options.signal === undefined) {
+      const controller = new AbortController();
+      options.signal = controller.signal;
 
-  let results = await fetch(url, {
-    method: options.method,
-    headers: options.headers,
-    body,
-    keepalive: options.keepalive,
-    cache: options.cache,
-    credentials: options.credentials,
-    mode: options.mode,
-    redirect: options.redirect,
-    referrer: options.referrer,
-    referrerPolicy: options.referrerPolicy,
-    signal: options.signal,
-  }).catch((e) => {
-    // Check if the request was aborted
-    if (e.name === "AbortError") {
-      // If timeout was set then the req must have timed out
-      if (options.timeout) {
-        throw new ReqAborted(
-          true,
-          `Request timeout out after ${options.timeout} seconds`,
-        );
-      }
-
-      throw new ReqAborted(false, "Request aborted");
+      // Start your engines!
+      timeoutTimer = setTimeout(
+        () => {
+          controller.abort();
+        },
+        (options.timeoutS as number) * 1000,
+      );
     }
 
-    // Need to check if we started a timeout
+    results = await fetch(url, {
+      method: options.method,
+      headers: options.headers,
+      body,
+      keepalive: options.keepalive,
+      cache: options.cache,
+      credentials: options.credentials,
+      mode: options.mode,
+      redirect: options.redirect,
+      referrer: options.referrer,
+      referrerPolicy: options.referrerPolicy,
+      signal: options.signal,
+    }).catch((e) => {
+      // OK, there was an error - check if the request was aborted
+      if (e.name === "AbortError") {
+        // If there was a timeoutTimer then the req must have timed out
+        if (timeoutTimer !== undefined) {
+          // NOTE: We DO NOT need to clear the timer since it already fired
+          throw new ReqAborted(
+            true,
+            `Request timeout out after ${options.timeoutS} seconds`,
+          );
+        }
+
+        throw new ReqAborted(false, "Request aborted");
+      }
+
+      // Check if we started a timer and if so stop it - it hasnt expired yet
+      if (timeoutTimer !== undefined) {
+        clearTimeout(timeoutTimer);
+      }
+
+      // We don't know what the error is so pass it up the chain
+      throw e;
+    });
+
+    // Check if we started a timer and if so stop it - it hasnt expired yet
     if (timeoutTimer !== undefined) {
       clearTimeout(timeoutTimer);
     }
 
-    // We don't know what the error is so pass it back
-    throw e;
-  });
+    // Check if the fetch failed
+    if (!results.ok) {
+      // Figure out if we wait and try again or throw an error
+      const status = results.status;
 
-  // Need to check if we started a timeout
-  if (timeoutTimer !== undefined) {
-    clearTimeout(timeoutTimer);
-  }
+      if (
+        attempt < (options.retries as number) + 1 && // Still attempts left (note mac attempts are numRetries + 1)
+        (status >= 500 || // Server error
+          status === 408 || // Req timeout
+          status === 429) // Too many requests
+      ) {
+        // We can go again, now we need to introduce a delay
+        // Use baseDelay as a multiple of the attempts and some random jitter
+        const delay = (options.baseDelayMs as number) * 2 ** attempt;
+        const jitter = Math.random() * delay * 0.5;
+        const totalDelay = Math.round(delay + jitter);
 
-  // We will throw an error if the response is not 2XX
-  if (!results.ok) {
-    let message = await results.text();
+        _logger.trace(
+          "Call to (%s) failed. Retrying in (%d) ms.",
+          url,
+          totalDelay,
+        );
 
-    throw new ReqError(
-      results.status,
-      message.length === 0 ? results.statusText : message,
-    );
-  }
+        // Now just sleep for the delay
+        await sleep(totalDelay / 1000);
+      } else {
+        // If we are here we are not going to retry
+        // So, get the last error and throw it
+        let message = await results.text();
 
+        throw new ReqError(
+          status,
+          message.length === 0 ? results.statusText : message,
+        );
+      }
+    }
+
+    // Loop if the results are NOT OK
+  } while (!results.ok);
+
+  // We can only be here if everything was OK
   return results;
 }
 
@@ -172,7 +215,9 @@ export let request = async (
   // Set the default values
   let options = {
     method: "GET",
-    timeout: 0,
+    timeoutS: 60,
+    retries: 3,
+    baseDelayMs: 500,
     keepalive: true,
     handleResponse: true,
     cache: <RequestCache>"no-store",
