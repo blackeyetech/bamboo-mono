@@ -1,5 +1,16 @@
 # @bs-core/shell
 
+## 1.21.10
+
+### Patch Changes
+
+- Upgraded @types/node to v24
+- Upgraded path-to-regexp to v8
+- Now handling invlaid URLs in the reqHandler
+- Moved WebResponse from astro adapter to req-res.ts
+- Moved ssrEndpoint() from astro adapter to Router as getSsrEndpoint()
+- Moved createHttpServer from astro adapter to main.ts as addHttpServerAdapter()
+
 ## 1.21.9
 
 ### Patch Changes
@@ -310,7 +321,6 @@
 - Renamed HttpServer.router() to HttpServer.addRouter() to conform with all of the other methods
 - Now checking to see if the path supplied to endpoint() already contains the bastPath
 - The following HttpServer methods now return the Router object to allow for chaining:
-
   - use()
   - del()
   - get()
@@ -370,7 +380,6 @@
 ### Minor Changes
 
 - Internal refactoring:
-
   - Removed ConfigMan Types and replaced them with strings
   - Changed ConfigMan env file store to a map()
   - Removed setLogger() from BSPlugin and added it to the constructor
@@ -478,7 +487,6 @@
 
 - Added global store and const store to bs to allow for convenient passing of
   globals and consts. The following methods have been added to bs:
-
   - setGlobal()
   - getGlobal()
   - setConst()
@@ -504,7 +512,6 @@
 ### Minor Changes
 
 - The following additions were made:
-
   - Added getHttpServer()
   - Added getPlugin()
 

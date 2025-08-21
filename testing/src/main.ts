@@ -438,7 +438,7 @@ bs.info("XXX (%j)", n);
 let res = await bs
   .request("https://httpbin.org", "/bearer", {
     method: "GET",
-    timeout: 3,
+    timeoutS: 3,
   })
   .catch((e) => {
     if (e instanceof ReqAborted) {
@@ -451,7 +451,7 @@ let res = await bs
 res = await bs
   .request("https://httpbin.org", "/status/200", {
     method: "GET",
-    timeout: 3,
+    timeoutS: 3,
   })
   .catch((e) => {
     if (e instanceof ReqAborted) {

@@ -1,5 +1,5 @@
 {
-  "version": "1.21.9",
+  "version": "1.21.10",
   "name": "@bs-core/shell",
   "description": "The Bamboo Shell",
   "type": "module",
@@ -43,8 +43,8 @@
     "url": "https://github.com/blackeyetech/bamboo-mono/issues"
   },
   "homepage": "https://github.com/blackeyetech/bamboo-mono#readme",
+  "private": false,
   "dependencies": {
-    "path-to-regexp": "^6.2.1"
-  },
-  "private": false
+    "path-to-regexp": "^8.2.0"
+  }
 }

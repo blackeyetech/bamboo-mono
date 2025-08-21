@@ -1,93 +1,25 @@
 // imports here
 import {
   bs,
-  Router,
-  HttpConfig,
-  ServerRequest,
-  ServerResponse,
   enhanceIncomingMessage,
   enhanceServerResponse,
   RouterMatchFunc,
-  HttpServer,
+  WebRequest,
+  HttpAdapterOptions,
 } from "@bs-core/shell";
 
 import type { AstroIntegration, SSRManifest } from "astro";
 
 import { App } from "astro/app";
-import { pathToFileURL } from "url";
-
-import { performance } from "node:perf_hooks";
-import type { ReadableStream } from "node:stream/web";
-import * as streams from "node:stream/promises";
 
 // Misc consts here
 const ADAPTER_NAME = "@bs-core/astro";
-
-const HTTP_CERT_FILE = "HTTP_CERT_FILE";
-const HTTP_KEY_FILE = "HTTP_KEY_FILE";
-const HTTP_ENABLE_HTTPS = "HTTP_ENABLE_HTTPS";
-const HTTP_IF = "HTTP_IF";
-const HTTP_PORT = "HTTP_PORT";
+const ADAPTER_LATENCY_NAME = "@bs-core/astro";
 
 // Module properties here
 
 /** The Astro App instance. */
 let _app: App;
-
-// Types here
-export type Options = {
-  setupEntryPoint?: string;
-
-  staticFilesPath?: string;
-  immutableRegexSrc?: string[];
-  securityHeaders?: { name: string; value: string }[];
-
-  keepAliveTimeout?: number;
-  // NOTE: There is a potential race condition and the recommended
-  // solution is to make the header timeouts greater then the keep alive
-  // timeout. See - https://github.com/nodejs/node/issues/27363
-  headerTimeout?: number;
-
-  defaultRouterBasePath?: string;
-
-  healthcheckPath?: string;
-  healthcheckGoodRes?: number;
-  healthcheckBadRes?: number;
-};
-
-export class WebRequest extends Request {
-  public req: ServerRequest;
-  public res: ServerResponse;
-
-  constructor(req: ServerRequest, res: ServerResponse) {
-    // Get the headers so we can pass them on
-    const headers = new Headers();
-
-    for (const [name, value] of Object.entries(req.headers)) {
-      // Skip headers with no values
-      if (value === undefined) {
-        continue;
-      }
-
-      // Value can be an array so we need to handle that
-      if (Array.isArray(value)) {
-        // Append each value as the header name
-        for (const item of value) {
-          headers.append(name, item);
-        }
-      } else {
-        headers.append(name, value);
-      }
-    }
-
-    // Now call the super constructor to create the Request
-    super(req.urlObj, { method: req.method, body: req.body, headers });
-
-    // Make sure to tack on the nodeJs req/res
-    this.req = req;
-    this.res = res;
-  }
-}
 
 // Private functions here
 function matcher(_: string): RouterMatchFunc {
@@ -108,128 +40,16 @@ function matcher(_: string): RouterMatchFunc {
   };
 }
 
-async function ssrEndpoint(
-  req: ServerRequest,
-  res: ServerResponse,
-): Promise<void> {
-  // Measure the time it took to render the page so capture when we started
-  const startedAt = performance.now();
-
-  // Create a webRequest object to pass to the render
-  const webReq = new WebRequest(req, res);
-
-  // Now render the page
-  const webRes = await _app.render(webReq, {
-    routeData: req.matchedInfo,
+async function render(webReq: WebRequest): Promise<Response> {
+  return await _app.render(webReq, {
+    routeData: webReq.req.matchedInfo,
   });
-
-  // Now figure out how long it took to render and store it in the metrics
-  const ssrLatency = Math.round(performance.now() - startedAt);
-  res.addServerTimingMetric("ssr", ssrLatency);
-
-  // The default status code is always 200. If webRes.status is NOT 200
-  // then it was set by the user so we need to use that status code
-  if (webRes.status !== 200) {
-    res.statusCode = webRes.status;
-  }
-
-  // Check if the user set any headers on webRes
-  const SET_COOKIE = "set-cookie";
-
-  for (let [name, value] of webRes.headers.entries()) {
-    // Dont bother setting set-cookie headers, we will do that later
-    if (name === SET_COOKIE) {
-      continue;
-    }
-
-    res.setHeader(name, value);
-  }
-
-  // Check if there were any set-cookie headers and if so set them as an array
-  const cookies = webRes.headers.getSetCookie();
-  if (cookies.length > 0) {
-    res.setHeader(SET_COOKIE, cookies);
-  }
-
-  // This is our last chance to set headers so set the server timings header
-  res.setServerTimingHeader();
-
-  // Now check if there is a body in the webRes
-  if (webRes.body !== null) {
-    // NOTE1: pipeline will close the res when it is finished
-    // NOTE2: You need to cast as ReadableStream<Uint8Array> or TS will complain
-    await streams
-      .pipeline(webRes.body as ReadableStream<Uint8Array>, res)
-      .catch((e) => {
-        // We can't do anything else here because either:
-        // - the stream is closed which means we can't send back an error
-        // - we have an internal error, but we have already started streaming
-        //   so we can't do anything
-        bs.warn("ssrEndpoint had this error during rendering: (%s)", e);
-      });
-  }
-}
-
-async function createHttpServer(
-  options: Options,
-  production: boolean,
-): Promise<HttpServer> {
-  // Setup the config for the HTTP server
-  let httpConfig: HttpConfig = {
-    keepAliveTimeout: options.keepAliveTimeout,
-    headerTimeout: options.headerTimeout,
-    defaultRouterBasePath: options.defaultRouterBasePath,
-    healthcheckPath: options.healthcheckPath,
-    healthcheckGoodRes: options.healthcheckGoodRes,
-    healthcheckBadRes: options.healthcheckBadRes,
-  };
-
-  // Only add the static file server configs if we are in production mode AND
-  // there is a staticFilesPath
-  if (production && options.staticFilesPath !== undefined) {
-    httpConfig.staticFileServer = {
-      path: options.staticFilesPath,
-      immutableRegExp: options.immutableRegexSrc,
-      securityHeaders: options.securityHeaders,
-    };
-  }
-
-  const enableHttps = bs.getConfigBool(HTTP_ENABLE_HTTPS, false);
-
-  if (enableHttps) {
-    httpConfig.enableHttps = true;
-    httpConfig.httpsCertFile = bs.getConfigStr(HTTP_CERT_FILE);
-    httpConfig.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
-  }
-
-  const networkIf = bs.getConfigStr(HTTP_IF, "127.0.0.1");
-  const networkPort = bs.getConfigNum(HTTP_PORT, 8080);
-
-  // Create the HTTP server
-  const httpServer = await bs.addHttpServer(
-    networkIf,
-    networkPort,
-    httpConfig,
-    false, // NOTE: Don't start the server
-  );
-
-  // Call setupEntryPoint here in case you want to setup any default
-  // middleware for the SSR endpoint or add API endpoints
-  if (options.setupEntryPoint !== undefined) {
-    // NOTE: We expect an exported function named "setup"
-    const { setup } = await import(pathToFileURL(options.setupEntryPoint).href);
-    await setup();
-  }
-
-  bs.startupMsg("HTTP server has been created");
-
-  return httpServer;
 }
 
 // Exported functions here
 
 // The default function is called when the bundle script is being built
-export default (args: Options): AstroIntegration => {
+export default (options: HttpAdapterOptions): AstroIntegration => {
   return {
     name: ADAPTER_NAME,
     hooks: {
@@ -238,7 +58,7 @@ export default (args: Options): AstroIntegration => {
           name: ADAPTER_NAME,
           serverEntrypoint: "@bs-core/astro",
           // previewEntrypoint: '@bs-core/astro',
-          args,
+          args: options,
           exports: [],
           supportedAstroFeatures: {
             hybridOutput: "stable",
@@ -258,9 +78,13 @@ export default (args: Options): AstroIntegration => {
       },
 
       "astro:server:setup": async ({ server }) => {
+        // This is called when running the app in "dev" mode
         // We need the req handler from the HttpServer so lets create one
         // even though we will not actually use it directly
-        const httpServer = await createHttpServer(args, false);
+        const httpServer = await bs.addHttpServerAdapter(
+          options,
+          ADAPTER_LATENCY_NAME,
+        );
 
         // Add the req handler to the dev server middleware
         server.middlewares.use(async (req, res, next) => {
@@ -272,7 +96,7 @@ export default (args: Options): AstroIntegration => {
           enhancedReq.checkSsrRoutes = false;
           enhancedReq.checkStaticFiles = false;
 
-          // Make sure we do not genertae a 404 if the rroute is not found
+          // Make sure we do not generate a 404 if the route is not found
           enhancedReq.handle404 = false;
 
           // Call our req handler
@@ -299,20 +123,19 @@ export const createExports = (): Record<string, any> => {
 // This function that will be called when the bundled script is run
 export const start = async (
   manifest: SSRManifest,
-  options: Options,
+  options: HttpAdapterOptions,
 ): Promise<void> => {
   // Create the app first before doing anything else
   _app = new App(manifest);
 
-  const httpServer = await createHttpServer(options, true);
-
-  // Add the main SSR route - NOTE: the path is not important since the
-  // matcher will decide if there is a matching page
-  httpServer.ssrRouter.all("/", ssrEndpoint, {
-    generateMatcher: matcher,
-    etag: true,
-    middlewareList: [Router.setLatencyMetricName("astro")],
-  });
+  const httpServer = await bs.addHttpServerAdapter(
+    options,
+    ADAPTER_LATENCY_NAME,
+    {
+      render,
+      matcher,
+    },
+  );
 
   // Start the http server now!
   await httpServer.start();

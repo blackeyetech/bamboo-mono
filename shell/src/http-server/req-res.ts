@@ -84,29 +84,27 @@ export type ServerRequest = http.IncomingMessage & {
 export const enhanceIncomingMessage = (
   req: http.IncomingMessage,
 ): ServerRequest => {
-  // Treat req like a ServerRequest (which it is minus the props and methods)
+  // Treat req like a ServerRequest (which it is minus some props and methods)
   let enhancedReq = req as ServerRequest;
 
   // Now set all of the props that make it a ServerRequest
-  enhancedReq.validUrl = true;
+  // NOTE: I can not figure out a good way to tell if the req is HTTP or HTTPS
+  // but I dont think it matters here unless someone needs the protocol prop
+  enhancedReq.validUrl = URL.canParse(
+    req.url as string,
+    `https://${req.headers.host}`,
+  );
 
-  // Best to put this in a try/catch because if the req.url = // this will
-  // throw an error as will a handful of other cases
-  try {
-    // NOTE: I can not figure out a good way to tell if the req is HTTP or HTTPS
-    // but I dont think it matters here unless someone needs the protocol prop
-    enhancedReq.urlObj = new URL(
-      req.url as string,
-      `https://${req.headers.host}`,
-    );
-  } catch (e) {
-    // Mark this as an invalid URL
-    enhancedReq.validUrl = false;
-  }
-
+  // If the URL is not valid then we should return now
   if (!enhancedReq.validUrl) {
     return enhancedReq;
   }
+
+  // If we are here we know the URL is valid so it is safe to use it
+  enhancedReq.urlObj = new URL(
+    req.url as string,
+    `https://${req.headers.host}`,
+  );
 
   enhancedReq.params = {};
   enhancedReq.handled = false;
@@ -377,3 +375,42 @@ export const enhanceServerResponse = (
 
   return enhancedRes;
 };
+
+export class WebRequest extends Request {
+  public req: ServerRequest;
+  public res: ServerResponse;
+
+  constructor(req: ServerRequest, res: ServerResponse) {
+    // Get the headers so we can pass them on
+    const headers = new Headers();
+
+    for (const [name, value] of Object.entries(req.headers)) {
+      // Skip headers with no values
+      if (value === undefined) {
+        continue;
+      }
+
+      // Value can be an array so we need to handle that
+      if (Array.isArray(value)) {
+        // Append each value as the header name
+        for (const item of value) {
+          headers.append(name, item);
+        }
+      } else {
+        headers.append(name, value);
+      }
+    }
+
+    // Now call the super constructor to create the Request
+    // NOTE: Request is a Web standard and doesnt use Buffers so convert req.body
+    super(req.urlObj, {
+      method: req.method,
+      body: req.body !== undefined ? new Uint8Array(req.body) : undefined,
+      headers,
+    });
+
+    // Make sure to tack on the nodeJs req/res
+    this.req = req;
+    this.res = res;
+  }
+}

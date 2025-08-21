@@ -6,6 +6,8 @@ import * as httpServer from "./http-server/main.js";
 import { BSPlugin } from "./bs-plugin.js";
 import { sleep, question } from "./utils.js";
 
+import { pathToFileURL } from "url";
+
 export { Logger, LogLevel } from "./logger.js";
 export { ConfigOptions, ConfigError } from "./config-man.js";
 export { ReqRes, ReqOptions, ReqAborted, ReqError } from "./http-req.js";
@@ -13,6 +15,7 @@ export { SseServerOptions, SseServer } from "./http-server/sse-server.js";
 export {
   ServerRequest,
   ServerResponse,
+  WebRequest,
   enhanceIncomingMessage,
   enhanceServerResponse,
   HttpError,
@@ -29,6 +32,7 @@ export {
   Router,
   RouterMatch,
   RouterMatchFunc,
+  SsrRenderFunc,
 } from "./http-server/main.js";
 export {
   Middleware,
@@ -43,9 +47,36 @@ export { BSQuestionOptions } from "./utils.js";
 // Misc consts here
 const LOGGER_APP_NAME = "App";
 
+const HTTP_CERT_FILE = "HTTP_CERT_FILE";
+const HTTP_KEY_FILE = "HTTP_KEY_FILE";
+const HTTP_ENABLE_HTTPS = "HTTP_ENABLE_HTTPS";
+const HTTP_IF = "HTTP_IF";
+const HTTP_PORT = "HTTP_PORT";
+
 // NOTE: BS_VERSION is replaced with package.json#version by a
 // rollup plugin at build time
 const VERSION: string = "BS_VERSION";
+
+// Types here
+export type HttpAdapterOptions = {
+  setupEntryPoint?: string;
+
+  staticFilesPath?: string;
+  immutableRegexSrc?: string[];
+  securityHeaders?: { name: string; value: string }[];
+
+  keepAliveTimeout?: number;
+  // NOTE: There is a potential race condition and the recommended
+  // solution is to make the header timeouts greater then the keep alive
+  // timeout. See - https://github.com/nodejs/node/issues/27363
+  headerTimeout?: number;
+
+  defaultRouterBasePath?: string;
+
+  healthcheckPath?: string;
+  healthcheckGoodRes?: number;
+  healthcheckBadRes?: number;
+};
 
 // Module private variables here
 let _logger: Logger;
@@ -360,6 +391,80 @@ export const bs = Object.freeze({
     }
 
     return _httpServerList[index];
+  },
+
+  addHttpServerAdapter: async (
+    options: HttpAdapterOptions,
+    adapter: string,
+    ssr?: {
+      matcher: (url: string) => httpServer.RouterMatchFunc;
+      render: httpServer.SsrRenderFunc;
+    },
+  ): Promise<httpServer.HttpServer> => {
+    // Setup the config for the HTTP server
+    let httpConfig: httpServer.HttpConfig = {
+      keepAliveTimeout: options.keepAliveTimeout,
+      headerTimeout: options.headerTimeout,
+      defaultRouterBasePath: options.defaultRouterBasePath,
+      healthcheckPath: options.healthcheckPath,
+      healthcheckGoodRes: options.healthcheckGoodRes,
+      healthcheckBadRes: options.healthcheckBadRes,
+    };
+
+    // Only add the static file server configs if there is a staticFilesPath
+    if (options.staticFilesPath !== undefined) {
+      httpConfig.staticFileServer = {
+        path: options.staticFilesPath,
+        immutableRegExp: options.immutableRegexSrc,
+        securityHeaders: options.securityHeaders,
+      };
+    }
+
+    const enableHttps = bs.getConfigBool(HTTP_ENABLE_HTTPS, false);
+
+    if (enableHttps) {
+      httpConfig.enableHttps = true;
+      httpConfig.httpsCertFile = bs.getConfigStr(HTTP_CERT_FILE);
+      httpConfig.httpsKeyFile = bs.getConfigStr(HTTP_KEY_FILE);
+    }
+
+    const networkIf = bs.getConfigStr(HTTP_IF, "127.0.0.1");
+    const networkPort = bs.getConfigNum(HTTP_PORT, 8080);
+
+    // Create the HTTP server
+    const server = await bs.addHttpServer(
+      networkIf,
+      networkPort,
+      httpConfig,
+      false, // NOTE: Don't start the server
+    );
+
+    // Check if we are going to add a SSR endpoint
+    if (ssr !== undefined) {
+      const ssrEndpoint = server.ssrRouter.getSsrEndpoint(ssr.render);
+
+      // Add the main SSR route - NOTE: the path is not important since the
+      // matcher will decide if there is a matching page
+      server.ssrRouter.all("/", ssrEndpoint, {
+        generateMatcher: ssr.matcher,
+        etag: true,
+        middlewareList: [httpServer.Router.setLatencyMetricName(adapter)],
+      });
+    }
+
+    // Call setupEntryPoint here in case you want to setup any default
+    // middleware for the SSR endpoint or add API endpoints
+    if (options.setupEntryPoint !== undefined) {
+      // NOTE: We expect an exported function named "setup"
+      const { setup } = await import(
+        pathToFileURL(options.setupEntryPoint).href
+      );
+      await setup();
+    }
+
+    bs.startupMsg("HTTP server has been created");
+
+    return server;
   },
 
   addPlugin: (

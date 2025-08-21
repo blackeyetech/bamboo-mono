@@ -25,6 +25,7 @@ export {
   RouterConfig,
   RouterMatch,
   RouterMatchFunc,
+  SsrRenderFunc,
 } from "./router.js";
 
 import * as http from "node:http";
@@ -275,6 +276,18 @@ export class HttpServer {
     req: ServerRequest,
     res: ServerResponse,
   ): Promise<void> {
+    // Make sure the URL is valid before we go any further
+    if (!req.validUrl) {
+      const message = "Invalid URL";
+
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Length", Buffer.byteLength(message));
+      res.statusCode = 400;
+      res.write(message);
+      res.end();
+      return;
+    }
+
     this._logger.trace(
       "Received (%s) req for (%s)",
       req.method,
@@ -397,18 +410,6 @@ export class HttpServer {
 
       this._server = https.createServer(options, (origReq, origRes) => {
         const req = enhanceIncomingMessage(origReq);
-
-        if (!req.validUrl) {
-          const message = "Invalid URL";
-
-          origRes.setHeader("Content-Type", "text/plain; charset=utf-8");
-          origRes.setHeader("Content-Length", Buffer.byteLength(message));
-          origRes.statusCode = 400;
-          origRes.write(message);
-          origRes.end();
-          return;
-        }
-
         const res = enhanceServerResponse(origRes);
 
         this.handleReq(req, res);
@@ -421,18 +422,6 @@ export class HttpServer {
       const options: https.ServerOptions = {};
       this._server = http.createServer(options, (origReq, origRes) => {
         const req = enhanceIncomingMessage(origReq);
-
-        if (!req.validUrl) {
-          const message = "Invalid URL";
-
-          origRes.setHeader("Content-Type", "text/plain; charset=utf-8");
-          origRes.setHeader("Content-Length", Buffer.byteLength(message));
-          origRes.statusCode = 400;
-          origRes.write(message);
-          origRes.end();
-          return;
-        }
-
         const res = enhanceServerResponse(origRes);
 
         this.handleReq(req, res);

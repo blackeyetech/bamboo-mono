@@ -7,6 +7,7 @@ import {
   ServerResponse,
   HttpError,
   HttpRedirect,
+  WebRequest,
 } from "./req-res.js";
 import {
   Middleware,
@@ -34,6 +35,7 @@ import * as crypto from "node:crypto";
 import * as zlib from "node:zlib";
 import { pipeline } from "node:stream/promises";
 import * as stream from "node:stream";
+import * as streams from "node:stream/promises";
 
 // Types here
 export type HealthcheckCallback = () => Promise<boolean>;
@@ -45,6 +47,7 @@ export type RouterMatch = {
 };
 
 export type RouterMatchFunc = (url: URL) => RouterMatch | false;
+export type SsrRenderFunc = (webReq: WebRequest) => Promise<Response>;
 
 export type EndpointOptions = {
   generateMatcher?: (path: string) => RouterMatchFunc;
@@ -536,7 +539,6 @@ export class Router {
     // Create the matching function
     let match = PathToRegEx.match(path, {
       decode: decodeURIComponent,
-      strict: true,
     });
 
     return (url: URL): RouterMatch | false => {
@@ -567,6 +569,68 @@ export class Router {
     this._defaultMiddlewareList.push(middleware);
 
     return this;
+  }
+
+  getSsrEndpoint(render: SsrRenderFunc): EndpointCallback {
+    return async (req: ServerRequest, res: ServerResponse): Promise<void> => {
+      // Measure the time it took to render the page so capture when we started
+      const startedAt = performance.now();
+
+      // Create a webRequest object to pass to the render
+      const webReq = new WebRequest(req, res);
+
+      // Now render the page
+      const webRes = await render(webReq);
+
+      // Now figure out how long it took to render and store it in the metrics
+      const ssrLatency = Math.round(performance.now() - startedAt);
+      res.addServerTimingMetric("ssr", ssrLatency);
+
+      // The default status code is always 200. If webRes.status is NOT 200
+      // then it was set by the user so we need to use that status code
+      if (webRes.status !== 200) {
+        res.statusCode = webRes.status;
+      }
+
+      // Check if the user set any headers on webRes
+      const SET_COOKIE = "set-cookie";
+
+      for (let [name, value] of webRes.headers.entries()) {
+        // Dont bother setting set-cookie headers, we will do that later
+        if (name === SET_COOKIE) {
+          continue;
+        }
+
+        res.setHeader(name, value);
+      }
+
+      // Check if there were any set-cookie headers and if so set them as an array
+      const cookies = webRes.headers.getSetCookie();
+      if (cookies.length > 0) {
+        res.setHeader(SET_COOKIE, cookies);
+      }
+
+      // This is our last chance to set headers so set the server timings header
+      res.setServerTimingHeader();
+
+      // Now check if there is a body in the webRes
+      if (webRes.body !== null) {
+        // NOTE1: pipeline will close the res when it is finished
+        // NOTE2: You need to cast as ReadableStream<Uint8Array> or TS will complain
+        await streams
+          .pipeline(webRes.body as ReadableStream<Uint8Array>, res)
+          .catch((e) => {
+            // We can't do anything else here because either:
+            // - the stream is closed which means we can't send back an error
+            // - we have an internal error, but we have already started streaming
+            //   so we can't do anything
+            this._logger.warn(
+              "ssrEndpoint had this error during rendering: (%s)",
+              e,
+            );
+          });
+      }
+    };
   }
 
   endpoint(

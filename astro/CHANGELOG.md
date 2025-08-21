@@ -1,5 +1,16 @@
 # @bs-core/astro
 
+## 1.8.17
+
+### Patch Changes
+
+- Converting body buffer to Uint8Array when creating the WebRequest to confirm with the Web Standard Request
+- Moved WebResponse from astro adapter to req-res.ts
+- Moved ssrEndpoint() from astro adapter to Router as getSsrEndpoint()
+- Moved createHttpServer from astro adapter to main.ts as addHttpServerAdapter()
+- Updated dependencies
+  - @bs-core/shell@1.21.10
+
 ## 1.8.16
 
 ### Patch Changes
