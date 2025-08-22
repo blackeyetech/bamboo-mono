@@ -14,7 +14,7 @@ import { App } from "astro/app";
 
 // Misc consts here
 const ADAPTER_NAME = "@bs-core/astro";
-const ADAPTER_LATENCY_NAME = "@bs-core/astro";
+const ADAPTER_LATENCY_NAME = "astro";
 
 // Module properties here
 

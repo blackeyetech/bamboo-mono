@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.8.19
+
+### Patch Changes
+
+- Changed ServerTiming latency name to "astro"
+
 ## 1.8.18
 
 ### Patch Changes
