@@ -15,7 +15,7 @@
     "@bs-core/shell": "workspace:^",
     "@bs-plugins/jira": "workspace:^",
     "@bs-plugins/template": "workspace:^",
-    "@types/http-proxy": "^1.17.14",
+    "@types/http-proxy": "^1.17.16",
     "http-proxy": "^1.18.1"
   }
 }

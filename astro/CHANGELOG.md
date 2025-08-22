@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.8.18
+
+### Patch Changes
+
+- Updated packages
+
 ## 1.8.17
 
 ### Patch Changes

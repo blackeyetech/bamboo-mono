@@ -1,5 +1,5 @@
 {
-  "version": "1.8.17",
+  "version": "1.8.18",
   "name": "@bs-core/astro",
   "description": "The Bamboo Shell Astro Adapter",
   "type": "module",
@@ -51,6 +51,6 @@
   "private": false,
   "devDependencies": {
     "@bs-core/shell": "workspace:^",
-    "astro": "^4.10.2"
+    "astro": "^4.16.19"
   }
 }
