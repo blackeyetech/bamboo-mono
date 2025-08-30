@@ -1,10 +1,13 @@
 {
-  "version": "1.8.19",
+  "version": "1.8.20",
   "name": "@bs-core/astro",
   "description": "The Bamboo Shell Astro Adapter",
   "type": "module",
   "exports": {
-    ".": "./dist/astro.mjs"
+    ".": {
+      "import": "./dist/astro.mjs",
+      "types": "./dist/astro.d.ts"
+    }
   },
   "files": [
     "dist/astro.mjs",
@@ -26,7 +29,7 @@
     "prepublishOnly": "pnpm test"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.0.0"
   },
   "keywords": [
     "Bamboo",

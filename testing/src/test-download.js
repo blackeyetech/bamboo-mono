@@ -1,4 +1,4 @@
-import { bs, Router } from "@bs-core/shell";
+import { bs } from "@bs-core/shell";
 
 let res = await bs
   .request("http://127.0.0.1:8080", "/api/get", {

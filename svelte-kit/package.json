@@ -1,24 +1,23 @@
 {
-  "version": "1.21.11",
-  "name": "@bs-core/shell",
-  "description": "The Bamboo Shell",
+  "version": "0.0.0",
+  "name": "@bs-core/svelte-kit",
+  "description": "The Bamboo Shell SvelteKit Adapter",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/shell.mjs",
-      "types": "./dist/shell.d.ts"
+      "import": "./dist/svelte-kit.js",
+      "types": "./dist/svelte-kit.d.ts"
     }
   },
   "files": [
-    "dist/shell.mjs",
-    "dist/shell.d.ts",
-    "dist/shell.mjs.map"
+    "dist/svelte-kit.js",
+    "dist/svelte-kit.d.ts",
+    "dist/svelte-kit.ms.map"
   ],
-  "types": "./dist/shell.d.ts",
+  "types": "./dist/svelte-kit.d.ts",
   "scripts": {
-    "rollup": "rollup -c rollup.config.mjs",
-    "build-dev": "tsc && pnpm run rollup",
-    "build-prod": "pnpm run clean && tsc && NODE_ENV=production pnpm run rollup",
+    "build-dev": "tsc",
+    "build-prod": "pnpm run clean && tsc",
     "format-ts": "prettier --write 'src/**/*.ts'",
     "format-js": "prettier --write 'dist/**/*.{js,ts}'",
     "format-misc": "prettier --write '**/*.{json,md,yaml}'",
@@ -34,7 +33,9 @@
   "keywords": [
     "Bamboo",
     "Shell",
-    "Framework"
+    "Framework",
+    "SvelteKit",
+    "selve-kit-adapter"
   ],
   "author": "Black Eye Technology",
   "license": "MIT",
@@ -46,8 +47,14 @@
     "url": "https://github.com/blackeyetech/bamboo-mono/issues"
   },
   "homepage": "https://github.com/blackeyetech/bamboo-mono#readme",
+  "peerDependencies": {
+    "@bs-core/shell": "workspace:^",
+    "@sveltejs/kit": "^2.36.1"
+  },
   "private": false,
-  "dependencies": {
-    "path-to-regexp": "^8.2.0"
+  "devDependencies": {
+    "@bs-core/shell": "workspace:^",
+    "@sveltejs/kit": "^2.36.1",
+    "vite": "^7.1.3"
   }
 }

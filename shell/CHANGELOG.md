@@ -1,5 +1,19 @@
 # @bs-core/shell
 
+## 1.21.11
+
+### Patch Changes
+
+- - Removed sql-server and template plugins
+  - Removed healthcheckGoodRes and healthcheckBasRes options from HttpConfig and added setter instead
+  - Tidied up HttpAdapterOptions as well
+  - Renamed addHttpServerAdapter() to addAdapterHttpServer()
+  - Added ssr parameters to HttpConfig
+  - Moved networkInterface and networkPort props into HttpConfig
+  - Added parameter to strip the extension off static html files
+  - Added Intl.DateTimeFormat to format logger timestamps
+- Updated package.json to export types in a better way
+
 ## 1.21.10
 
 ### Patch Changes

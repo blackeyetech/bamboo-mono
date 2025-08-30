@@ -1,0 +1,1 @@
+# @bs-core/svelte-kit

@@ -1,10 +1,13 @@
 {
-  "version": "1.2.42",
+  "version": "1.2.43",
   "name": "@bs-plugins/postgresql",
   "description": "Bamboo Shell plugin for PostgreSQL",
   "type": "module",
   "exports": {
-    ".": "./dist/plugin.mjs"
+    ".": {
+      "import": "./dist/plugin.mjs",
+      "types": "./dist/plugin.d.ts"
+    }
   },
   "files": [
     "dist/plugin.mjs",
@@ -26,7 +29,7 @@
     "prepublishOnly": "npm test"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.0.0"
   },
   "keywords": [
     "Bamboo",

@@ -1,5 +1,14 @@
 # @bs-plugins/postgresql
 
+## 1.2.43
+
+### Patch Changes
+
+- Updated package.json to export types in a better way
+- Updated dependencies
+- Updated dependencies
+  - @bs-core/shell@1.21.11
+
 ## 1.2.42
 
 ### Patch Changes

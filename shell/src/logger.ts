@@ -28,6 +28,7 @@ export class Logger {
   private _timestampLocale: string;
   private _timestampTz: string;
   private _logLevel: LogLevel;
+  private _formatter: Intl.DateTimeFormat;
 
   // Private methods here
   /**
@@ -43,23 +44,14 @@ export class Logger {
 
     let now = new Date();
 
+    // Check if we should formet the time in ISO format
     if (this._timestampLocale === "ISO") {
       // Make sure to add a trailing space!
       return `${now.toISOString()} `;
     }
 
     // Make sure to add a trailing space!
-    return `${now.toLocaleString(this._timestampLocale, {
-      timeZone: this._timestampTz,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-      fractionalSecondDigits: 3,
-    })} `;
+    return `${this._formatter.format(now)} `;
   }
 
   private convertLevel(level: string): LogLevel {
@@ -102,6 +94,18 @@ export class Logger {
     this._timestampTz = configMan.getStr(CFG_LOG_TIMESTAMP_TZ, "UTC");
 
     this._logLevel = this.convertLevel(configMan.getStr(CFG_LOG_LEVEL, ""));
+
+    this._formatter = new Intl.DateTimeFormat(this._timestampLocale, {
+      timeZone: this._timestampTz,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+      fractionalSecondDigits: 3,
+    });
 
     // Now get the messages from the confgiMan for display
     let messages = configMan.getMessages();

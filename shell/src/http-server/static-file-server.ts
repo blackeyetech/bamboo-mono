@@ -27,8 +27,7 @@ type FileDetails = {
 };
 
 export type StaticFileServerConfig = {
-  loggerName: string;
-  filePath: string;
+  path: string;
 
   immutableRegExp?: string[];
   defaultDirFile?: string;
@@ -36,6 +35,8 @@ export type StaticFileServerConfig = {
   defaultCharSet?: string;
 
   securityHeaders?: { name: string; value: string }[];
+
+  stripHtmlExt?: boolean;
 };
 
 // StaticFileServer class here
@@ -46,17 +47,18 @@ export class StaticFileServer {
   private _immutableRegExp: RegExp[];
   private _defaultDirFile: string;
   private _defaultCharSet: string;
+  private _stripHtmlExt: boolean;
 
   private _staticFileMap: Map<string, FileDetails>;
 
   private _securityHeaders: { name: string; value: string }[];
 
-  constructor(config: StaticFileServerConfig) {
+  constructor(loggerName: string, config: StaticFileServerConfig) {
     // Make sure there is no trailing slash at the end of the path
-    this._logger = new Logger(config.loggerName);
+    this._logger = new Logger(loggerName);
     this._logger.startupMsg("Creating static file server ...");
 
-    this._filePath = config.filePath.replace(/\/*$/, "");
+    this._filePath = config.path.replace(/\/*$/, "");
 
     // Initialise the immutable regexs array
     this._immutableRegExp = [];
@@ -71,6 +73,7 @@ export class StaticFileServer {
 
     this._defaultDirFile = config.defaultDirFile ?? "index.html";
     this._defaultCharSet = config.defaultCharSet ?? "charset=utf-8";
+    this._stripHtmlExt = config.stripHtmlExt ?? false;
 
     this._staticFileMap = new Map();
 
@@ -110,7 +113,16 @@ export class StaticFileServer {
         this.getFilesRecursively(`${url}/`);
       } else if (stats.isFile()) {
         // Add the file to the list
-        await this.addFile(fullPath, `${url}`, stats);
+        await this.addFile(fullPath, url, stats);
+
+        // Check if we should strip .html
+        if (this._stripHtmlExt) {
+          if (path.extname(url) === ".html") {
+            const baseUrl = url.slice(0, url.lastIndexOf("."));
+            this._logger.trace("Adding striped html file (%s)", baseUrl);
+            await this.addFile(fullPath, baseUrl, stats);
+          }
+        }
       }
     }
   }
@@ -233,13 +245,15 @@ export class StaticFileServer {
     return true;
   }
 
-  private async getFileDetails(file: string): Promise<FileDetails | undefined> {
+  private async getFileDetails(
+    urlPath: string,
+  ): Promise<FileDetails | undefined> {
     // Check for the details first. If it exists we want to use the stored full
     // path just in case file is s dir. It will save and extra stat!
-    let details = this._staticFileMap.get(file);
+    let details = this._staticFileMap.get(urlPath);
 
     let fullPath =
-      details?.fullPath ?? `${this._filePath}${file.replace(/\/*$/, "")}`;
+      details?.fullPath ?? `${this._filePath}${urlPath.replace(/\/*$/, "")}`;
 
     // If we can't stat the file (doesn't exist) then stat will throw
     let stats = await fsPromises.stat(fullPath).catch((e) => {
@@ -254,7 +268,8 @@ export class StaticFileServer {
       return undefined;
     }
 
-    // Check if the file is a directory (should only happen the 1st time)
+    // Check if the file is a directory (should only happen the 1st time
+    // because the urlPath will get mapped to the default file for a dir)
     if (stats.isDirectory()) {
       // This is a dir so set the file to be the default file for a dir
       fullPath += `/${this._defaultDirFile}`;
@@ -281,8 +296,8 @@ export class StaticFileServer {
       details.size !== stats.size
     ) {
       // Add the file to the file map and get the new details
-      await this.addFile(fullPath, file, stats);
-      details = this._staticFileMap.get(file);
+      await this.addFile(fullPath, urlPath, stats);
+      details = this._staticFileMap.get(urlPath);
     }
 
     return details;

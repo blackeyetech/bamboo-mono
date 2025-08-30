@@ -8,7 +8,10 @@ import {
   ServerResponse,
 } from "./req-res.js";
 import { Middleware } from "./middleware.js";
-import { StaticFileServer } from "./static-file-server.js";
+import {
+  StaticFileServer,
+  StaticFileServerConfig,
+} from "./static-file-server.js";
 import {
   Router,
   EndpointOptions,
@@ -16,6 +19,8 @@ import {
   Method,
   Route,
   RouterConfig,
+  RouterMatchFunc,
+  SsrRenderFunc,
 } from "./router.js";
 
 export {
@@ -42,6 +47,9 @@ export class HttpConfigError {
 }
 
 export type HttpConfig = {
+  networkInterface?: string;
+  networkPort?: number;
+
   // NOTE: The default node keep alive is 5 secs. This needs to be set
   // higher then any load balancers in front of this App
   keepAliveTimeout?: number;
@@ -51,19 +59,18 @@ export type HttpConfig = {
   headerTimeout?: number;
 
   defaultRouterBasePath?: string;
-
   healthcheckPath?: string;
-  healthcheckGoodRes?: number;
-  healthcheckBadRes?: number;
 
   enableHttps?: boolean;
   httpsKeyFile?: string;
   httpsCertFile?: string;
 
-  staticFileServer?: {
-    path: string;
-    immutableRegExp?: string[];
-    securityHeaders?: { name: string; value: string }[];
+  staticFileServer?: StaticFileServerConfig;
+
+  ssrServer?: {
+    adapterName: string;
+    matcher?: (url: string) => RouterMatchFunc;
+    render?: SsrRenderFunc;
   };
 };
 
@@ -73,9 +80,9 @@ export class HttpServer {
   private _socketMap: Map<number, net.Socket>;
   private _socketId: number;
 
-  private _networkInterface: string;
-  private _networkPort: number;
-  private _networkIp: string;
+  private _networkInterface: string | null;
+  private _networkPort: number | null;
+  private _networkIp: string | null;
   private _baseUrl: string;
 
   private _name: string;
@@ -95,36 +102,36 @@ export class HttpServer {
 
   private _apiRouterList: Router[];
   private _defaultApiRouter: Router;
-  private _ssrRouter: Router;
+  private _ssrRouter: Router | null;
   private _staticFileServer?: StaticFileServer;
 
   private _server?: http.Server;
 
-  constructor(
-    networkInterface: string,
-    networkPort: number,
-    config: HttpConfig = {},
-  ) {
-    this._name = `${networkInterface}-${networkPort}`;
+  constructor(config: HttpConfig) {
+    this._networkInterface = config.networkInterface ?? null;
+    this._networkPort = config.networkPort ?? null;
+
+    if (this._networkInterface === null || this._networkPort === null) {
+      this._name = "not-listening";
+    } else {
+      this._name = `${config.networkInterface}-${config.networkPort}`;
+    }
     this._logger = new Logger(`HttpServer-${this._name}`);
 
     this._httpKeepAliveTimeout = config.keepAliveTimeout ?? 65000;
     this._httpHeaderTimeout = config.headerTimeout ?? 66000;
 
     this._healthCheckPath = config.healthcheckPath ?? "/healthcheck";
-    this._healthCheckGoodResCode = config.healthcheckGoodRes ?? 200;
-    this._healthCheckBadResCode = config.healthcheckBadRes ?? 503;
+    this._healthCheckGoodResCode = 200;
+    this._healthCheckBadResCode = 503;
 
     this._enableHttps = config.enableHttps ?? false;
 
     this._socketMap = new Map();
     this._socketId = 0;
 
-    this._networkIp = "";
+    this._networkIp = null;
     this._baseUrl = "";
-
-    this._networkInterface = networkInterface;
-    this._networkPort = networkPort;
 
     this._healthcheckCallbacks = [];
 
@@ -135,37 +142,63 @@ export class HttpServer {
       config.defaultRouterBasePath ?? "/api",
     );
 
+    // Now we need to add the endpoint for healthchecks
+    this._defaultApiRouter.get(
+      this._healthCheckPath,
+      async (req, res) => this.healthcheckCallback(req, res),
+      { useDefaultMiddlewares: false },
+    );
+
     if (this._enableHttps) {
       this._keyFile = config.httpsKeyFile;
       this._certFile = config.httpsCertFile;
     }
 
-    // Make sure to not add the SSR Router to the
-    // _apiRouterList since it doesnt have a fixed base path
-    this._ssrRouter = new Router("/");
-    this._logger.startupMsg("SSR router created");
+    // Check if we are going to add a SSR endpoint
+    if (
+      config.ssrServer?.render === undefined ||
+      config.ssrServer?.matcher === undefined
+    ) {
+      // We are not enabling SSR so mark the router as not existing
+      this._ssrRouter = null;
+      this._logger.startupMsg("SSR router NOT created");
+    } else {
+      // Make sure to NOT add the SSR Router to the
+      // _apiRouterList since it doesnt have a fixed base path
+      this._ssrRouter = new Router("/");
+
+      const ssrEndpoint = this._ssrRouter.getSsrEndpoint(
+        config.ssrServer.render,
+      );
+
+      // Add the main SSR route - NOTE: the path is not important since the
+      // matcher will decide if there is a matching page
+      this._ssrRouter.all("/", ssrEndpoint, {
+        generateMatcher: config.ssrServer.matcher,
+        etag: true,
+        middlewareList: [
+          Router.setLatencyMetricName(config.ssrServer.adapterName),
+        ],
+      });
+
+      this._logger.startupMsg("SSR router created");
+    }
 
     if (config.staticFileServer !== undefined) {
-      this._staticFileServer = new StaticFileServer({
-        loggerName: `HttpServer-${this._name}/StaticFile`,
-        filePath: config.staticFileServer.path,
-        immutableRegExp: config.staticFileServer.immutableRegExp,
-        securityHeaders: config.staticFileServer.securityHeaders,
-      });
+      this._staticFileServer = new StaticFileServer(
+        `HttpServer-${this._name}/StaticFile`,
+        config.staticFileServer,
+      );
     }
   }
 
-  // Getter methods here
-  get networkIp(): string {
+  // Getter and setter methods here
+  get networkIp(): string | null {
     return this._networkIp;
   }
 
-  get networkPort(): number {
+  get networkPort(): number | null {
     return this._networkPort;
-  }
-
-  get baseUrl(): string {
-    return this._baseUrl;
   }
 
   get httpsEnabled(): boolean {
@@ -176,16 +209,20 @@ export class HttpServer {
     return this._name;
   }
 
-  get ssrRouter(): Router {
-    return this._ssrRouter;
-  }
-
   get server(): http.Server | null {
     return this._server === undefined ? null : this._server;
   }
 
   get reqHandler(): (req: ServerRequest, res: ServerResponse) => Promise<void> {
     return this.handleReq;
+  }
+
+  set healthCheckGoodResCode(code: number) {
+    this._healthCheckGoodResCode = code;
+  }
+
+  set healthCheckBadResCode(code: number) {
+    this._healthCheckBadResCode = code;
   }
 
   // Private methods here
@@ -226,6 +263,12 @@ export class HttpServer {
   }
 
   private async startListening(server: http.Server): Promise<void> {
+    // Make sure we have an interface and port before we start doing anything
+    if (this._networkIp === null || this._networkPort === null) {
+      this._logger.startupMsg("Not listening ...");
+      return;
+    }
+
     // Start listening
     server.listen(this._networkPort, this._networkIp);
 
@@ -314,7 +357,7 @@ export class HttpServer {
     }
 
     // Check if we should test for SSR routes matches
-    if (req.checkSsrRoutes) {
+    if (req.checkSsrRoutes && this._ssrRouter !== null) {
       await this._ssrRouter.handleReq(req, res);
       if (req.handled) {
         return;
@@ -372,7 +415,13 @@ export class HttpServer {
 
   // Public methods here
   async start(): Promise<void> {
-    this._logger.startupMsg("Initialising HTTP manager ...");
+    // Make sure we have an interface and port before we start doing anything
+    if (this._networkInterface === null || this._networkPort === null) {
+      this._logger.startupMsg("Not initialising HTTP server ...");
+      return;
+    }
+
+    this._logger.startupMsg("Initialising HTTP server ...");
 
     let ip = this.findInterfaceIp(this._networkInterface);
 
@@ -390,7 +439,7 @@ export class HttpServer {
 
     // Create either a HTTP or HTTPS server
     if (this._enableHttps) {
-      this._baseUrl = `https://${this._networkIp}:${this._networkPort}`;
+      this._baseUrl = `https://${this._networkInterface}:${this._networkPort}`;
 
       if (this._keyFile === undefined) {
         throw new HttpConfigError("HTTPS is enabled but no key file provided!");
@@ -415,7 +464,7 @@ export class HttpServer {
         this.handleReq(req, res);
       });
     } else {
-      this._baseUrl = `http://${this._networkIp}:${this._networkPort}`;
+      this._baseUrl = `http://${this._networkInterface}:${this._networkPort}`;
 
       this._logger.startupMsg(`Attempting to listen on (${this._baseUrl})`);
 
@@ -432,13 +481,6 @@ export class HttpServer {
     this._server.headersTimeout = this._httpHeaderTimeout;
 
     await this.startListening(this._server);
-
-    // Now we need to add the endpoint for healthchecks
-    this._defaultApiRouter.get(
-      this._healthCheckPath,
-      async (req, res) => this.healthcheckCallback(req, res),
-      { useDefaultMiddlewares: false },
-    );
   }
 
   async stop(): Promise<void> {

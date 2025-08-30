@@ -2,7 +2,10 @@ import { bs, Router } from "@bs-core/shell";
 
 import { PassThrough } from "node:stream";
 
-const httpServer = await bs.addHttpServer("127.0.0.1", 8080);
+const httpServer = await bs.addHttpServer({
+  networkInterface: "127.0.0.1",
+  networkPort: 8080,
+});
 
 const file = `
 Greetings people of Earth, prepare to die!

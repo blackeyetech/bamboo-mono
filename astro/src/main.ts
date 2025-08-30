@@ -5,20 +5,25 @@ import {
   enhanceServerResponse,
   RouterMatchFunc,
   WebRequest,
-  HttpAdapterOptions,
+  HttpConfig,
 } from "@bs-core/shell";
 
 import type { AstroIntegration, SSRManifest } from "astro";
-
 import { App } from "astro/app";
+
+import { pathToFileURL } from "url";
 
 // Misc consts here
 const ADAPTER_NAME = "@bs-core/astro";
 const ADAPTER_LATENCY_NAME = "astro";
 
-// Module properties here
+// Type here
+export type AdapterConfig = {
+  setupEntryPoint?: string;
+  httpConfig: HttpConfig;
+};
 
-/** The Astro App instance. */
+// Module properties here
 let _app: App;
 
 // Private functions here
@@ -49,7 +54,7 @@ async function render(webReq: WebRequest): Promise<Response> {
 // Exported functions here
 
 // The default function is called when the bundle script is being built
-export default (options: HttpAdapterOptions): AstroIntegration => {
+export default (config: AdapterConfig): AstroIntegration => {
   return {
     name: ADAPTER_NAME,
     hooks: {
@@ -58,7 +63,7 @@ export default (options: HttpAdapterOptions): AstroIntegration => {
           name: ADAPTER_NAME,
           serverEntrypoint: "@bs-core/astro",
           // previewEntrypoint: '@bs-core/astro',
-          args: options,
+          args: config,
           exports: [],
           supportedAstroFeatures: {
             hybridOutput: "stable",
@@ -79,12 +84,26 @@ export default (options: HttpAdapterOptions): AstroIntegration => {
 
       "astro:server:setup": async ({ server }) => {
         // This is called when running the app in "dev" mode
+        // Set the adapter name to use in the latency measurements
+        config.httpConfig.ssrServer = { adapterName: ADAPTER_LATENCY_NAME };
+
         // We need the req handler from the HttpServer so lets create one
         // even though we will not actually use it directly
-        const httpServer = await bs.addHttpServerAdapter(
-          options,
-          ADAPTER_LATENCY_NAME,
+        const httpServer = await bs.addHttpServer(
+          config.httpConfig,
+          false, // NOTE: Don't start the server
         );
+
+        // Call setupEntryPoint in case they want to setup add API endpoints
+        if (config.setupEntryPoint !== undefined) {
+          // NOTE: We expect an exported function named "setup"
+          const { setup } = await import(
+            pathToFileURL(config.setupEntryPoint).href
+          );
+          await setup();
+        }
+
+        bs.startupMsg("HTTP server has been created");
 
         // Add the req handler to the dev server middleware
         server.middlewares.use(async (req, res, next) => {
@@ -123,19 +142,33 @@ export const createExports = (): Record<string, any> => {
 // This function that will be called when the bundled script is run
 export const start = async (
   manifest: SSRManifest,
-  options: HttpAdapterOptions,
+  config: AdapterConfig,
 ): Promise<void> => {
   // Create the app first before doing anything else
   _app = new App(manifest);
 
-  const httpServer = await bs.addHttpServerAdapter(
-    options,
-    ADAPTER_LATENCY_NAME,
-    {
-      render,
-      matcher,
-    },
+  config.httpConfig.ssrServer = {
+    adapterName: ADAPTER_LATENCY_NAME,
+    render,
+    matcher,
+  };
+
+  config.httpConfig.ssrServer = { adapterName: ADAPTER_LATENCY_NAME };
+
+  // We need the req handler from the HttpServer so lets create one
+  // even though we will not actually use it directly
+  const httpServer = await bs.addHttpServer(
+    config.httpConfig,
+    false, // NOTE: Don't start the server
   );
+
+  // Call setupEntryPoint here in case you want to setup any default
+  // middleware for the SSR endpoint or add API endpoints
+  if (config.setupEntryPoint !== undefined) {
+    // NOTE: We expect an exported function named "setup"
+    const { setup } = await import(pathToFileURL(config.setupEntryPoint).href);
+    await setup();
+  }
 
   // Start the http server now!
   await httpServer.start();

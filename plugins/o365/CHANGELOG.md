@@ -1,5 +1,14 @@
 # @bs-plugins/o365
 
+## 21.2.41
+
+### Patch Changes
+
+- Updated package.json to export types in a better way
+- Updated dependencies
+- Updated dependencies
+  - @bs-core/shell@1.21.11
+
 ## 21.2.40
 
 ### Patch Changes

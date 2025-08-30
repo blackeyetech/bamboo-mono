@@ -1,6 +1,8 @@
 import { bs } from "@bs-core/shell";
 
-await bs.addHttpServer("lo", 8088, {
+await bs.addHttpServer({
+  networkInterface: "lo",
+  networkPort: 8088,
   loggerTag: "HttpMan",
 });
 

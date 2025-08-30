@@ -535,7 +535,7 @@ export class Router {
     }
   }
 
-  pathToRegexMatcher(path: string): RouterMatchFunc {
+  static pathToRegexMatcher(path: string): RouterMatchFunc {
     // Create the matching function
     let match = PathToRegEx.match(path, {
       decode: decodeURIComponent,
@@ -555,7 +555,7 @@ export class Router {
     };
   }
 
-  matchAllMatcher(_: string): RouterMatchFunc {
+  static matchAllMatcher(_: string): RouterMatchFunc {
     // This will match everything
     return (url: URL): RouterMatch => {
       return {
@@ -642,7 +642,7 @@ export class Router {
     let options = {
       useDefaultMiddlewares: true,
       etag: false,
-      generateMatcher: this.pathToRegexMatcher,
+      generateMatcher: Router.pathToRegexMatcher,
 
       ...endpointOptions,
     };

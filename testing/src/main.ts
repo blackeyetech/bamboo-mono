@@ -11,7 +11,6 @@ import {
 } from "@bs-core/shell";
 
 import { Jira, JiraConfig } from "@bs-plugins/jira";
-import { Template } from "@bs-plugins/template";
 
 import { PassThrough } from "node:stream";
 
@@ -23,9 +22,10 @@ async function init() {
   bs.addPlugin("t1", Jira, jOptions);
   bs.addPlugin("t2", Jira, jOptions);
   bs.addPlugin("t3", Jira, jOptions);
-  bs.addPlugin("t4", Template);
 
-  let httpMan1 = await bs.addHttpServer("127.0.0.1", 8080, {
+  let httpMan1 = await bs.addHttpServer({
+    // networkInterface: "lo",
+    // networkPort: 8080,
     //healthcheckPath: "/",
     // defaultRouterBasePath: "/",
     staticFileServer: {
@@ -33,6 +33,8 @@ async function init() {
       immutableRegExp: ["^.+\.min\.[a-zA-Z0-9-]+$"],
     },
   });
+
+  httpMan1.healthCheckGoodResCode = 201;
 
   // httpMan1.use(Router.body({}));
   // httpMan1.use(Router.json());
@@ -288,7 +290,7 @@ async function init() {
   bs.httpServer().addHealthcheck(async () => {
     bs.info("Healthy!");
     await bs.sleep(3);
-    return false;
+    return true;
   });
 
   bs.httpServer().endpoint(
@@ -528,7 +530,5 @@ let t2 = bs.plugin("t2");
 bs.info(t2.name);
 let t3 = bs.plugin("t3");
 bs.info(t3.name);
-let t4 = bs.plugin("t4");
-bs.info(t4.name);
 
 bs.getConfigStr("xxxx", "oo", { silent: true });

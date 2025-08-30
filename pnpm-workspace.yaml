@@ -1,7 +1,7 @@
 packages:
   - shell
   - astro
-  - plugins/template
+  - svelte-kit
   - plugins/o365
   - plugins/postgresql
   - plugins/jira
