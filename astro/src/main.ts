@@ -85,7 +85,11 @@ export default (config: AdapterConfig): AstroIntegration => {
       "astro:server:setup": async ({ server }) => {
         // This is called when running the app in "dev" mode
         // Set the adapter name to use in the latency measurements
-        config.httpConfig.ssrServer = { adapterName: ADAPTER_LATENCY_NAME };
+        config.httpConfig.ssrServer = {
+          adapterName: ADAPTER_LATENCY_NAME,
+          matcher,
+          render,
+        };
 
         // We need the req handler from the HttpServer so lets create one
         // even though we will not actually use it directly

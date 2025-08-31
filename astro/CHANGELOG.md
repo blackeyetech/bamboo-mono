@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.8.21
+
+### Patch Changes
+
+- Now setting Astro SSR matcher and render
+
 ## 1.8.20
 
 ### Patch Changes
