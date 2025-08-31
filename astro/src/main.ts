@@ -87,8 +87,6 @@ export default (config: AdapterConfig): AstroIntegration => {
         // Set the adapter name to use in the latency measurements
         config.httpConfig.ssrServer = {
           adapterName: ADAPTER_LATENCY_NAME,
-          matcher,
-          render,
         };
 
         // We need the req handler from the HttpServer so lets create one
@@ -156,8 +154,6 @@ export const start = async (
     render,
     matcher,
   };
-
-  config.httpConfig.ssrServer = { adapterName: ADAPTER_LATENCY_NAME };
 
   // We need the req handler from the HttpServer so lets create one
   // even though we will not actually use it directly

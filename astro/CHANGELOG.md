@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.8.22
+
+### Patch Changes
+
+- Fixed issue with Astro adapter not setting the matcher and render
+
 ## 1.8.21
 
 ### Patch Changes
