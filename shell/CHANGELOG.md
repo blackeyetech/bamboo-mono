@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.12
+
+### Patch Changes
+
+- Exposing SSR Router
+
 ## 1.21.11
 
 ### Patch Changes

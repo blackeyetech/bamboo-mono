@@ -213,6 +213,10 @@ export class HttpServer {
     return this._server === undefined ? null : this._server;
   }
 
+  get ssrRouter(): Router | null {
+    return this._ssrRouter;
+  }
+
   get reqHandler(): (req: ServerRequest, res: ServerResponse) => Promise<void> {
     return this.handleReq;
   }
