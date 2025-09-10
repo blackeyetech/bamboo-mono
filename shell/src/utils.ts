@@ -1,11 +1,23 @@
 // imports here
 import * as readline from "node:readline";
+import * as crypto from "node:crypto";
 
 // Types here
 export type BSQuestionOptions = {
   muteAnswer?: boolean;
   muteChar?: string;
 };
+
+export type EncryptedSecret = {
+  iv: string;
+  authTag: string;
+  cipherText: string;
+};
+
+// Consts here
+const SECRET_IV_SIZE = 12;
+const SECRET_KEY_SIZE = 32;
+const SECRET_ALGO = "aes-256-gcm";
 
 export const sleep = async (durationInSeconds: number): Promise<void> => {
   // Convert duration to ms
@@ -66,4 +78,73 @@ export const question = async (
       rl.close();
     });
   });
+};
+
+export const encryptSecret = (
+  secret: string,
+  key: string | Buffer,
+  inputEncoding: crypto.Encoding = "utf-8",
+  outputEncoding: crypto.Encoding = "base64",
+): EncryptedSecret | null => {
+  // Make sure the key len is 32 - this is a requirement
+  if (key.length !== SECRET_KEY_SIZE) {
+    console.log(key.length);
+    return null;
+  }
+
+  // Create a random IV
+  const iv = crypto.randomBytes(SECRET_IV_SIZE);
+
+  // Create a new cipher object
+  const cipher = crypto.createCipheriv(SECRET_ALGO, key, iv);
+
+  // Encrypt the secret
+  const cipherText =
+    cipher.update(secret, inputEncoding, outputEncoding) +
+    cipher.final(outputEncoding);
+
+  // Generate the authentication tag
+  const tag = cipher.getAuthTag();
+
+  const encrypted = {
+    iv: iv.toString(outputEncoding),
+    authTag: tag.toString(outputEncoding),
+    cipherText,
+  };
+
+  return encrypted;
+};
+
+export const decryptSecret = (
+  secret: EncryptedSecret,
+  key: string | Buffer,
+  inputEncoding: crypto.Encoding = "base64", // outputEncoding from encryptSecret
+  outputEncoding: crypto.Encoding = "utf-8",
+): string | null => {
+  // Make sure the key len is 32 - this is a requirement
+  if (key.length !== SECRET_KEY_SIZE) {
+    console.log(key.length);
+    return null;
+  }
+
+  // Create a decipher object
+  const decipher = crypto.createDecipheriv(
+    SECRET_ALGO,
+    key,
+    Buffer.from(secret.iv, inputEncoding),
+  );
+
+  // Set the  authentication tag
+  decipher.setAuthTag(Buffer.from(secret.authTag, inputEncoding));
+
+  let decrypted: string | null = null;
+
+  // Decrypt the secret
+  try {
+    decrypted =
+      decipher.update(secret.cipherText, inputEncoding, outputEncoding) +
+      decipher.final(outputEncoding);
+  } catch (_) {}
+
+  return decrypted;
 };

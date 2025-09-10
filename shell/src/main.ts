@@ -4,7 +4,7 @@ import { configMan, ConfigOptions } from "./config-man.js";
 import * as httpReq from "./http-req.js";
 import * as httpServer from "./http-server/main.js";
 import { BSPlugin } from "./bs-plugin.js";
-import { sleep, question } from "./utils.js";
+import { sleep, question, encryptSecret, decryptSecret } from "./utils.js";
 
 export { Logger, LogLevel } from "./logger.js";
 export { ConfigOptions, ConfigError } from "./config-man.js";
@@ -40,7 +40,7 @@ export {
   SecurityHeadersOptions,
 } from "./http-server/middleware.js";
 export { BSPlugin } from "./bs-plugin.js";
-export { BSQuestionOptions } from "./utils.js";
+export { BSQuestionOptions, EncryptedSecret } from "./utils.js";
 
 // Misc consts here
 const LOGGER_APP_NAME = "App";
@@ -407,6 +407,8 @@ export const bs = Object.freeze({
 
   sleep,
   question,
+  encryptSecret,
+  decryptSecret,
 });
 
 // Private functions here

@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.13
+
+### Patch Changes
+
+- Added encryptSecret() and decryptSecret()
+
 ## 1.21.12
 
 ### Patch Changes
