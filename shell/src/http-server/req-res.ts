@@ -78,6 +78,8 @@ export type ServerRequest = http.IncomingMessage & {
   getCookie(cookieName: string): string | null;
 
   setServerTimingHeader(value: string): void;
+
+  getBearerToken(): string | null;
 };
 
 // This method enhances an existing IncomingMessage to be a ServerRequest
@@ -155,6 +157,28 @@ export const enhanceIncomingMessage = (
 
   enhancedReq.setServerTimingHeader = (value: string): void => {
     enhancedReq.headers["Server-Timing"] = value;
+  };
+
+  enhancedReq.getBearerToken = (): string | null => {
+    const authzHeader = req.headers["authorization"];
+
+    // The authz header MUST be a string
+    if (typeof authzHeader !== "string") {
+      return null;
+    }
+
+    // This is the length of "Bearer " in the authZ header
+    // NOTE: Must include the space at the end!
+    const LEN_OF_BEARER = 7;
+
+    if (
+      authzHeader.length > LEN_OF_BEARER &&
+      authzHeader.slice(0, LEN_OF_BEARER).toLowerCase().startsWith("bearer ")
+    ) {
+      return authzHeader.slice(LEN_OF_BEARER);
+    }
+
+    return null;
   };
 
   return enhancedReq;

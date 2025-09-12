@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.14
+
+### Patch Changes
+
+- Added getBearerHeader() on enhanceIncomingMessage
+
 ## 1.21.13
 
 ### Patch Changes
