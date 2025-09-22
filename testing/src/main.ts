@@ -24,8 +24,8 @@ async function init() {
   bs.addPlugin("t3", Jira, jOptions);
 
   let httpMan1 = await bs.addHttpServer({
-    // networkInterface: "lo",
-    // networkPort: 8080,
+    networkInterface: "lo",
+    networkPort: 8080,
     //healthcheckPath: "/",
     // defaultRouterBasePath: "/",
     staticFileServer: {
@@ -337,6 +337,10 @@ async function init() {
     },
     { etag: true },
   );
+
+  bs.httpServer().endpoint("GET", "/test", (req, res) => {
+    res.json = JSON.stringify(req.getBearerToken());
+  });
 
   bs.httpServer().endpoint(
     "ALL",

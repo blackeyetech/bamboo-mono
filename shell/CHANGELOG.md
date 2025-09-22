@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.15
+
+### Patch Changes
+
+- Updated secrets to be string OR buffer
+
 ## 1.21.14
 
 ### Patch Changes

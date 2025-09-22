@@ -9,6 +9,7 @@ export type BSQuestionOptions = {
 };
 
 export type EncryptedSecret = {
+  isBuffer: boolean;
   iv: string;
   authTag: string;
   cipherText: string;
@@ -81,16 +82,18 @@ export const question = async (
 };
 
 export const encryptSecret = (
-  secret: string,
+  secret: string | Buffer,
   key: string | Buffer,
-  inputEncoding: crypto.Encoding = "utf-8",
-  outputEncoding: crypto.Encoding = "base64",
+  outputEncoding: crypto.Encoding = "base64", // used for strings and Buffers
+  inputEncoding: crypto.Encoding = "utf-8", // only used for strings
 ): EncryptedSecret | null => {
   // Make sure the key len is 32 - this is a requirement
   if (key.length !== SECRET_KEY_SIZE) {
-    console.log(key.length);
     return null;
   }
+
+  // Check if the secret is a buffer or string
+  const isBuffer = Buffer.isBuffer(secret);
 
   // Create a random IV
   const iv = crypto.randomBytes(SECRET_IV_SIZE);
@@ -98,17 +101,20 @@ export const encryptSecret = (
   // Create a new cipher object
   const cipher = crypto.createCipheriv(SECRET_ALGO, key, iv);
 
-  // Encrypt the secret
-  const cipherText =
-    cipher.update(secret, inputEncoding, outputEncoding) +
-    cipher.final(outputEncoding);
+  // Encrypt the secret - check if it is a string or Buffer
+  let cipherText = isBuffer
+    ? cipher.update(secret, undefined, outputEncoding) // No inputEncoding for Buffers
+    : cipher.update(secret, inputEncoding, outputEncoding);
+
+  cipherText += cipher.final(outputEncoding);
 
   // Generate the authentication tag
   const tag = cipher.getAuthTag();
 
-  const encrypted = {
-    iv: iv.toString(outputEncoding),
-    authTag: tag.toString(outputEncoding),
+  const encrypted: EncryptedSecret = {
+    isBuffer,
+    iv: iv.toString(outputEncoding), // convert the Buffer to string
+    authTag: tag.toString(outputEncoding), // convert the Buffer to string
     cipherText,
   };
 
@@ -119,31 +125,36 @@ export const decryptSecret = (
   secret: EncryptedSecret,
   key: string | Buffer,
   inputEncoding: crypto.Encoding = "base64", // outputEncoding from encryptSecret
-  outputEncoding: crypto.Encoding = "utf-8",
-): string | null => {
+  outputEncoding: crypto.Encoding = "utf-8", // only used for strings
+): string | Buffer | null => {
   // Make sure the key len is 32 - this is a requirement
   if (key.length !== SECRET_KEY_SIZE) {
-    console.log(key.length);
     return null;
   }
 
   // Create a decipher object
-  const decipher = crypto.createDecipheriv(
-    SECRET_ALGO,
-    key,
-    Buffer.from(secret.iv, inputEncoding),
-  );
+  const iv = Buffer.from(secret.iv, inputEncoding);
+  const decipher = crypto.createDecipheriv(SECRET_ALGO, key, iv);
 
   // Set the  authentication tag
-  decipher.setAuthTag(Buffer.from(secret.authTag, inputEncoding));
+  const tag = Buffer.from(secret.authTag, inputEncoding);
+  decipher.setAuthTag(tag);
 
-  let decrypted: string | null = null;
+  let decrypted: string | Buffer | null = null;
 
   // Decrypt the secret
   try {
-    decrypted =
-      decipher.update(secret.cipherText, inputEncoding, outputEncoding) +
-      decipher.final(outputEncoding);
+    // Check if the secret is a Buffer or a string
+    if (secret.isBuffer) {
+      decrypted = Buffer.concat([
+        decipher.update(secret.cipherText, inputEncoding), // no outputEncoding for Buffers
+        decipher.final(), // no outputEncoding for Buffers
+      ]);
+    } else {
+      decrypted =
+        decipher.update(secret.cipherText, inputEncoding, outputEncoding) +
+        decipher.final(outputEncoding);
+    }
   } catch (_) {}
 
   return decrypted;
