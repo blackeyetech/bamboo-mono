@@ -172,11 +172,6 @@ export const corsMiddleware = (options: CorsOptions = {}): Middleware => {
 
   // NOTE: If credentialsAllowed is enabled then other headers cant be a "*"
   if (opts.credentialsAllowed) {
-    if (opts.originsAllowed === "*") {
-      throw new Error(
-        "The originsAllowed MUST be specified when credentialsAllowed is true",
-      );
-    }
     if (opts.methodsAllowed === "*") {
       throw new Error(
         "The methodsAllowed MUST be specified when credentialsAllowed is true",

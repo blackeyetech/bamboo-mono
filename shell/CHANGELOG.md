@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.16
+
+### Patch Changes
+
+- Removed CORS init check for allow all origins
+
 ## 1.21.15
 
 ### Patch Changes
