@@ -351,11 +351,25 @@ export const bs = Object.freeze({
     }
 
     // Check if the requested server DOES NOT exist
-    if (index >= _httpServerList.length) {
+    if (index < 0 || index >= _httpServerList.length) {
       throw Error(`There is no http servers with the index ${index}`);
     }
 
     return _httpServerList[index];
+  },
+
+  httpServerReady: (index: number = 0): boolean => {
+    // Check if there are any http servers first
+    if (_httpServerList.length === 0) {
+      return false;
+    }
+
+    // Check if the requested server DOES NOT exist
+    if (index < 0 || index >= _httpServerList.length) {
+      return false;
+    }
+
+    return true;
   },
 
   addPlugin: (

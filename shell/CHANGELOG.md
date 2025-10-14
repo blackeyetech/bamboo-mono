@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.17
+
+### Patch Changes
+
+- Added new method httpServerReady()
+
 ## 1.21.16
 
 ### Patch Changes
