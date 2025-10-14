@@ -58,6 +58,8 @@ export type HttpConfig = {
   // timeout. See - https://github.com/nodejs/node/issues/27363
   headerTimeout?: number;
 
+  basePath?: string;
+
   defaultRouterBasePath?: string;
   healthcheckPath?: string;
 
@@ -83,7 +85,7 @@ export class HttpServer {
   private _networkInterface: string | null;
   private _networkPort: number | null;
   private _networkIp: string | null;
-  private _baseUrl: string;
+  private _listeningOn: string;
 
   private _name: string;
 
@@ -91,6 +93,8 @@ export class HttpServer {
 
   private _httpKeepAliveTimeout: number;
   private _httpHeaderTimeout: number;
+
+  private _basePath: string;
 
   private _healthCheckPath: string;
   private _healthCheckGoodResCode: number;
@@ -121,6 +125,8 @@ export class HttpServer {
     this._httpKeepAliveTimeout = config.keepAliveTimeout ?? 65000;
     this._httpHeaderTimeout = config.headerTimeout ?? 66000;
 
+    this._basePath = config.basePath ?? "";
+
     this._healthCheckPath = config.healthcheckPath ?? "/healthcheck";
     this._healthCheckGoodResCode = 200;
     this._healthCheckBadResCode = 503;
@@ -131,7 +137,7 @@ export class HttpServer {
     this._socketId = 0;
 
     this._networkIp = null;
-    this._baseUrl = "";
+    this._listeningOn = "";
 
     this._healthcheckCallbacks = [];
 
@@ -209,6 +215,10 @@ export class HttpServer {
     return this._name;
   }
 
+  get basePath(): string {
+    return this._basePath;
+  }
+
   get server(): http.Server | null {
     return this._server === undefined ? null : this._server;
   }
@@ -282,7 +292,7 @@ export class HttpServer {
     return new Promise((resolve, _) => {
       server.on("listening", () => {
         this._logger.startupMsg(
-          `Now listening on (${this._baseUrl}). HTTP manager started!`,
+          `Now listening on (${this._listeningOn}). HTTP manager started!`,
         );
 
         resolve();
@@ -443,7 +453,7 @@ export class HttpServer {
 
     // Create either a HTTP or HTTPS server
     if (this._enableHttps) {
-      this._baseUrl = `https://${this._networkInterface}:${this._networkPort}`;
+      this._listeningOn = `https://${this._networkInterface}:${this._networkPort}`;
 
       if (this._keyFile === undefined) {
         throw new HttpConfigError("HTTPS is enabled but no key file provided!");
@@ -454,7 +464,7 @@ export class HttpServer {
         );
       }
 
-      this._logger.startupMsg(`Attempting to listen on (${this._baseUrl})`);
+      this._logger.startupMsg(`Attempting to listen on (${this._listeningOn})`);
 
       const options: https.ServerOptions = {
         key: fs.readFileSync(this._keyFile),
@@ -468,9 +478,9 @@ export class HttpServer {
         this.handleReq(req, res);
       });
     } else {
-      this._baseUrl = `http://${this._networkInterface}:${this._networkPort}`;
+      this._listeningOn = `http://${this._networkInterface}:${this._networkPort}`;
 
-      this._logger.startupMsg(`Attempting to listen on (${this._baseUrl})`);
+      this._logger.startupMsg(`Attempting to listen on (${this._listeningOn})`);
 
       const options: https.ServerOptions = {};
       this._server = http.createServer(options, (origReq, origRes) => {
@@ -521,8 +531,9 @@ export class HttpServer {
   }
 
   addRouter(basePath: string, routerConfig: RouterConfig = {}): Router {
-    // Make sure the basePath is properly terminated
-    basePath = basePath.replace(/\/*$/, "/");
+    // Prepend the Http Server basePath and make sure the basePath
+    // is properly terminated
+    basePath = `${this._basePath}${basePath}`.replace(/\/*$/, "/");
 
     // Check to make sure this basePath does not overlap with another router's
     // basePath
@@ -550,9 +561,12 @@ export class HttpServer {
       return this._defaultApiRouter;
     }
 
-    // Make sure to remove any trailing slashes and then delimit properly,
-    // this makes sure to remove any double slashes
-    let basePathSanitised = basePath.replace(/\/*$/, "/");
+    // Prepend the Http Server basePath and make sure the basePath
+    // is properly terminated
+    const basePathSanitised = `${this._basePath}${basePath}`.replace(
+      /\/*$/,
+      "/",
+    );
 
     return this._apiRouterList.find((el) => el.basePath === basePathSanitised);
   }

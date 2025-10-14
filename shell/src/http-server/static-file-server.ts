@@ -5,7 +5,6 @@ import { contentTypes } from "./content-types.js";
 import { Router } from "./router.js";
 
 import * as fs from "node:fs";
-import * as fsPromises from "node:fs/promises";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import { pipeline } from "node:stream/promises";
@@ -50,6 +49,7 @@ export class StaticFileServer {
   private _stripHtmlExt: boolean;
 
   private _staticFileMap: Map<string, FileDetails>;
+  private _redirectUrlMap: Map<string, string>;
 
   private _securityHeaders: { name: string; value: string }[];
 
@@ -76,6 +76,7 @@ export class StaticFileServer {
     this._stripHtmlExt = config.stripHtmlExt ?? false;
 
     this._staticFileMap = new Map();
+    this._redirectUrlMap = new Map();
 
     // Get the standard sec headers and add the users specified headers as well
     this._securityHeaders = Router.getSecHeaders({
@@ -114,15 +115,6 @@ export class StaticFileServer {
       } else if (stats.isFile()) {
         // Add the file to the list
         await this.addFile(fullPath, url, stats);
-
-        // Check if we should strip .html
-        if (this._stripHtmlExt) {
-          if (path.extname(url) === ".html") {
-            const baseUrl = url.slice(0, url.lastIndexOf("."));
-            this._logger.trace("Adding striped html file (%s)", baseUrl);
-            await this.addFile(fullPath, baseUrl, stats);
-          }
-        }
       }
     }
   }
@@ -182,7 +174,6 @@ export class StaticFileServer {
     } catch (e) {
       // There was an error which means we cant read the file so DO NOT add it
       addFile = false;
-
       this._logger.warn("No permissions to read file : (%s)", fullPath);
     }
 
@@ -242,65 +233,44 @@ export class StaticFileServer {
       fileDetails.immutable,
     );
 
-    return true;
-  }
+    const HTML_EXT = ".html";
 
-  private async getFileDetails(
-    urlPath: string,
-  ): Promise<FileDetails | undefined> {
-    // Check for the details first. If it exists we want to use the stored full
-    // path just in case file is s dir. It will save and extra stat!
-    let details = this._staticFileMap.get(urlPath);
-
-    let fullPath =
-      details?.fullPath ?? `${this._filePath}${urlPath.replace(/\/*$/, "")}`;
-
-    // If we can't stat the file (doesn't exist) then stat will throw
-    let stats = await fsPromises.stat(fullPath).catch((e) => {
-      this._logger.trace(
-        "Received an error when trying to stat (%s): (%s)",
-        fullPath,
-        e,
-      );
-    });
-
-    if (stats === undefined) {
-      return undefined;
+    // Check if we should strip .html from the file extension
+    if (this._stripHtmlExt && path.extname(urlPath) === HTML_EXT) {
+      // Add the file again but this time without the .html
+      const strippedUrl = urlPath.slice(0, HTML_EXT.length * -1);
+      this._logger.trace("Adding striped html file (%s)", strippedUrl);
+      this._staticFileMap.set(strippedUrl, fileDetails);
     }
 
-    // Check if the file is a directory (should only happen the 1st time
-    // because the urlPath will get mapped to the default file for a dir)
-    if (stats.isDirectory()) {
-      // This is a dir so set the file to be the default file for a dir
-      fullPath += `/${this._defaultDirFile}`;
+    // Check if this file is the default dir file
+    if (path.basename(urlPath) === this._defaultDirFile) {
+      const basePath = path.dirname(urlPath);
+      // If we at the root we want / to return /index.html
+      if (basePath === "/") {
+        this._logger.trace("Adding canonical path (%s)", basePath);
+        this._staticFileMap.set(basePath, fileDetails);
+      } else {
+        // We want a user to be able to request url like this:
+        //   /about/index.html -> this returns the HTML file
+        //   /about/ -> this returns the HTML file
+        //   /about -> this redirects to /about/
+        const canonicalPath = `${basePath}/`;
 
-      // Get the stats again for the default file. If we can't stat the file
-      // (doesn't exist) then stat will throw
-      stats = await fsPromises.stat(fullPath).catch((e) => {
+        this._logger.trace("Adding canonical path (%s)", canonicalPath);
+        this._staticFileMap.set(canonicalPath, fileDetails);
+
+        // Add a redirect for the basePath (/about -> /about/)
         this._logger.trace(
-          "Received an error when trying to stat (%s): (%s)",
-          fullPath,
-          e,
+          "Adding redirect from (%s) to (%s)",
+          basePath,
+          canonicalPath,
         );
-      });
-
-      if (stats === undefined) {
-        return undefined;
+        this._redirectUrlMap.set(basePath, canonicalPath);
       }
     }
 
-    // Check if the file wasn't in the file map or it was modified
-    if (
-      details === undefined ||
-      details.lastModifiedMs !== stats.mtime.getTime() ||
-      details.size !== stats.size
-    ) {
-      // Add the file to the file map and get the new details
-      await this.addFile(fullPath, urlPath, stats);
-      details = this._staticFileMap.get(urlPath);
-    }
-
-    return details;
+    return true;
   }
 
   // Public methods here
@@ -311,10 +281,22 @@ export class StaticFileServer {
       return;
     }
 
+    this._logger.info("%s", req.urlObj.pathname);
     // Get the file details
-    const details = await this.getFileDetails(req.urlObj.pathname);
+    const details = this._staticFileMap.get(req.urlObj.pathname);
     if (details === undefined) {
-      // File doesnt exist so return with the req not handled
+      // See if there are any redirects in place for this URL
+      const redirect = this._redirectUrlMap.get(req.urlObj.pathname);
+      if (redirect !== undefined) {
+        // Mark the req as being handled and redirect it
+        req.handled = true;
+
+        res.redirect(redirect);
+        res.end();
+        return;
+      }
+
+      // URL doesnt match nor has a redirect so return with req not handled
       return;
     }
 
