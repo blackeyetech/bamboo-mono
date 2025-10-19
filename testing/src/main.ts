@@ -29,8 +29,25 @@ async function init() {
     //healthcheckPath: "/",
     // defaultRouterBasePath: "/",
     staticFileServer: {
-      path: "/home/parallels/dev/src/urlbase/appman",
-      immutableRegExp: ["^.+\.min\.[a-zA-Z0-9-]+$"],
+      path: "testing/html",
+      stripHtmlExt: true,
+      cspHeader: {
+        inlineScriptHashes: true,
+        directives: {
+          // "default-src": "'self'",
+          // "connect-src": "'self'",
+          // "base-uri": "'self'",
+          // "font-src": "'self' https: data:",
+          // "form-action": "'self'",
+          // "frame-ancestors": "'self'",
+          // "img-src": "'self' data: https:",
+          // "object-src": "'none'",
+          // "script-src-attr": "'none'",
+          // "style-src": "'self' https: 'unsafe-inline'",
+          "script-src": "'self'",
+          // "upgrade-insecure-requests": null,
+        },
+      },
     },
   });
 
@@ -513,7 +530,7 @@ let middleware2: Middleware = async (_1, _2, next) => {
 //   b: z.string(),
 // });
 
-await bs.sleep(2);
+// await bs.sleep(2);
 
 bs.save("test1", 1);
 let test1 = bs.retrieve("test1");

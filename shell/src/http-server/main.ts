@@ -7,7 +7,7 @@ import {
   ServerRequest,
   ServerResponse,
 } from "./req-res.js";
-import { Middleware } from "./middleware.js";
+import { Middleware, SecurityHeadersOptions } from "./middleware.js";
 import {
   StaticFileServer,
   StaticFileServerConfig,
@@ -73,6 +73,7 @@ export type HttpConfig = {
     adapterName: string;
     matcher?: (url: string) => RouterMatchFunc;
     render?: SsrRenderFunc;
+    secHeaderOptons?: SecurityHeadersOptions;
   };
 };
 
@@ -162,6 +163,7 @@ export class HttpServer {
 
     // Check if we are going to add a SSR endpoint
     if (
+      config.ssrServer === undefined ||
       config.ssrServer?.render === undefined ||
       config.ssrServer?.matcher === undefined
     ) {
@@ -184,6 +186,7 @@ export class HttpServer {
         etag: true,
         middlewareList: [
           Router.setLatencyMetricName(config.ssrServer.adapterName),
+          Router.secHeaders(config.ssrServer.secHeaderOptons ?? {}),
         ],
       });
 

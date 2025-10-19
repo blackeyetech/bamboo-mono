@@ -414,27 +414,31 @@ export const csrfChecksMiddleware = (
 export const getSecurityHeaders = (
   options: SecurityHeadersOptions = {},
 ): { name: string; value: string }[] => {
-  let opts: Required<SecurityHeadersOptions> = {
+  const opts: Required<SecurityHeadersOptions> = {
     headers: options.headers ?? [],
     useDefaultHeaders: options.useDefaultHeaders ?? true,
   };
 
   // These are the default headers to use
-  let defaultHeaders: { name: string; value: string }[] = [
-    { name: "X-Frame-Options", value: "SAMEORIGIN" },
-    { name: "X-XSS-Protection", value: "0" },
-    { name: "X-Content-Type-Options", value: "nosniff" },
-    { name: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  const defaultHeaders: { name: string; value: string }[] = [
     {
       name: "Strict-Transport-Security",
       value: "max-age=63072000; includeSubDomains; preload",
     },
-    { name: "X-DNS-Prefetch-Control", value: "off" },
+    { name: "X-Content-Type-Options", value: "nosniff" },
+    { name: "X-Frame-Options", value: "DENY" },
+    { name: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     {
-      name: "Content-Security-Policy",
+      name: "Permissions-Policy",
       value:
-        "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests",
+        "geolocation=(), microphone=(), camera=(), payment=(), fullscreen=(self)",
     },
+    // { name: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+    // { name: "Origin-Agent-Cluster", value: "?1" },
+    { name: "Cross-Origin-Opener-Policy", value: "same-origin" },
+    { name: "Cross-Origin-Resource-Policy", value: "same-origin" },
+    { name: "X-XSS-Protection", value: "0" },
+    { name: "X-DNS-Prefetch-Control", value: "off" },
   ];
 
   // These are the headers we will use
@@ -442,12 +446,15 @@ export const getSecurityHeaders = (
 
   // Set all of the user supplied headers first
   for (let header of opts.headers) {
-    securityHeaders.push({ name: header.name, value: header.value });
+    // Only add the header if the value is non-null
+    // This allows us remove a header from the defaults
+    if (header.value.length > 0) {
+      securityHeaders.push({ name: header.name, value: header.value });
+    }
   }
 
   // Check if we should use the default headers
   if (opts.useDefaultHeaders) {
-    // Looks like it - so add the default headers
     for (let header of defaultHeaders) {
       // Check if the user has already supplied the header (use lower case
       // to be safe)
@@ -470,7 +477,7 @@ export const securityHeadersMiddleware = (
   options: SecurityHeadersOptions = {},
 ): Middleware => {
   // Get the security headers
-  let securityHeaders = getSecurityHeaders(options);
+  const securityHeaders = getSecurityHeaders(options);
 
   // Because we need to pass in the options we will return the
   // middleware, i.e. you need to call this function

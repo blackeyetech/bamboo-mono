@@ -1,5 +1,23 @@
 # @bs-core/shell
 
+## 1.21.19
+
+### Patch Changes
+
+- Added SecurityHeader middleware to SSR router. It can be configured through HttpConfig
+- Removed CSP header from SecurityHeader middleware
+- Added CSP header to Static File Server. It can be configured through HttpConfig
+
+## 1.21.18
+
+### Patch Changes
+
+- Improvements to how Static File Server handles HTML directories
+
+- Added basePath option to the HttpConfig. It will be automatically added to
+  the basePath of a Router when using addRouter() and automatically added to
+  the basePath when searching for a Router when using router()
+
 ## 1.21.17
 
 ### Patch Changes

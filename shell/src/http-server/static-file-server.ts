@@ -2,7 +2,7 @@
 import { Logger } from "../logger.js";
 import { ServerRequest, ServerResponse } from "./req-res.js";
 import { contentTypes } from "./content-types.js";
-import { Router } from "./router.js";
+import { SecurityHeadersOptions, getSecurityHeaders } from "./middleware.js";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -23,6 +23,8 @@ type FileDetails = {
   immutable: boolean;
   fileBuffer: Buffer;
   compressedBuffer: Buffer;
+
+  cspHeader: string | null; // Only set for HTML files
 };
 
 export type StaticFileServerConfig = {
@@ -33,9 +35,29 @@ export type StaticFileServerConfig = {
 
   defaultCharSet?: string;
 
-  securityHeaders?: { name: string; value: string }[];
-
   stripHtmlExt?: boolean;
+
+  secHeaderOptons?: SecurityHeadersOptions;
+  cspHeader?: {
+    inlineScriptHashes: boolean;
+    directives?: Record<string, string | null>;
+  };
+};
+
+// Const here
+const DefaultCspDirectives: Record<string, string | null> = {
+  "default-src": "'self'",
+  "connect-src": "'self'",
+  "base-uri": "'self'",
+  "font-src": "'self' https: data:",
+  "form-action": "'self'",
+  "frame-ancestors": "'self'",
+  "img-src": "'self' data: https:",
+  "object-src": "'none'",
+  "script-src-attr": "'none'",
+  "style-src": "'self' https: 'unsafe-inline'",
+  "script-src": "'self'",
+  "upgrade-insecure-requests": null,
 };
 
 // StaticFileServer class here
@@ -47,6 +69,9 @@ export class StaticFileServer {
   private _defaultDirFile: string;
   private _defaultCharSet: string;
   private _stripHtmlExt: boolean;
+  private _cspHeader: string | null;
+  private _cspScriptSrcValue: string;
+  private _inlineScriptHashes: boolean;
 
   private _staticFileMap: Map<string, FileDetails>;
   private _redirectUrlMap: Map<string, string>;
@@ -74,14 +99,53 @@ export class StaticFileServer {
     this._defaultDirFile = config.defaultDirFile ?? "index.html";
     this._defaultCharSet = config.defaultCharSet ?? "charset=utf-8";
     this._stripHtmlExt = config.stripHtmlExt ?? false;
+    this._inlineScriptHashes = config.cspHeader?.inlineScriptHashes ?? false;
+
+    // If the user set directives use them otherwise use the defaults
+    const directives = config.cspHeader?.directives ?? DefaultCspDirectives;
+
+    this._cspScriptSrcValue = "";
+
+    // Build up the default CSP header
+    this._cspHeader = "";
+
+    for (const directive in directives) {
+      const value = directives[directive];
+      // If we are caculating the inline script hashes then we should not
+      // add the script-src directive until we parse the file
+      if (this._inlineScriptHashes && directive === "script-src") {
+        // Let's take note of the value for later
+        this._cspScriptSrcValue = value as string;
+        continue;
+      }
+
+      // Check if the directive has a value or not (null means not!)
+      if (value === null) {
+        // No value means just the directive is given - rem the space at end
+        this._cspHeader += `${directive}; `;
+      } else {
+        // Format is "<directive> <value>; " - rem the space at the end
+        this._cspHeader += `${directive} ${value}; `;
+      }
+    }
+
+    // If the CSP header is gonna be empty then make sure we dont set it
+    // NOTE: If we are generating hashes we need to not set the header to null
+    if (
+      this._cspHeader.length === 0 &&
+      this._cspScriptSrcValue.length === 0 &&
+      !this._inlineScriptHashes
+    ) {
+      this._cspHeader = null;
+    }
 
     this._staticFileMap = new Map();
     this._redirectUrlMap = new Map();
 
-    // Get the standard sec headers and add the users specified headers as well
-    this._securityHeaders = Router.getSecHeaders({
-      headers: config.securityHeaders,
-    });
+    // Get the standard sec headers to be used
+    // NOTE: We can not set a middleware on the static file server since it
+    // handles the requests itself
+    this._securityHeaders = getSecurityHeaders(config.secHeaderOptons);
 
     // Get all of the files at start up - but a constructor cant be async so
     // run getFilesRecursively() at the earliest possibile time
@@ -132,6 +196,19 @@ export class StaticFileServer {
     return `text/plain; ${this._defaultCharSet}`;
   }
 
+  private isHtml(file: string): boolean {
+    // Look up the file extension to get content type - drop the leading '.'
+    const ext = path.extname(file).slice(1);
+    const type = contentTypes[ext];
+
+    // Check if this file is of type HTML
+    if (type === "text/html") {
+      return true;
+    }
+
+    return false;
+  }
+
   private async calculateEtag(
     fileBuffer: Buffer,
     fileName: string,
@@ -158,6 +235,40 @@ export class StaticFileServer {
     }
 
     return hash.digest("hex");
+  }
+
+  private calcInlineScriptHashes(fileBuffer: Buffer): string[] {
+    // We need to convert the Buffer to a string we can search
+    const file = fileBuffer.toString("utf-8");
+
+    // Search for any script tags
+    // NOTE: The group we have defined will be the code in the script tag
+    const scripts = file.matchAll(/<script>([\s\S]*?)<\/script>/g);
+
+    // we shold have an array of matched scripts
+    let hashes: string[] = [];
+    for (const script of scripts) {
+      // The 2nd element of the array is the code in the script tag
+      const code = script[1];
+      // We need to hash is with SHA256 and then encoded it to base64
+      const hash = crypto.createHash("sha256").update(code).digest("base64");
+
+      hashes.push(`'sha256-${hash}'`);
+    }
+
+    return hashes;
+  }
+
+  private stripMetaCsp(fileBuffer: Buffer): Buffer {
+    // Convert the Buffer to a string then strip the meta CSP elements
+    let file = fileBuffer.toString("utf-8");
+    let cleaned = file.replace(
+      /<meta\s+http-equiv=["']content-security-policy["'][^>]*>/gi,
+      "",
+    );
+
+    // Convert the string back to a Buffer
+    return Buffer.from(cleaned, "utf-8");
   }
 
   private async addFile(
@@ -188,7 +299,33 @@ export class StaticFileServer {
     // UTC string which means we get a mismatch checking "If-Modified-Since"
     const modTimeNoMs = Math.trunc(modTimeMs / 1000) * 1000;
 
-    const fileBuffer = fs.readFileSync(fullPath);
+    let fileBuffer: Buffer = fs.readFileSync(fullPath);
+
+    // We only add a CSP header for HTML file, so lets check that first
+    let cspHeader: string | null = null;
+    if (this.isHtml(fullPath)) {
+      // We need to add a CSP header so check if we are calulating hashes
+      if (this._inlineScriptHashes) {
+        // First calculate the hashes
+        const hashes = this.calcInlineScriptHashes(fileBuffer);
+
+        // Only append the script-src directive if there are hashes or we
+        // stored a script-src value earlier
+        if (hashes.length > 0 || this._cspScriptSrcValue.length > 0) {
+          // Append the script-src directive with the value stored earlier
+          cspHeader = `${this._cspHeader} script-src ${this._cspScriptSrcValue}`;
+          // Append hashes separated by spaces to the CSP (script-src is at the end)
+          // Don't forget the space before the hashes!
+          cspHeader += " " + hashes.join(" ");
+
+          // Now strip the Meta CSP elements from the file we will serve
+          // NOTE: Make sure to do this before we calculate the etag
+          fileBuffer = this.stripMetaCsp(fileBuffer);
+        }
+      } else {
+        cspHeader = this._cspHeader;
+      }
+    }
 
     const eTag = await this.calculateEtag(fileBuffer, fullPath);
     if (eTag === null) {
@@ -218,12 +355,13 @@ export class StaticFileServer {
       immutable,
       fileBuffer,
       compressedBuffer: zlib.gzipSync(fileBuffer),
+      cspHeader,
     };
 
     this._staticFileMap.set(urlPath, fileDetails);
 
     this._logger.trace(
-      "Added (%s) to file map. Details: contentType (%s), size (%s), lastModifiedMs(%s), eTag (%s), fullPath (%s), immutable (%j)",
+      "Added (%s) to file map. Details: contentType (%s), size (%s), lastModifiedMs(%s), eTag (%s), fullPath (%s), immutable (%j), cspHeader(%s)",
       urlPath,
       fileDetails.contentType,
       fileDetails.size,
@@ -231,6 +369,7 @@ export class StaticFileServer {
       fileDetails.eTag,
       fileDetails.fullPath,
       fileDetails.immutable,
+      fileDetails.cspHeader,
     );
 
     const HTML_EXT = ".html";
@@ -317,6 +456,11 @@ export class StaticFileServer {
     // Set all of the sec headers
     for (const header of this._securityHeaders) {
       res.setHeader(header.name, header.value);
+    }
+
+    // Check if we have a CSP header to add
+    if (details.cspHeader !== null) {
+      res.setHeader("Content-Security-Policy", details.cspHeader);
     }
 
     // Don't forget to set the server-timing header

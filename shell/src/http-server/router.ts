@@ -20,7 +20,6 @@ import {
   corsMiddleware,
   expressWrapper,
   csrfChecksMiddleware,
-  getSecurityHeaders,
   securityHeadersMiddleware,
   dontCompressResponse,
   setLatencyMetricName,
@@ -808,12 +807,6 @@ export class Router {
 
   static csrf(options: CsrfChecksOptions = {}): Middleware {
     return csrfChecksMiddleware(options);
-  }
-
-  static getSecHeaders(
-    options: SecurityHeadersOptions,
-  ): { name: string; value: string }[] {
-    return getSecurityHeaders(options);
   }
 
   static secHeaders(options: SecurityHeadersOptions): Middleware {
