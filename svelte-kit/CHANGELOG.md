@@ -1,5 +1,11 @@
 # @bs-core/svelte-kit
 
+## 1.0.2
+
+### Patch Changes
+
+- Moved path out of loop
+
 ## 1.0.1
 
 ### Patch Changes

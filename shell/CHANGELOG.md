@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.20
+
+### Patch Changes
+
+- Ensuring basePath has proper redirect
+
 ## 1.21.19
 
 ### Patch Changes

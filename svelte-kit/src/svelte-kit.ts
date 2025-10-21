@@ -44,10 +44,10 @@ let BasePath: string;
 function matcher(_: string): RouterMatchFunc {
   // This matcher function tests if a route matches an SSR route
   return (url: URL) => {
-    for (const route of SsrManifest._.routes) {
-      // Remove the baseUrl because Svelte SSR routing doesnt use it
-      const pathname = url.pathname.slice(BasePath.length);
+    // Remove the baseUrl because Svelte SSR routing doesnt use it
+    const pathname = url.pathname.slice(BasePath.length);
 
+    for (const route of SsrManifest._.routes) {
       if (
         route.pattern.test(pathname) ||
         url.pathname.endsWith("__data.json") // This is a svelete-kit file in memory
