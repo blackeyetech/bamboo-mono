@@ -78,7 +78,11 @@ export class StaticFileServer {
 
   private _securityHeaders: { name: string; value: string }[];
 
-  constructor(loggerName: string, config: StaticFileServerConfig) {
+  constructor(
+    loggerName: string,
+    basePath: string,
+    config: StaticFileServerConfig,
+  ) {
     // Make sure there is no trailing slash at the end of the path
     this._logger = new Logger(loggerName);
     this._logger.startupMsg("Creating static file server ...");
@@ -147,15 +151,27 @@ export class StaticFileServer {
     // handles the requests itself
     this._securityHeaders = getSecurityHeaders(config.secHeaderOptons);
 
-    // Get all of the files at start up - but a constructor cant be async so
-    // run getFilesRecursively() at the earliest possibile time
-    setImmediate(async () => {
-      await this.getFilesRecursively();
-    });
+    this.getFiles();
+
+    // If there is a basePath. e.g. /base, and there is no index.html file
+    // then it is possible the index.html will be SSRed so we need to
+    // ensure there is a redirect from /base -> /base/
+    const strippedBasePath = basePath.replace(/\/$/, "");
+    if (
+      strippedBasePath.length > 0 &&
+      this._redirectUrlMap.get(strippedBasePath) === undefined
+    ) {
+      this._logger.trace(
+        "Adding redirect for base path from (%s) to (%s)",
+        strippedBasePath,
+        basePath,
+      );
+      this._redirectUrlMap.set(strippedBasePath, basePath);
+    }
   }
 
   // Private methods here
-  private async getFilesRecursively(urlPath: string = "/"): Promise<void> {
+  private getFiles(urlPath: string = "/"): void {
     // Note: urlPath should always start and end in "/"
     const dir = `${this._filePath}${urlPath}`;
     let dirFiles: string[] = [];
@@ -175,10 +191,10 @@ export class StaticFileServer {
 
       if (stats.isDirectory()) {
         // Get the files in this dir
-        this.getFilesRecursively(`${url}/`);
+        this.getFiles(`${url}/`);
       } else if (stats.isFile()) {
         // Add the file to the list
-        await this.addFile(fullPath, url, stats);
+        this.addFile(fullPath, url, stats);
       }
     }
   }
@@ -207,34 +223,6 @@ export class StaticFileServer {
     }
 
     return false;
-  }
-
-  private async calculateEtag(
-    fileBuffer: Buffer,
-    fileName: string,
-  ): Promise<string | null> {
-    // MD5 hash the file contents to calculate the etag
-    const contents = stream.Readable.from(fileBuffer);
-    const hash = crypto.createHash("sha1");
-
-    // Flag to check if we successfully pipe the file to the hash
-    let failed = false;
-
-    await pipeline(contents, hash).catch((e) => {
-      this._logger.trace(
-        "Error attempting to create etag for file (%s) (%s): ",
-        fileName,
-        e,
-      );
-
-      failed = true;
-    });
-
-    if (failed) {
-      return null;
-    }
-
-    return hash.digest("hex");
   }
 
   private calcInlineScriptHashes(fileBuffer: Buffer): string[] {
@@ -271,11 +259,7 @@ export class StaticFileServer {
     return Buffer.from(cleaned, "utf-8");
   }
 
-  private async addFile(
-    fullPath: string,
-    urlPath: string,
-    stats: fs.Stats,
-  ): Promise<boolean> {
+  private addFile(fullPath: string, urlPath: string, stats: fs.Stats): boolean {
     // Use a flag to decide if we add the file to the file map or not
     let addFile = true;
 
@@ -327,11 +311,8 @@ export class StaticFileServer {
       }
     }
 
-    const eTag = await this.calculateEtag(fileBuffer, fullPath);
-    if (eTag === null) {
-      // Couldn't calculate the etag so do nothing
-      return false;
-    }
+    // Calculate the eTag for the file now that is wont change
+    const eTag = crypto.createHash("sha1").update(fileBuffer).digest("hex");
 
     // Default immutable to false until we can prove it is
     let immutable = false;

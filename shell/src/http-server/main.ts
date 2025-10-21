@@ -126,7 +126,11 @@ export class HttpServer {
     this._httpKeepAliveTimeout = config.keepAliveTimeout ?? 65000;
     this._httpHeaderTimeout = config.headerTimeout ?? 66000;
 
-    this._basePath = config.basePath ?? "";
+    const basePath = config.basePath ?? "/";
+    // Make sure the basePath has a leading and trailing slash
+    this._basePath = basePath.replace(/^\/*/, "/").replace(/\/*$/, "/");
+
+    this._logger.startupMsg("Base Path is (%s)", this._basePath);
 
     this._healthCheckPath = config.healthcheckPath ?? "/healthcheck";
     this._healthCheckGoodResCode = 200;
@@ -196,6 +200,7 @@ export class HttpServer {
     if (config.staticFileServer !== undefined) {
       this._staticFileServer = new StaticFileServer(
         `HttpServer-${this._name}/StaticFile`,
+        this._basePath,
         config.staticFileServer,
       );
     }
@@ -295,7 +300,7 @@ export class HttpServer {
     return new Promise((resolve, _) => {
       server.on("listening", () => {
         this._logger.startupMsg(
-          `Now listening on (${this._listeningOn}). HTTP manager started!`,
+          `Now listening on (${this._listeningOn}${this._basePath}). HTTP manager started!`,
         );
 
         resolve();
@@ -456,7 +461,7 @@ export class HttpServer {
 
     // Create either a HTTP or HTTPS server
     if (this._enableHttps) {
-      this._listeningOn = `https://${this._networkInterface}:${this._networkPort}`;
+      this._listeningOn = `https://${this._networkIp}:${this._networkPort}`;
 
       if (this._keyFile === undefined) {
         throw new HttpConfigError("HTTPS is enabled but no key file provided!");
@@ -481,7 +486,7 @@ export class HttpServer {
         this.handleReq(req, res);
       });
     } else {
-      this._listeningOn = `http://${this._networkInterface}:${this._networkPort}`;
+      this._listeningOn = `http://${this._networkIp}:${this._networkPort}`;
 
       this._logger.startupMsg(`Attempting to listen on (${this._listeningOn})`);
 
@@ -534,9 +539,10 @@ export class HttpServer {
   }
 
   addRouter(basePath: string, routerConfig: RouterConfig = {}): Router {
-    // Prepend the Http Server basePath and make sure the basePath
-    // is properly terminated
-    basePath = `${this._basePath}${basePath}`.replace(/\/*$/, "/");
+    // Strip off any leading slashes and make sure it has only 1 trailing slash
+    basePath = basePath.replace(/^\/*/, "").replace(/\/*$/, "/");
+    // Prepend the Http Servers base path
+    basePath = `${this._basePath}${basePath}`;
 
     // Check to make sure this basePath does not overlap with another router's
     // basePath
@@ -553,7 +559,7 @@ export class HttpServer {
     let router = new Router(basePath, routerConfig);
     this._apiRouterList.push(router);
 
-    this._logger.startupMsg("(%s) router created", basePath.replace(/\/$/, ""));
+    this._logger.startupMsg("(%s) router created", basePath);
 
     return router;
   }
@@ -564,14 +570,12 @@ export class HttpServer {
       return this._defaultApiRouter;
     }
 
-    // Prepend the Http Server basePath and make sure the basePath
-    // is properly terminated
-    const basePathSanitised = `${this._basePath}${basePath}`.replace(
-      /\/*$/,
-      "/",
-    );
+    // Strip off any leading slashes and make sure it has only 1 trailing slash
+    basePath = basePath.replace(/^\/*/, "").replace(/\/*$/, "/");
+    // Prepend the Http Servers base path
+    basePath = `${this._basePath}${basePath}`;
 
-    return this._apiRouterList.find((el) => el.basePath === basePathSanitised);
+    return this._apiRouterList.find((el) => el.basePath === basePath);
   }
 
   // Methods for the default router here

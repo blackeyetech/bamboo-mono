@@ -28,6 +28,7 @@ async function init() {
     networkPort: 8080,
     //healthcheckPath: "/",
     // defaultRouterBasePath: "/",
+    // basePath: "/base",
     staticFileServer: {
       path: "testing/html",
       stripHtmlExt: true,
