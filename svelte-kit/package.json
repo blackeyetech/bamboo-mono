@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "name": "@bs-core/svelte-kit",
   "description": "The Bamboo Shell SvelteKit Adapter",
   "type": "module",

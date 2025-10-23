@@ -27,13 +27,13 @@ export { bs, Router } from "@bs-core/shell";
 const ADAPTER_NAME = "@bs-core/svelte-kit";
 const ADAPTER_LATENCY_NAME = "svelte-kit";
 
-const DIST_DIR = "dist";
+const BUILD_DIR = "build";
 
-const CONFIG = `${DIST_DIR}/config.js`;
-const INDEX = `${DIST_DIR}/index.js`;
-const MANIFEST = `${DIST_DIR}/server/manifest.js`;
-const SERVER = `${DIST_DIR}/server/index.js`;
-const CLIENT_DIR = `${DIST_DIR}/client`;
+const CONFIG = `${BUILD_DIR}/config.js`;
+const INDEX = `${BUILD_DIR}/index.js`;
+const MANIFEST = `${BUILD_DIR}/server/manifest.js`;
+const SERVER = `${BUILD_DIR}/server/index.js`;
+const CLIENT_DIR = `${BUILD_DIR}/client`;
 
 // Global vars here
 let KitServer: Server;
@@ -135,19 +135,21 @@ export default function (config: HttpConfig) {
       // Recreate a new temp dir
       builder.rimraf(out);
       builder.mkdirp(out);
-      // Recreate a new dist dir
+      // Recreate a new build dir
       // NOTE: This doesnt seem very efficient, but it is probably safer
-      builder.rimraf(DIST_DIR);
-      builder.mkdirp(DIST_DIR);
+      builder.rimraf(BUILD_DIR);
+      builder.mkdirp(BUILD_DIR);
 
       // Write the static assets
-      builder.writeClient(`${DIST_DIR}/client${builder.config.kit.paths.base}`);
+      builder.writeClient(
+        `${BUILD_DIR}/client${builder.config.kit.paths.base}`,
+      );
 
       // Write the pre-rendered pages
       // NOTE: Write to the same directoty as the static assets since they are
       // both referenced relavtive to the base URL
       builder.writePrerendered(
-        `${DIST_DIR}/client${builder.config.kit.paths.base}`,
+        `${BUILD_DIR}/client${builder.config.kit.paths.base}`,
       );
 
       // Write the SSR output
@@ -190,7 +192,7 @@ export default function (config: HttpConfig) {
       });
 
       await bundle.write({
-        dir: `${DIST_DIR}/server`,
+        dir: `${BUILD_DIR}/server`,
         format: "es",
         sourcemap: true,
         chunkFileNames: "chunks/[name]-[hash].js",
