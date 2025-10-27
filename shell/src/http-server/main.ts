@@ -177,7 +177,7 @@ export class HttpServer {
     } else {
       // Make sure to NOT add the SSR Router to the
       // _apiRouterList since it doesnt have a fixed base path
-      this._ssrRouter = new Router("/");
+      this._ssrRouter = new Router("/", "/");
 
       const ssrEndpoint = this._ssrRouter.getSsrEndpoint(
         config.ssrServer.render,
@@ -365,7 +365,7 @@ export class HttpServer {
       // NOTE: Make sure to delimit the pathname in case it is a match for
       // the root of the basepath
       let router = this._apiRouterList.find((el) =>
-        el.inPath(`${req.urlObj.pathname}/`),
+        req.urlObj.pathname.startsWith(el.fullBasePath),
       );
 
       // Check if router exists
@@ -539,24 +539,24 @@ export class HttpServer {
   }
 
   addRouter(basePath: string, routerConfig: RouterConfig = {}): Router {
-    // Strip off any leading slashes and make sure it has only 1 trailing slash
-    basePath = basePath.replace(/^\/*/, "").replace(/\/*$/, "/");
-    // Prepend the Http Servers base path
-    basePath = `${this._basePath}${basePath}`;
+    // Strip off any leading slashes and make sure it has a trailing slash
+    basePath = basePath.replace(/\/*$/, "/");
 
     // Check to make sure this basePath does not overlap with another router's
     // basePath
-    let found = this._apiRouterList.find((el) => {
-      return el.inPath(basePath) || el.basePath.startsWith(basePath);
-    });
+    let found = this._apiRouterList.find((el) =>
+      el.routerBasePath.startsWith(basePath),
+    );
 
     // If there is an overlap with an existing router then "stop the press"!
     if (found !== undefined) {
-      throw new Error(`${basePath} clashes with basePath of ${found.basePath}`);
+      throw new Error(
+        `${basePath} clashes with basePath of ${found.routerBasePath}`,
+      );
     }
 
     // If we are here then all is good so create the new router
-    let router = new Router(basePath, routerConfig);
+    let router = new Router(this._basePath, basePath, routerConfig);
     this._apiRouterList.push(router);
 
     this._logger.startupMsg("(%s) router created", basePath);
@@ -570,12 +570,10 @@ export class HttpServer {
       return this._defaultApiRouter;
     }
 
-    // Strip off any leading slashes and make sure it has only 1 trailing slash
-    basePath = basePath.replace(/^\/*/, "").replace(/\/*$/, "/");
-    // Prepend the Http Servers base path
-    basePath = `${this._basePath}${basePath}`;
+    // Make sure there is a trailing "/"
+    basePath = basePath.replace(/\/*$/, "/");
 
-    return this._apiRouterList.find((el) => el.basePath === basePath);
+    return this._apiRouterList.find((el) => el.routerBasePath === basePath);
   }
 
   // Methods for the default router here

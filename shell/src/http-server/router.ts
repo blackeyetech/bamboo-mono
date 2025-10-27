@@ -102,8 +102,9 @@ type MethodListElement = {
 
 // Router class here
 export class Router {
-  private _basePathDelimited: string;
-  private _basePath: string;
+  private _httpServerBasePath: string;
+  private _routerBasePath: string;
+
   private _minCompressionSize: number;
   private _defaultCharSet: string;
 
@@ -111,16 +112,19 @@ export class Router {
   private _methodListMap: Record<Method, MethodListElement[]>;
   private _defaultMiddlewareList: Middleware[];
 
-  constructor(basePath: string, config: RouterConfig = {}) {
-    // Make sure to properly delimit the basePath
-    this._basePathDelimited = basePath.replace(/\/*$/, "/");
-    // Make sure to strip off the trailing slashes
-    this._basePath = basePath.replace(/\/*$/, "");
+  constructor(
+    httpServerBasePath: string,
+    routerBasePath: string,
+    config: RouterConfig = {},
+  ) {
+    // Make sure to the base paths have a trailing "/"
+    this._httpServerBasePath = httpServerBasePath.replace(/\/*$/, "/");
+    this._routerBasePath = routerBasePath.replace(/\/*$/, "/");
 
     this._minCompressionSize = config.minCompressionSize ?? 1024;
     this._defaultCharSet = config.defaultCharSet ?? "charset=utf-8";
 
-    this._logger = new Logger(`Router (${this._basePath})`);
+    this._logger = new Logger(`Router (${this._routerBasePath})`);
 
     // Initialise the method list manually
     this._methodListMap = {
@@ -138,8 +142,12 @@ export class Router {
   }
 
   // Getter methods here
-  get basePath(): string {
-    return this._basePathDelimited;
+  get routerBasePath(): string {
+    return this._routerBasePath;
+  }
+
+  get fullBasePath(): string {
+    return `${this._httpServerBasePath.replace(/\/*$/, "")}${this._routerBasePath}`;
   }
 
   // Private methods here
@@ -456,11 +464,6 @@ export class Router {
   }
 
   // Public methods here
-  inPath(pathname: string): boolean {
-    // Make sure to use the delimited base path to ensure a correct match
-    return pathname.startsWith(this._basePathDelimited);
-  }
-
   async handleReq(req: ServerRequest, res: ServerResponse): Promise<void> {
     // See if this request matches a registered endpoint
     let matchedEl = this.findEndpoint(req);
@@ -661,8 +664,13 @@ export class Router {
       middlewareList = [...middlewareList, ...options.middlewareList];
     }
 
-    // GEt the full path - check if the path already includes the basePath
-    let fullPath = this.inPath(path) ? path : `${this._basePath}${path}`;
+    // Remove traiing "/" to make things easier for later
+    const strippedBase = this._httpServerBasePath.replace(/\/*$/, "");
+
+    // Get the full path - check if the path already includes the basePath
+    let fullPath = path.startsWith(this._routerBasePath)
+      ? `${strippedBase}${path}`
+      : `${strippedBase}${this._routerBasePath.replace(/\/*$/, "")}${path}`;
 
     // Finally add it to the list of callbacks
     this._methodListMap[method].push({

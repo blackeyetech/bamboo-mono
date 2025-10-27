@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.21
+
+### Patch Changes
+
+- Updated how base path is handled by routers
+
 ## 1.21.20
 
 ### Patch Changes

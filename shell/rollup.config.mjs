@@ -4,12 +4,9 @@ import json from "@rollup/plugin-json";
 import replace from "@rollup/plugin-replace";
 import dts from "rollup-plugin-dts";
 
-import { createRequire } from "node:module";
-
-// Consts here
 // Load the package.json so we can get the current version of the shell
-const require = createRequire(import.meta.url);
-const pkg = require("./package.json");
+import pkg from "./package.json" with { type: "json" };
+const { version } = pkg;
 
 // We need to know if we are building for prod or dev
 const NODE_ENV =
@@ -19,7 +16,7 @@ const NODE_ENV =
 let plugins = [
   replace({
     preventAssignment: true,
-    values: { BS_VERSION: pkg.version },
+    values: { BS_VERSION: version },
   }),
   commonjs(),
   resolve({ preferBuiltins: true }),
