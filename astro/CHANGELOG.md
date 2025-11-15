@@ -1,5 +1,11 @@
 # @bs-core/astro
 
+## 1.8.23
+
+### Patch Changes
+
+- Fixed SSR sec headers configuration
+
 ## 1.8.22
 
 ### Patch Changes

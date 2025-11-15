@@ -1,5 +1,11 @@
 # @bs-core/svelte-kit
 
+## 1.0.4
+
+### Patch Changes
+
+- Fixed SSR sec headers configuration
+
 ## 1.0.3
 
 ### Patch Changes

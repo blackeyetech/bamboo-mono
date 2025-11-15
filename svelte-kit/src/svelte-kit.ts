@@ -95,6 +95,7 @@ export const setup = async (basePath: string): Promise<void> => {
   };
 
   config.ssrServer = {
+    ...config.ssrServer,
     adapterName: ADAPTER_LATENCY_NAME,
     render,
     matcher,

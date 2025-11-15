@@ -69,7 +69,7 @@ async function init() {
       headers: [
         { name: "x-test1", value: "kewl" },
         { name: "x-test2", value: "kewler" },
-        { name: "X-Frame-Options", value: "DENY" },
+        { name: "Cross-Origin-Opener-Policy", value: "DENY" },
       ],
     }),
   );

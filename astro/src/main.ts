@@ -150,6 +150,7 @@ export const start = async (
   _app = new App(manifest);
 
   config.httpConfig.ssrServer = {
+    ...config.httpConfig.ssrServer,
     adapterName: ADAPTER_LATENCY_NAME,
     render,
     matcher,
