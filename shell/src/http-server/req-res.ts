@@ -90,12 +90,24 @@ export const enhanceIncomingMessage = (
   let enhancedReq = req as ServerRequest;
 
   // Now set all of the props that make it a ServerRequest
+  // Check for a valid url or "new URL()" to throw
   // NOTE: I can not figure out a good way to tell if the req is HTTP or HTTPS
   // but I dont think it matters here unless someone needs the protocol prop
   enhancedReq.validUrl = URL.canParse(
     req.url as string,
     `https://${req.headers.host}`,
   );
+
+  // If URL is valid check to see if the it has any encodings that arent valid
+  if (enhancedReq.validUrl) {
+    try {
+      // This will not throw if everything is good
+      decodeURIComponent(req.url as string);
+    } catch {
+      // if we are here then the URL encoding is not valid so flag it
+      enhancedReq.validUrl = false;
+    }
+  }
 
   // If the URL is not valid then we should return now
   if (!enhancedReq.validUrl) {

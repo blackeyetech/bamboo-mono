@@ -1,5 +1,11 @@
 # @bs-core/shell
 
+## 1.21.22
+
+### Patch Changes
+
+- Added check for invalid URL encodings
+
 ## 1.21.21
 
 ### Patch Changes
